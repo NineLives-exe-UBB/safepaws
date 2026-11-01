@@ -1,8 +1,10 @@
-# Here, the documentation will be written, in this manner: 
-docs/
-├── architecture.md
-├── database.md
-├── api.md
-├── usageGuide.md
-├── decisions.md
-└── meetingDiscussions.md
+# Documentation
+
+This folder contains the documentation for SafePaws:
+
+- `architecture.md` – how the application is built (frontend, backend, database)
+- `database.md` – database tables and the relations between them
+- `api.md` – backend endpoints, with requests and responses
+- `usage-guide.md` – how to use the application, step by step
+- `decisions.md` – important decisions and the reasons behind them
+- `meetings.md` – notes from team and mentor meetings
