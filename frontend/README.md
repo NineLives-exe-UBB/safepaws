@@ -29,6 +29,8 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 The app expects the backend to run on `http://localhost:8080`. The URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
 
+While the backend is not ready, `npm start` shows mock data (`useMockData: true` in `src/environments/environment.development.ts`). Set it to `false` to use the real `GET /announcements`.
+
 ### Pages
 
 | Route                | Page                   |

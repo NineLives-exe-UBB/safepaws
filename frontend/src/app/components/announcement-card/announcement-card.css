@@ -1,0 +1,79 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.photo {
+  position: relative;
+  height: 200px;
+  background-color: #e4e9e9;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7777;
+}
+
+.label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.label.lost {
+  background-color: #c0392b;
+}
+
+.label.found {
+  background-color: #2e8b57;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+}
+
+.species {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.area,
+.date {
+  margin: 0;
+  color: #555555;
+}
+
+.poster-button {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  background-color: #2f5d62;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.poster-button:hover {
+  background-color: #244a4e;
+}

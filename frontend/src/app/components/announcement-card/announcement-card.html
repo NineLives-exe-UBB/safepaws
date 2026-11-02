@@ -1,0 +1,22 @@
+<article class="card">
+  <div class="photo">
+    @if (mainPhotoUrl(); as photoUrl) {
+      <img [src]="photoUrl" [alt]="announcement().species + ' photo'" />
+    } @else {
+      <div class="no-photo">No photo</div>
+    }
+    <span
+      class="label"
+      [class.lost]="announcement().type === 'LOST'"
+      [class.found]="announcement().type === 'FOUND'"
+    >
+      {{ announcement().type }}
+    </span>
+  </div>
+  <div class="details">
+    <h2 class="species">{{ announcement().species }}</h2>
+    <p class="area">{{ announcement().area }}</p>
+    <p class="date">{{ announcement().eventDate | date: 'dd MMM yyyy, HH:mm' }}</p>
+    <a class="poster-button" [href]="posterUrl()" download>Download poster</a>
+  </div>
+</article>

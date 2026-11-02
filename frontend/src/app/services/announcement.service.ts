@@ -24,6 +24,14 @@ export class AnnouncementService {
     return this.http.post<Announcement>(this.announcementsUrl, announcement);
   }
 
+  photoUrl(photo: Photo): string {
+    return `${environment.apiUrl}${photo.url}`;
+  }
+
+  posterUrl(id: number): string {
+    return `${this.announcementsUrl}/${id}/poster`;
+  }
+
   uploadPhotos(id: number, files: File[]): Observable<Photo[]> {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));

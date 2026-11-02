@@ -77,6 +77,16 @@ describe('AnnouncementService', () => {
     expect(result).toEqual(announcement);
   });
 
+  it('should build the photo url from the backend url', () => {
+    expect(service.photoUrl({ id: 3, url: '/photos/3', isMain: true })).toBe(
+      `${environment.apiUrl}/photos/3`,
+    );
+  });
+
+  it('should build the poster url of an announcement', () => {
+    expect(service.posterUrl(15)).toBe(`${announcementsUrl}/15/poster`);
+  });
+
   it('should upload photos as multipart form data', () => {
     const file = new File(['photo'], 'cat.png', { type: 'image/png' });
     service.uploadPhotos(15, [file]).subscribe();
