@@ -3,12 +3,15 @@ package com.ninelives.safepaws.service;
 import com.ninelives.safepaws.dto.AnnouncementRequest;
 import com.ninelives.safepaws.dto.AnnouncementResponse;
 import com.ninelives.safepaws.dto.AnnouncementSummaryResponse;
+import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
 import com.ninelives.safepaws.model.Announcement;
 import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
+import com.ninelives.safepaws.repository.PhotoMetadata;
+import com.ninelives.safepaws.repository.PhotoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +42,9 @@ class AnnouncementServiceTest {
 
     @Mock
     private AnnouncementRepository announcementRepository;
+
+    @Mock
+    private PhotoRepository photoRepository;
 
     @InjectMocks
     private AnnouncementService announcementService;
@@ -125,6 +132,23 @@ class AnnouncementServiceTest {
     }
 
     @Test
+    void findAllIncludesEachAnnouncementsPhotos() {
+        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
+                storedAnnouncement(1L, Species.CAT, "Mitzi"),
+                storedAnnouncement(2L, Species.DOG, "Rex")));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(1L, 2L))).thenReturn(List.of(
+                new PhotoMetadata(7L, 1L, "image/jpeg", 100L, "mitzi.jpg", true, CREATED_AT),
+                new PhotoMetadata(8L, 1L, "image/png", 200L, "mitzi2.png", false, CREATED_AT)));
+
+        List<AnnouncementSummaryResponse> result = announcementService.findAll();
+
+        assertThat(result.get(0).photos()).containsExactly(
+                new AnnouncementSummaryResponse.Photo(7L, "/photos/7", true),
+                new AnnouncementSummaryResponse.Photo(8L, "/photos/8", false));
+        assertThat(result.get(1).photos()).isEmpty();
+    }
+
+    @Test
     void findAllUsesTheSpeciesDisplayName() {
         when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
                 storedAnnouncement(1L, Species.CAT, null),
@@ -141,6 +165,7 @@ class AnnouncementServiceTest {
         when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of());
 
         assertThat(announcementService.findAll()).isEmpty();
+        verify(photoRepository, never()).findMetadataByAnnouncementIds(any());
     }
 
     @Test
@@ -165,6 +190,18 @@ class AnnouncementServiceTest {
         assertThat(response.status()).isEqualTo(AnnouncementStatus.ACTIVE);
         assertThat(response.createdAt()).isEqualTo(CREATED_AT);
         assertThat(response.photos()).isEmpty();
+    }
+
+    @Test
+    void findByIdIncludesThePhotos() {
+        when(announcementRepository.findById(1L)).thenReturn(Optional.of(storedAnnouncement(1L, Species.CAT, "Mitzi")));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(1L))).thenReturn(List.of(
+                new PhotoMetadata(7L, 1L, "image/jpeg", 100L, "mitzi.jpg", true, CREATED_AT)));
+
+        AnnouncementResponse response = announcementService.findById(1L);
+
+        assertThat(response.photos()).containsExactly(
+                new PhotoResponse(7L, 1L, "image/jpeg", 100L, "mitzi.jpg", true, "/photos/7", CREATED_AT));
     }
 
     @Test
