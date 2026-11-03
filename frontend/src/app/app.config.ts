@@ -13,7 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     {
       provide: AnnouncementService,
-      useClass: environment.useMockData ? MockAnnouncementService : AnnouncementService,
+      useClass: AnnouncementService,
     },
   ],
 };
