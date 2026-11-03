@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push to the same PR cancels the run that is still going
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      # Runs the tests, builds the JaCoCo report and fails when instruction coverage is under 70%
+      # (threshold configured in backend/pom.xml). The repository tests start PostgreSQL with
+      # Testcontainers, which uses the Docker already present on GitHub runners.
+      - name: Test and check coverage
+        run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/target/site/jacoco
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails when statements, branches, functions or lines are under 70%
+      # (coverageThresholds in frontend/angular.json)
+      - name: Test and check coverage
+        run: npm run test:coverage
+
+      # Production build: catches template type errors in every component (not only the ones
+      # a spec renders), components without specs that do not compile, and bundle budget overruns
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: ignore
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.21.2
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+
+      # Scans only the commits of this PR (or of this push) for things that look like
+      # passwords, tokens or keys. Team rule 4: no passwords or keys written in the code.
+      - name: Scan commits for secrets
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}..HEAD"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="HEAD~1..HEAD"
+          else
+            RANGE="${{ github.event.before }}..HEAD"
+          fi
+          echo "Scanning $RANGE"
+          gitleaks git . --log-opts="$RANGE" --redact --verbose
+
+  migrations:
+    name: Migration guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    env:
+      MIGRATIONS: backend/src/main/resources/db/migration
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Flyway stores a checksum of every applied migration. Editing or renaming a migration
+      # that is already on main breaks the database of everyone who has already run it.
+      - name: Migrations already on main are not modified
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=MDR "origin/${{ github.base_ref }}...HEAD" -- "$MIGRATIONS")
+          if [ -n "$CHANGED" ]; then
+            echo "::error::These migrations are already on main and must not be changed. Add a new V<n>__ file instead:"
+            echo "$CHANGED"
+            exit 1
+          fi
+          echo "OK: no existing migration modified"
+
+      # Two PRs adding a migration with the same version number both pass alone but
+      # Flyway refuses to start once both are merged.
+      - name: Version numbers are unique
+        run: |
+          DUPES=$(ls "$MIGRATIONS" | grep -E '^V[0-9]+__.*\.sql$' | sed -E 's/^(V[0-9]+)__.*/\1/' | sort | uniq -d)
+          if [ -n "$DUPES" ]; then
+            echo "::error::Duplicate migration version: $DUPES"
+            exit 1
+          fi
+          echo "OK: versions are unique"
+
+      # A new migration that drops a table or column, or truncates, fails unless the PR title
+      # contains [destructive], so it is a conscious decision and the reviewer sees it.
+      - name: New migrations are not destructive
+        if: ${{ !contains(github.event.pull_request.title, '[destructive]') }}
+        run: |
+          NEW=$(git diff --name-only --diff-filter=A "origin/${{ github.base_ref }}...HEAD" -- "$MIGRATIONS")
+          FOUND=0
+          for f in $NEW; do
+            if grep -inE '\bDROP\s+(TABLE|COLUMN|SCHEMA)\b|\bALTER\s+TABLE\b.*\bDROP\b|\bTRUNCATE\b' "$f"; then
+              echo "::error file=$f::Destructive statement in a new migration. If intended, add [destructive] to the PR title."
+              FOUND=1
+            fi
+          done
+          [ "$FOUND" -eq 0 ] && echo "OK: no destructive statements in new migrations"
+          exit $FOUND
