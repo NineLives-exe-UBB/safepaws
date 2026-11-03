@@ -2,6 +2,7 @@
 package com.ninelives.safepaws.controller;
 
 import com.ninelives.safepaws.dto.PhotoResponse;
+import com.ninelives.safepaws.model.Photo;
 import com.ninelives.safepaws.service.PhotoService;
 
 import org.springframework.http.HttpStatus;
@@ -13,7 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/announcements")
 public class PhotoController {
 
     private final PhotoService photoService;
@@ -22,7 +22,8 @@ public class PhotoController {
         this.photoService = photoService;
     }
 
-    @PostMapping(value = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/announcements/{id}/photos",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<List<PhotoResponse>> upload(
             @PathVariable Long id,
             @RequestPart("files") MultipartFile[] files) {
@@ -30,5 +31,15 @@ public class PhotoController {
         List<PhotoResponse> photos = photoService.upload(id, files);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(photos);
+    }
+
+    @GetMapping("/photos/{id}")
+    public ResponseEntity<byte[]> getPhoto(@PathVariable Long id) {
+
+        Photo photo = photoService.getPhoto(id);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(photo.getContentType()))
+                .body(photo.getData());
     }
 }

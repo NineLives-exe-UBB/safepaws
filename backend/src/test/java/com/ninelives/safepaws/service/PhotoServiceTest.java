@@ -317,4 +317,34 @@ class PhotoServiceTest {
         verify(photoRepository, never())
                 .saveAndFlush(any(Photo.class));
     }
+
+
+        @Test
+        void getExistingPhoto() {
+        Photo photo = new Photo(
+                new Announcement(), JPEG, "image/jpeg", "cat.jpg", true
+        );
+
+        when(photoRepository.findById(1L))
+                .thenReturn(Optional.of(photo));
+
+        Photo result = photoService.getPhoto(1L);
+
+        assertThat(result).isSameAs(photo);
+
+        verify(photoRepository).findById(1L);
+        }
+
+        @Test
+        void getNonexistentPhoto() {
+        when(photoRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> photoService.getPhoto(999L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Photo not found with id: 999");
+
+        verify(photoRepository).findById(999L);
+        }
+
 }

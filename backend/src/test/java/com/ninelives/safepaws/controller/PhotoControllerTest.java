@@ -4,6 +4,7 @@ package com.ninelives.safepaws.controller;
 import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
 import com.ninelives.safepaws.service.PhotoService;
+import com.ninelives.safepaws.model.Photo;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -149,4 +151,43 @@ class PhotoControllerTest {
 
         verifyNoInteractions(photoService);
     }
+
+
+        @Test
+        void getExistingPhotoReturns200() throws Exception {
+        byte[] image = {
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF
+        };
+
+        Photo photo = new Photo(
+                new com.ninelives.safepaws.model.Announcement(),
+                image, "image/jpeg", "cat.jpg", true
+        );
+
+        when(photoService.getPhoto(1L)).thenReturn(photo);
+
+        mockMvc.perform(get("/photos/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG))
+                .andExpect(content().bytes(image));
+
+        verify(photoService).getPhoto(1L);
+        }
+
+        @Test
+        void getNonexistentPhotoReturns404() throws Exception {
+        when(photoService.getPhoto(999L))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Photo not found with id: 999"
+                ));
+
+        mockMvc.perform(get("/photos/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+
+        verify(photoService).getPhoto(999L);
+        }
+
 }
