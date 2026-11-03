@@ -1,0 +1,15 @@
+<h1>Announcements</h1>
+
+@if (loading()) {
+  <p>Loading announcements...</p>
+} @else if (failed()) {
+  <p class="message error">Could not load the announcements. Please try again later.</p>
+} @else if (announcements().length === 0) {
+  <p class="message empty">There are no announcements yet.</p>
+} @else {
+  <div class="grid">
+    @for (announcement of announcements(); track announcement.id) {
+      <app-announcement-card [announcement]="announcement" />
+    }
+  </div>
+}
