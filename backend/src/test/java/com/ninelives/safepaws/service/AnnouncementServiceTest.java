@@ -149,7 +149,7 @@ class AnnouncementServiceTest {
     }
 
     @Test
-    void findAllUsesTheSpeciesDisplayName() {
+    void findAllReturnsTheSpeciesAsTheEnumValue() {
         when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
                 storedAnnouncement(1L, Species.CAT, null),
                 storedAnnouncement(2L, Species.DOG, null),
@@ -157,7 +157,7 @@ class AnnouncementServiceTest {
 
         assertThat(announcementService.findAll())
                 .extracting(AnnouncementSummaryResponse::species)
-                .containsExactly("Cat", "Dog", "Other");
+                .containsExactly(Species.CAT, Species.DOG, Species.OTHER);
     }
 
     @Test

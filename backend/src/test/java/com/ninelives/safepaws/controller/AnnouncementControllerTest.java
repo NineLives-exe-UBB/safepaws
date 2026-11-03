@@ -235,11 +235,11 @@ class AnnouncementControllerTest {
         @Test
         void returnsTheSummariesInTheOrderTheServiceGives() throws Exception {
             when(announcementService.findAll()).thenReturn(List.of(
-                    new AnnouncementSummaryResponse(13L, AnnouncementType.LOST, "Max", "Dog",
+                    new AnnouncementSummaryResponse(13L, AnnouncementType.LOST, "Max", Species.DOG,
                             "Someșeni, Cluj-Napoca", LocalDateTime.of(2026, 11, 2, 7, 0),
                             AnnouncementStatus.ACTIVE,
                             List.of(new AnnouncementSummaryResponse.Photo(3L, "/photos/3", true))),
-                    new AnnouncementSummaryResponse(11L, AnnouncementType.FOUND, null, "Cat",
+                    new AnnouncementSummaryResponse(11L, AnnouncementType.FOUND, null, Species.CAT,
                             "Între Lacuri, Cluj-Napoca", LocalDateTime.of(2026, 11, 1, 17, 0),
                             AnnouncementStatus.RESOLVED, List.of())));
 
@@ -249,7 +249,7 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$[0].id").value(13))
                     .andExpect(jsonPath("$[0].type").value("LOST"))
                     .andExpect(jsonPath("$[0].petName").value("Max"))
-                    .andExpect(jsonPath("$[0].species").value("Dog"))
+                    .andExpect(jsonPath("$[0].species").value("DOG"))
                     .andExpect(jsonPath("$[0].area").value("Someșeni, Cluj-Napoca"))
                     .andExpect(jsonPath("$[0].eventDate").value("2026-11-02T07:00:00"))
                     .andExpect(jsonPath("$[0].status").value("ACTIVE"))

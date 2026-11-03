@@ -40,7 +40,7 @@ Creates a new lost or found announcement.
 ```json
 {
   "type": "LOST",
-  "species": "Cat",
+  "species": "CAT",
   "petName": "Misi",
   "breed": "European",
   "color": "Grey with white paws",
@@ -59,7 +59,7 @@ Creates a new lost or found announcement.
 {
   "id": 15,
   "type": "LOST",
-  "species": "Cat",
+  "species": "CAT",
   "petName": "Misi",
   "breed": "European",
   "color": "Grey with white paws",
@@ -87,7 +87,7 @@ Returns all announcements in descending order by creation date (newest first). E
   {
     "id": 15,
     "type": "LOST",
-    "species": "Cat",
+    "species": "CAT",
     "petName": "Misi",
     "breed": "European",
     "color": "Grey with white paws",
@@ -121,7 +121,7 @@ Returns a single announcement by its unique identifier, including all associated
 {
   "id": 15,
   "type": "LOST",
-  "species": "Cat",
+  "species": "CAT",
   "petName": "Misi",
   "breed": "European",
   "color": "Grey with white paws",

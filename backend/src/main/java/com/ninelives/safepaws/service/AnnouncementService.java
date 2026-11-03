@@ -115,7 +115,7 @@ public class AnnouncementService {
                 announcement.getId(),
                 announcement.getType(),
                 announcement.getPetName(),
-                announcement.getSpecies().getDisplayName(),
+                announcement.getSpecies(),
                 announcement.getArea(),
                 announcement.getEventDate(),
                 announcement.getStatus(),
