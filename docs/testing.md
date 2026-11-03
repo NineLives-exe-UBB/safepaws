@@ -11,7 +11,12 @@ Both parts fail the build when coverage is under 70%.
 | backend | `cd backend && ./mvnw verify` | Docker running (the repository test starts a PostgreSQL with Testcontainers) | 95.7% instructions, 34 tests |
 | frontend | `cd frontend && npm run test:coverage` | `npm install` done once | 97.7% statements, 24 tests |
 
-The backend threshold is in `pom.xml` (jacoco, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`). Both run on every pull request through GitHub Actions.
+The backend threshold is in `pom.xml` (jacoco, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`). Both run on every pull request through GitHub Actions (`.github/workflows/ci.yml`), together with a secret scan and a Flyway migration guard.
+
+Where the tests live:
+
+- backend: `backend/src/test/java/.../safepaws/`, same tree as `main`. `controller/` has `@WebMvcTest` slice tests (status codes, JSON, validation) with the service mocked, `service/` has unit tests with mocked repositories, `repository/` has `@DataJpaTest` tests against a real PostgreSQL started by Testcontainers. Frameworks: JUnit 5, Mockito, Spring Boot Test.
+- frontend: a `*.spec.ts` next to each component, page and service, run with Vitest (jsdom, no browser needed).
 
 ## 2. Manual testing setup
 
@@ -54,16 +59,16 @@ Endpoint `POST /announcements`. Page `/announcements/new` is still a placeholder
 
 ### B. Photos
 
-Endpoints `POST /announcements/{id}/photos` (multipart, field `files`) and `GET /photos/{id}`. Limits: only `image/jpeg` and `image/png`, max 5 MB per file, 25 MB per request, one main photo per announcement.
+Endpoints `POST /announcements/{id}/photos` (multipart, field `files`, merged in PR #8) and `GET /photos/{id}` (not yet). Limits: only `image/jpeg` and `image/png`, max 5 MB per file (`413`), 25 MB per request, empty file and empty request rejected with `400`, one main photo per announcement.
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| B1 | one photo | upload one jpeg to announcement 3 | `201`, list with one photo, `isMain: true`, `url: /photos/{id}` | blocked |
-| B2 | multiple photos | upload 3 files in one request | `201`, 3 photos, first `isMain: true`, others `false` | blocked |
-| B3 | second upload | upload again to an announcement that already has a main photo | new photos have `isMain: false`, main stays the same | blocked |
-| B4 | not an image | upload a `.pdf` or `.txt` | `400` with a clear message, nothing stored in `photo` | blocked |
-| B5 | too large | upload a 6 MB jpeg | rejected (`400` or `413`), standard error format, nothing stored | blocked |
-| B6 | unknown announcement | upload to `/announcements/999/photos` | `404` | blocked |
+| B1 | one photo | upload one jpeg to announcement 3 | `201`, list with one photo, `isMain: true`, `url: /photos/{id}` | ready |
+| B2 | multiple photos | upload 3 files in one request | `201`, 3 photos, first `isMain: true`, others `false` | ready |
+| B3 | second upload | upload again to an announcement that already has a main photo | new photos have `isMain: false`, main stays the same | ready |
+| B4 | not an image | upload a `.pdf` or `.txt` | `400` with a clear message, nothing stored in `photo` | ready |
+| B5 | too large | upload a 6 MB jpeg | rejected (`400` or `413`), standard error format, nothing stored | ready |
+| B6 | unknown announcement | upload to `/announcements/999/photos` | `404` | ready |
 | B7 | fetch photo | `GET /photos/1` (Mitzi) | `200`, `Content-Type: image/jpeg`, the image renders in `<img>` | blocked |
 | B8 | unknown photo | `GET /photos/999` | `404` | blocked |
 | B9 | photos in announcement | after B1, `GET /announcements/3` and `GET /announcements` | both include the photo list; the card shows the main photo instead of `No photo` | blocked |

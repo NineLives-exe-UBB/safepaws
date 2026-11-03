@@ -28,3 +28,14 @@ replay_pid*
 
 # Intellij
 .idea
+
+# Maven build output
+target/
+
+# macOS
+.DS_Store
+
+# IDE files outside .idea
+*.iml
+out/
+.vscode/

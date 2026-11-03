@@ -8,11 +8,35 @@
 
 ## 2. Local Setup
 
-### Database
-Create a local PostgreSQL database:
-```sql
-CREATE DATABASE safepaws;
-```
+### Database (Docker)
+PostgreSQL 17 runs containerized via Docker Compose.
+
+1. Create your local environment file from the template:
+   ```bash
+   cp .env.example .env
+   ```
+   Note: `.env` is ignored by Git and must never be committed.
+2. Start the PostgreSQL container:
+   ```bash
+   docker compose up -d
+   ```
+3. Confirm that the container is healthy:
+   ```bash
+   docker compose ps
+   ```
+   (The STATUS column should indicate healthy).
+4. Launch the Spring Boot backend. Flyway will automatically execute migrations and load seed data on the first run.
+
+#### Troubleshooting & Commands
+- **Port Conflict (Port 5432 in use):** If a local PostgreSQL instance is already running on port 5432, update `DB_PORT=5433` in your `.env` file before starting the container.
+- **Stop Database (Retain Data):**
+  ```bash
+  docker compose down
+  ```
+- **Full Database Reset (Wipe Data & Re-run Migrations):**
+  ```bash
+  docker compose down -v
+  ```
 
 ### Backend (Spring Boot)
 1. Navigate to the backend directory.
