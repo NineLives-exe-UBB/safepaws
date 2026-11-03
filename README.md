@@ -59,11 +59,14 @@ All design records, specifications, and project management files are organized i
 
 ## 👥 The Team (NineLives.exe)
 
-| Name | Role | Core Deliverables |
-|---|---|---|
-| **Antonia** | Backend Developer | Announcements REST Endpoints (`/announcements`) |
-| **Patrick** | Backend Developer | Photo Management & Storage (`/photos`) |
-| **Alexandru** | Backend Developer | PDF Poster Generation (`/poster`) |
-| **Victor** | Frontend Developer | Announcement Creation Form & Photo Upload |
-| **Luca** | Frontend Developer | Announcement Listings, Details & Poster Download |
-| **Tudor-Vasile Câmpean** | Documentation & Architecture | Project Documentation, Specifications & Architecture |
+| Name | Role |
+|---|---|
+| **Vanessza** | Team Lead |
+| **Antonia** | Backend |
+| **Patrick** | Backend |
+| **Alexandru** | Backend |
+| **Victor** | Frontend |
+| **Luca** | Frontend |
+| **Matei** | Databases |
+| **Jessica** | Testing |
+| **Tudor** | Documentation |
