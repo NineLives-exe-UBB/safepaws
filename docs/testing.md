@@ -103,8 +103,6 @@ Endpoint `GET /announcements/{id}/poster`, button `Download poster` on each card
 
 ## 4. Known issues (3 Nov)
 
-- `species` is `"Dog"` in the list and `"CAT"` in the detail response. Same field, two formats.
-- Mitzi and Rex have photos in the database but `photos` is `[]` in every response until the photo endpoints exist.
 - `docs/api.md` describes a different API (`/api/v1`, JWT, `/pets`). The API contract from the team rules is the correct one.
 - `docs/usage-guide.md` mentions `application.yml` and creating the database by hand; the real setup is `application.properties` and `docker compose`.
 - `contactPhone` is returned in every response. Accepted for now, to be hidden once messaging exists.
