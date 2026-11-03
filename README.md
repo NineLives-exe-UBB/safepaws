@@ -54,6 +54,7 @@ All design records, specifications, and project management files are organized i
 - [Testing Strategy](./docs/testing.md) — Test suites, framework setup, and 70% coverage requirements.
 - [Usage & Setup Guide](./docs/usage-guide.md) — Local environment setup and execution instructions.
 - [Meeting Notes](./docs/meetings.md) — Team standups and mentor review records.
+- [Testing](./docs/testing.md) — Automated tests, manual test scenarios, and bug reporting.
 
 ---
 

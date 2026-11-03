@@ -8,4 +8,4 @@ This folder contains the documentation for SafePaws:
 - `usage-guide.md` – how to use the application, step by step
 - `decisions.md` – important decisions and the reasons behind them
 - `meetings.md` – notes from team and mentor meetings
-- `testing.md` – testing strategy, quality standards, and test suites
+- `testing.md` – automated tests, manual test scenarios and how to report bugs
