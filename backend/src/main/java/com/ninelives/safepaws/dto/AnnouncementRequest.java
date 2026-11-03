@@ -22,12 +22,16 @@ public record AnnouncementRequest(
         @NotNull(message = "Species is required")
         Species species,
 
+        @Size(max = 50, message = "Pet name must be at most 50 characters")
         String petName,
 
+        @Size(max = 100, message = "Breed must be at most 100 characters")
         String breed,
 
+        @Size(max = 100, message = "Color must be at most 100 characters")
         String color,
 
+        @Size(max = 500, message = "Distinctive marks must be at most 500 characters")
         String distinctiveMarks,
 
         @NotNull(message = "Event date is required")
