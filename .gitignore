@@ -28,3 +28,9 @@ replay_pid*
 
 # Intellij
 .idea
+
+# Maven build output
+target/
+
+# macOS
+.DS_Store
