@@ -98,6 +98,17 @@ public class PhotoService {
         return responses;
     }
 
+
+    @Transactional(readOnly = true)
+    public Photo getPhoto(Long id) {
+        return photoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Photo not found with id: " + id
+                ));
+    }
+
+
     private boolean isValidImage(byte[] data, String type) {
         if ("image/jpeg".equals(type)) {
             return data.length >= 3
