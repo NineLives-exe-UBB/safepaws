@@ -30,16 +30,5 @@ All design records, specifications, and project management files are organized i
 
 ---
 
-## 👥 The Team (NineLives.exe)
-
-| Name | Role | Responsibilities |
-|---|---|---|
-| *Team Member 1* | Frontend Developer | UI/UX, Angular Components |
-| *Team Member 2* | Backend Developer | API, Business Logic, Spring Boot |
-| *Tudor-Vasile Câmpean* | Documentation & Engineering | Project Documentation, Backend/Architecture |
-| *Team Member 4* | Fullstack / QA | Testing, CI/CD, Quality Assurance |
-
----
-
 ## 🚀 Quick Start
 Refer to the [Usage & Setup Guide](./docs/usage-guide.md) for detailed instructions on launching the backend, frontend, and database locally.
