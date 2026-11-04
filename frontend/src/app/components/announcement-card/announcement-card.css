@@ -58,6 +58,11 @@
   font-size: 1.25rem;
 }
 
+.pet-name {
+  margin: 0;
+  font-weight: 600;
+}
+
 .area,
 .date {
   margin: 0;
