@@ -6,8 +6,8 @@ SafePaws uses **PostgreSQL 17**, containerized via Docker Compose. Schema migrat
 ### Migration Ledger
 | Migration | Description |
 |---|---|
-| `V1__create_tables.sql` | Initializes the core `announcement` and `photo` tables with strict constraints and indexes. |
-| `V2__test_data.sql` | Seeds 14 realistic test announcements in Cluj-Napoca (2 of which include attached photos). |
+| `V1__create_tables.sql` | Initializes the core `announcement` and `photo` tables with strict constraints, indexes, and foreign keys. |
+| `V2__test_data.sql` | Seeds 14 realistic test announcements in Cluj-Napoca (including 2 with attached binary photos: Mitzi and Rex). |
 
 ---
 
@@ -67,7 +67,7 @@ Stores binary image data attached to announcements.
 ## 4. Architectural & Schema Decisions
 
 - **Demo 1 Scope (No Users / Locations Tables):** Because authentication is deferred to Milestone 2, reporter contact information (`contact_name`, `contact_phone`) is stored directly on the announcement. Coordinates (`latitude`, `longitude`) and descriptive `area` are also embedded directly on the record. Dedicated user and location entities can be introduced in subsequent migrations.
-- **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL to ensure portable development staging, straightforward container resets, and self-contained database migrations. Listing endpoints (`GET /api/v1/announcements`) omit image bytes; individual photos are retrieved via `GET /api/v1/photos/{id}`.
+- **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL to ensure portable development staging, straightforward container resets, and self-contained database migrations. Listing endpoints (`GET /announcements`) return a summary projection omitting image bytes; individual photos are retrieved via `GET /photos/{id}`.
 - **Optional Coordinates:** Geographic coordinates are optional in Demo 1 as the initial submission form lacks an interactive map picker; `area` remains strictly mandatory. If coordinates are provided, both latitude and longitude must be present together (`ck_announcement_coordinates`).
 - **Conventions & Immutability:** 
   - Database schema uses strict `snake_case` (`contact_phone`, `pet_name`), mapping directly to `camelCase` in Java DTOs/Entities (`contactPhone`, `petName`).
@@ -99,7 +99,7 @@ Stores binary image data attached to announcements.
    *(The `STATUS` column should indicate `healthy`).*
 
 4. **Launch Backend:**
-   Start the Spring Boot backend. Flyway will automatically execute migrations and load seed data on startup.
+   Start the Spring Boot backend (`./mvnw spring-boot:run`). Flyway will automatically execute migrations and load seed data on startup.
 
 ### Connection Credentials
 For GUI clients (IntelliJ Database Tool, DBeaver, pgAdmin) or direct connections:
@@ -107,7 +107,7 @@ For GUI clients (IntelliJ Database Tool, DBeaver, pgAdmin) or direct connections
 - **Port:** `5432` *(or `5433` if fallback `DB_PORT=5433` is configured)*
 - **Database:** `safepaws`
 - **User:** `safepaws`
-- **Password:** Configured in your local `.env` file (`POSTGRES_PASSWORD`)
+- **Password:** Configured in your local `.env` file (`DB_PASSWORD`)
 
 ### Lifecycle Commands
 | Task | Command | Description |

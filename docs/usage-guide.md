@@ -1,10 +1,12 @@
 # Usage & Setup Guide
 
 ## 1. Prerequisites
-- **Java:** JDK 17 or JDK 21
-- **Node.js:** Node LTS and npm
-- **Database:** PostgreSQL instance running locally or via Docker
+- **Java:** JDK 21 (Required by `pom.xml` and CI)
+- **Node.js:** Node 22 LTS and npm (>= 10 / 11)
+- **Database / Containers:** Docker Desktop & Docker Compose (or PostgreSQL 17)
 - **Git**
+
+---
 
 ## 2. Local Setup
 
@@ -15,19 +17,20 @@ PostgreSQL 17 runs containerized via Docker Compose.
    ```bash
    cp .env.example .env
    ```
-   Note: `.env` is ignored by Git and must never be committed.
+   > **Note:** `.env` is ignored by Git and must never be committed.
+
 2. Start the PostgreSQL container:
    ```bash
    docker compose up -d
    ```
+
 3. Confirm that the container is healthy:
    ```bash
    docker compose ps
    ```
-   (The STATUS column should indicate healthy).
-4. Launch the Spring Boot backend. Flyway will automatically execute migrations and load seed data on the first run.
+   *(The `STATUS` column should indicate `healthy`).*
 
-#### Troubleshooting & Commands
+#### Troubleshooting & Database Commands
 - **Port Conflict (Port 5432 in use):** If a local PostgreSQL instance is already running on port 5432, update `DB_PORT=5433` in your `.env` file before starting the container.
 - **Stop Database (Retain Data):**
   ```bash
@@ -38,29 +41,75 @@ PostgreSQL 17 runs containerized via Docker Compose.
   docker compose down -v
   ```
 
+---
+
 ### Backend (Spring Boot)
-1. Navigate to the backend directory.
-2. Verify connection properties in `application.yml` or set environment variables:
-   - `SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/safepaws`
-   - `SPRING_DATASOURCE_USERNAME=<your_username>`
-   - `SPRING_DATASOURCE_PASSWORD=<your_password>`
-3. Run the application:
+1. Navigate to the backend directory:
    ```bash
-   ./mvnw clean spring-boot:run
+   cd backend
    ```
 
+2. The application configuration (`src/main/resources/application.properties`) automatically imports database credentials from the root `.env` file (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`). Optional environment variables:
+   - `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed frontend origins (defaults to `http://localhost:4200`).
+
+3. Run the application:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+   *(Flyway runs automatically on startup to validate the schema and seed initial test data).*
+
+4. **API & Documentation Endpoints:**
+   - Base API URL: `http://localhost:8080`
+   - Swagger UI: `http://localhost:8080/swagger-ui.html`
+   - OpenAPI 3 Spec (JSON): `http://localhost:8080/v3/api-docs`
+
+---
+
 ### Frontend (Angular)
-1. Navigate to the frontend directory.
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
 2. Install dependencies:
    ```bash
    npm install
    ```
+
 3. Start the local development server:
-   ```bash
-   npm start
-   ```
+   - **With Mock Data (Default dev mode):**
+     ```bash
+     npm start
+     ```
+     *(Uses local mock data service; useful when backend is not running).*
+   - **With Live Backend Connection (Production config):**
+     ```bash
+     npm start -- --configuration production
+     ```
+     *(Connects directly to the Spring Boot REST API at `http://localhost:8080`).*
+
 4. Access the web interface at `http://localhost:4200`.
 
-## 3. Running Automated Tests
-- **Backend:** `./mvnw test` (enforcing >= 70% coverage requirement).
-- **Frontend:** `npm test`
+---
+
+## 3. Running Automated Tests & Coverage
+
+SafePaws enforces a strict **>= 70%** code coverage requirement across both backend and frontend.
+
+### Backend Tests (JUnit 5, Mockito, Testcontainers)
+Requires Docker running for PostgreSQL Testcontainers integration:
+```bash
+cd backend
+./mvnw verify
+```
+- Executes slice tests (`@WebMvcTest`), unit tests with Mockito, and database tests with Testcontainers.
+- Generates the JaCoCo coverage report under `backend/target/site/jacoco/index.html`.
+- Fails the build if instruction coverage falls below 70%.
+
+### Frontend Tests (Vitest, jsdom)
+```bash
+cd frontend
+npm run test:coverage
+```
+- Executes unit specs with Vitest without requiring a browser.
+- Fails the build if statements, branches, functions, or lines are under 70%.
