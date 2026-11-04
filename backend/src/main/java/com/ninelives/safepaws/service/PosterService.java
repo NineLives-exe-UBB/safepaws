@@ -1,6 +1,15 @@
 package com.ninelives.safepaws.service;
 
-import com.lowagie.text.*;
+import com.lowagie.text.Chunk;
+import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.Image;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -11,24 +20,44 @@ import com.ninelives.safepaws.model.Photo;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
-import java.awt.Color;
-import java.io.ByteArrayOutputStream;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.awt.*;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 public class PosterService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String FONT_PATH = "fonts/DejaVuSans-Bold.ttf";
 
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
+    private final BaseFont baseFont;
 
     public PosterService(AnnouncementRepository announcementRepository, PhotoRepository photoRepository) {
         this.announcementRepository = announcementRepository;
         this.photoRepository = photoRepository;
+        this.baseFont = loadFont();
+    }
+
+    private static BaseFont loadFont() {
+        try (InputStream in = new ClassPathResource(FONT_PATH).getInputStream()) {
+            byte[] fontBytes = in.readAllBytes();
+            return BaseFont.createFont("DejaVuSans-Bold.ttf", BaseFont.IDENTITY_H,
+                    BaseFont.EMBEDDED, true, fontBytes, null);
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not load poster font " + FONT_PATH, e);
+        }
+    }
+
+    private Font font(float size, Color color) {
+        return new Font(baseFont, size, Font.NORMAL, color);
     }
 
     @Transactional(readOnly = true)
@@ -36,7 +65,6 @@ public class PosterService {
         Announcement announcement = announcementRepository.findById(announcementId)
                 .orElseThrow(() -> new AnnouncementNotFoundException(announcementId));
 
-        // Fetch metadata and directly query photo repository for binary data safely
         List<PhotoMetadata> metadataList = photoRepository.findMetadataByAnnouncementIds(List.of(announcementId));
 
         byte[] mainPhotoBytes = null;
@@ -77,7 +105,7 @@ public class PosterService {
         banner.setWidthPercentage(100);
         banner.setSpacingAfter(18f);
 
-        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 64, Color.WHITE);
+        Font titleFont = font(64, Color.WHITE);
         PdfPCell cell = new PdfPCell(new Phrase(titleText, titleFont));
         cell.setBackgroundColor(bannerColor);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -128,8 +156,8 @@ public class PosterService {
     }
 
     private void addDetailRow(PdfPTable table, String label, String value) {
-        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.DARK_GRAY);
-        Font valueFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, Color.BLACK);
+        Font labelFont = font(18, Color.DARK_GRAY);
+        Font valueFont = font(20, Color.BLACK);
 
         PdfPCell labelCell = new PdfPCell(new Phrase(label, labelFont));
         labelCell.setBorder(Rectangle.BOTTOM);
@@ -151,8 +179,8 @@ public class PosterService {
         PdfPTable contactTable = new PdfPTable(1);
         contactTable.setWidthPercentage(100);
 
-        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.WHITE);
-        Font contactFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 26, Color.YELLOW);
+        Font headerFont = font(18, Color.WHITE);
+        Font contactFont = font(26, Color.YELLOW);
 
         String name = valueOrDefault(announcement.getContactName(), "");
         String phone = valueOrDefault(announcement.getContactPhone(), "N/A");
