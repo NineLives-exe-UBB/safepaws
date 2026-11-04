@@ -27,9 +27,9 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 3. Open http://localhost:4200 in the browser.
 
-The app expects the backend to run on `http://localhost:8080`. The URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
+The list needs the backend running on `http://localhost:8080`, with the seeded test data. See `backend/README.md` (copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). Without it, the list page shows "Could not load the announcements."
 
-While the backend is not ready, `npm start` shows mock data (`useMockData: true` in `src/environments/environment.development.ts`). Set it to `false` to use the real `GET /announcements`.
+The backend URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
 
 ### Pages
 

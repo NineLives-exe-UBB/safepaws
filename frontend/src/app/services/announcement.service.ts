@@ -2,7 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Announcement, AnnouncementRequest } from '../models/announcement.model';
+import {
+  Announcement,
+  AnnouncementRequest,
+  AnnouncementSummary,
+} from '../models/announcement.model';
 import { Photo } from '../models/photo.model';
 
 @Injectable({
@@ -12,8 +16,8 @@ export class AnnouncementService {
   private readonly http = inject(HttpClient);
   private readonly announcementsUrl = `${environment.apiUrl}/announcements`;
 
-  getAll(): Observable<Announcement[]> {
-    return this.http.get<Announcement[]>(this.announcementsUrl);
+  getAll(): Observable<AnnouncementSummary[]> {
+    return this.http.get<AnnouncementSummary[]>(this.announcementsUrl);
   }
 
   getById(id: number): Observable<Announcement> {

@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { AnnouncementCard } from '../../components/announcement-card/announcement-card';
-import { Announcement } from '../../models/announcement.model';
+import { AnnouncementSummary } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 
 @Component({
@@ -12,7 +12,7 @@ import { AnnouncementService } from '../../services/announcement.service';
 export class AnnouncementList {
   private readonly announcementService = inject(AnnouncementService);
 
-  protected readonly announcements = signal<Announcement[]>([]);
+  protected readonly announcements = signal<AnnouncementSummary[]>([]);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
 

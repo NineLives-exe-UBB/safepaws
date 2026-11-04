@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
-import { Announcement } from '../../models/announcement.model';
+import { AnnouncementSummary, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 
 @Component({
@@ -12,13 +12,15 @@ import { AnnouncementService } from '../../services/announcement.service';
 export class AnnouncementCard {
   private readonly announcementService = inject(AnnouncementService);
 
-  readonly announcement = input.required<Announcement>();
+  readonly announcement = input.required<AnnouncementSummary>();
 
   protected readonly mainPhotoUrl = computed(() => {
     const photos = this.announcement().photos;
     const mainPhoto = photos.find((photo) => photo.isMain) ?? photos[0];
     return mainPhoto ? this.announcementService.photoUrl(mainPhoto) : null;
   });
+
+  protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
 
   protected readonly posterUrl = computed(() =>
     this.announcementService.posterUrl(this.announcement().id),
