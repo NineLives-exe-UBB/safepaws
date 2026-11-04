@@ -66,6 +66,33 @@ describe('AnnouncementList', () => {
     expect(compiled.querySelector('.empty')).toBeNull();
   });
 
+  it('should sort the cards by event date, newest first', async () => {
+    const posted = (id: number, eventDate: string): AnnouncementSummary => ({
+      ...announcements[0],
+      id,
+      eventDate,
+    });
+    const fixture = await render(
+      of([
+        posted(1, '2026-10-30T18:00:00'),
+        posted(2, '2026-11-02T09:00:00'),
+        posted(3, '2026-11-01T12:00:00'),
+        posted(4, '2026-11-01T12:00:00'),
+      ]),
+    );
+    const compiled = fixture.nativeElement as HTMLElement;
+    const dates = Array.from(compiled.querySelectorAll('.date')).map((date) =>
+      date.textContent?.trim(),
+    );
+
+    expect(dates).toEqual([
+      '02 Nov 2026, 09:00',
+      '01 Nov 2026, 12:00',
+      '01 Nov 2026, 12:00',
+      '30 Oct 2026, 18:00',
+    ]);
+  });
+
   it('should show a message when there are no announcements', async () => {
     const fixture = await render(of([]));
     const compiled = fixture.nativeElement as HTMLElement;

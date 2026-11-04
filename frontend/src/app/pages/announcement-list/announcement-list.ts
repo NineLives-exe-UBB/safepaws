@@ -19,7 +19,7 @@ export class AnnouncementList {
   constructor() {
     this.announcementService.getAll().subscribe({
       next: (announcements) => {
-        this.announcements.set(announcements);
+        this.announcements.set(this.sortByEventDate(announcements));
         this.loading.set(false);
       },
       error: () => {
@@ -27,5 +27,13 @@ export class AnnouncementList {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Newest event first, so the order matches the date shown on each card. */
+  private sortByEventDate(announcements: AnnouncementSummary[]): AnnouncementSummary[] {
+    return [...announcements].sort(
+      (first, second) =>
+        Date.parse(second.eventDate) - Date.parse(first.eventDate) || second.id - first.id,
+    );
   }
 }
