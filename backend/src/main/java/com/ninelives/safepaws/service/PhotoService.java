@@ -1,4 +1,3 @@
-
 package com.ninelives.safepaws.service;
 
 import com.ninelives.safepaws.dto.PhotoResponse;
@@ -7,7 +6,6 @@ import com.ninelives.safepaws.model.Announcement;
 import com.ninelives.safepaws.model.Photo;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoRepository;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,7 +86,7 @@ public class PhotoService {
                     photo.getFileSize(),
                     photo.getOriginalFileName(),
                     photo.isMain(),
-                    "/photos/" + photo.getId(),
+                    PhotoResponse.urlFor(photo.getId()),
                     photo.getUploadedAt()
             ));
 
@@ -98,7 +96,6 @@ public class PhotoService {
         return responses;
     }
 
-
     @Transactional(readOnly = true)
     public Photo getPhoto(Long id) {
         return photoRepository.findById(id)
@@ -107,7 +104,6 @@ public class PhotoService {
                         "Photo not found with id: " + id
                 ));
     }
-
 
     private boolean isValidImage(byte[] data, String type) {
         if ("image/jpeg".equals(type)) {
