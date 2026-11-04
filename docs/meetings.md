@@ -29,7 +29,7 @@ This document tracks team syncs, sprint planning sessions, and mentor check-ins 
 
 ## Meeting Records
 
-### Initial Sprint Planning & Project Kickoff
+### [2026-10-21] - Initial Sprint Planning & Project Kickoff
 - **Meeting Type:** Team Planning Sync
 - **Objective:** Establish repository setup, technical alignment, and deliverables leading to the next team review.
 
@@ -55,15 +55,34 @@ This document tracks team syncs, sprint planning sessions, and mentor check-ins 
 
 ## Mentor Check-in Ledger
 
-### Initial Mentor Sync
+### [2026-10-21] - Initial Mentor Sync
 - **Attendees:** NineLives.exe Team, Course Mentor
 - **Objective:** Scope validation and architectural sign-off for Demo 1.
 - **Mentor Feedback:**
-  - Approved tech stack (Spring Boot 3, Angular, PostgreSQL 17).
+  - Approved tech stack (Spring Boot 4.1, Angular, PostgreSQL 17).
   - Recommended focusing initial demo on core announcement and photo workflows.
 - **Action Items:**
   - [x] Set up repository, guidelines, and ADRs (@Tudor)
   - [x] Configure PostgreSQL and Flyway migrations (@Matei)
-  - [ ] Implement initial announcement endpoints (@Antonia)
-  - [ ] Implement photo handling service (@Patrick)
-  - [ ] Implement poster PDF export prototype (@Alexandru)
+  - [x] Implement initial announcement endpoints (@Antonia)
+  - [x] Implement photo handling service (@Patrick)
+  - [x] Implement poster PDF export prototype (@Alexandru)
+
+---
+
+### [2026-11-04] - Mentor Check-in & Sprint 1 Review
+- **Attendees:** NineLives.exe Team, Course Mentor
+- **Objective:** Review completed backend deliverables (announcements, photos, posters), verify automated test coverage (backend 63 tests, frontend 26 tests), and align project documentation.
+- **Key Discussion Points:**
+  - Backend endpoints fully implemented and verified via automated test suites (95.7% instruction coverage on backend, 97.7% on frontend).
+  - Poster generation prototype completed using DejaVu Sans for Romanian diacritics; gracefully renders without image when none is attached.
+  - Frontend list connected to live backend; announcement creation form actively being built.
+  - Completed thorough documentation audit to eliminate outdated references (mock data, adoptions, Jasmine/Karma) and accurately align with current schema and error handling.
+- **Decisions Made:**
+  - Prioritize frontend announcement form completion and photo upload component integration for the upcoming Demo 1 milestone.
+  - Keep documentation updated in lockstep with feature PRs.
+- **Action Items:**
+  - [ ] Complete frontend announcement creation form (@Victor)
+  - [ ] Integrate photo upload component in frontend (@Luca)
+  - [ ] Add end-user usage guide with screenshots once form is merged (@Tudor)
+  - [ ] Execute manual test scenarios for announcement creation and edge cases (@Jessica)

@@ -1,7 +1,7 @@
 # System Architecture
 
 ## 1. System Overview
-SafePaws is a collaborative web-based platform designed to assist pet owners and communities in tracking, reporting, and reuniting lost pets, as well as managing adoption announcements.
+SafePaws is a collaborative web-based platform designed to assist pet owners and communities in tracking, reporting, and reuniting lost and found pets.
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TD
         UI["Angular SPA\n(Components, Services, Reactive Forms)"]
     end
 
-    subgraph AppTier["Application Tier (Spring Boot 3 / 4)"]
+    subgraph AppTier["Application Tier (Spring Boot 4.1)"]
         Controller["REST Controllers\n(Request Validation & HTTP Mapping)"]
         OpenAPI["SpringDoc OpenAPI\n(/swagger-ui.html & /v3/api-docs)"]
         Cors["CorsConfig\n(CORS Registry & Location Header)"]
@@ -136,9 +136,8 @@ safepaws/
 │       │   ├── pages/                    # Views/pages (AnnouncementList, AnnouncementForm)
 │       │   ├── components/               # Reusable UI elements (AnnouncementCard, Header)
 │       │   ├── services/                 # HTTP services calling the backend
-│       │   ├── models/                   # TypeScript interfaces (Announcement, Photo)
-│       │   └── shared/                   # Shared components, directives, pipes
-│       └── environments/                 # Environment configuration (Backend API URLs, mock flags)
+│       │   └── models/                   # TypeScript interfaces (Announcement, Photo)
+│       └── environments/                 # Backend API base URL configuration
 ├── docs/                                 # Project documentation
 ├── docker-compose.yml                    # Starts PostgreSQL 17 database
 └── README.md                             # Project overview

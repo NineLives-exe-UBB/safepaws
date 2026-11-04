@@ -6,10 +6,10 @@ How SafePaws is tested: automated tests, manual test scenarios and how to report
 
 Both parts fail the build when coverage is under 70%.
 
-| Part | Command | What it needs | Coverage on 3 Nov |
+| Part | Command | What it needs | Coverage |
 |---|---|---|---|
-| backend | `cd backend && ./mvnw verify` | Docker running (the repository test starts a PostgreSQL with Testcontainers) | 95.7% instructions, 34 tests |
-| frontend | `cd frontend && npm run test:coverage` | `npm install` done once | 97.7% statements, 24 tests |
+| backend | `cd backend && ./mvnw verify` | Docker running (the repository test starts a PostgreSQL with Testcontainers) | 95.7% instructions, 63 tests |
+| frontend | `cd frontend && npm run test:coverage` | `npm install` done once | 97.7% statements, 26 tests |
 
 The backend threshold is in `pom.xml` (jacoco, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`). Both run on every pull request through GitHub Actions (`.github/workflows/ci.yml`), together with a secret scan and a Flyway migration guard.
 
@@ -23,9 +23,9 @@ Where the tests live:
 1. `cp .env.example .env` and set a password, then `docker compose up -d`
 2. `cd backend && ./mvnw spring-boot:run`, wait for `Started SafepawsApplication`
 3. API is at `http://localhost:8080`, Swagger UI at `http://localhost:8080/swagger-ui.html`
-4. frontend: `cd frontend && npm start -- --configuration production`, then open `http://localhost:4200`
+4. frontend: `cd frontend && npm start`, then open `http://localhost:4200`
 
-Plain `npm start` uses **mock data** (6 fake announcements, no backend call). Use the production configuration above to test against the real API.
+The frontend connects directly to the backend at `http://localhost:8080`.
 
 Test data comes from `V2__test_data.sql`: 14 announcements (8 LOST, 6 FOUND, 3 RESOLVED, 3 without coordinates, 6 without pet name) and 2 photos (Mitzi, id 1 and Rex, id 2). To reset it: `docker compose down -v`, then start again.
 
@@ -59,7 +59,7 @@ Endpoint `POST /announcements`. Page `/announcements/new` is still a placeholder
 
 ### B. Photos
 
-Endpoints `POST /announcements/{id}/photos` (multipart, field `files`, merged in PR #8) and `GET /photos/{id}` (not yet). Limits: only `image/jpeg` and `image/png`, max 5 MB per file (`413`), 25 MB per request, empty file and empty request rejected with `400`, one main photo per announcement.
+Endpoints `POST /announcements/{id}/photos` (multipart, field `files`) and `GET /photos/{id}`. Limits: only `image/jpeg` and `image/png`, max 5 MB per file (`413`), 25 MB per request, empty file and empty request rejected with `400`, one main photo per announcement.
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
@@ -67,11 +67,11 @@ Endpoints `POST /announcements/{id}/photos` (multipart, field `files`, merged in
 | B2 | multiple photos | upload 3 files in one request | `201`, 3 photos, first `isMain: true`, others `false` | ready |
 | B3 | second upload | upload again to an announcement that already has a main photo | new photos have `isMain: false`, main stays the same | ready |
 | B4 | not an image | upload a `.pdf` or `.txt` | `400` with a clear message, nothing stored in `photo` | ready |
-| B5 | too large | upload a 6 MB jpeg | rejected (`400` or `413`), standard error format, nothing stored | ready |
+| B5 | too large | upload a 6 MB jpeg | rejected (`413`), standard error format, nothing stored | ready |
 | B6 | unknown announcement | upload to `/announcements/999/photos` | `404` | ready |
-| B7 | fetch photo | `GET /photos/1` (Mitzi) | `200`, `Content-Type: image/jpeg`, the image renders in `<img>` | blocked |
-| B8 | unknown photo | `GET /photos/999` | `404` | blocked |
-| B9 | photos in announcement | after B1, `GET /announcements/3` and `GET /announcements` | both include the photo list; the card shows the main photo instead of `No photo` | blocked |
+| B7 | fetch photo | `GET /photos/1` (Mitzi) | `200`, `Content-Type: image/jpeg`, the image renders in `<img>` | ready |
+| B8 | unknown photo | `GET /photos/999` | `404` | ready |
+| B9 | photos in announcement | after B1, `GET /announcements/3` and `GET /announcements` | both include the photo list; the card shows the main photo instead of `No photo` | ready |
 | B10 | form upload | pick one, then several photos in the form | preview shown, after submit the card has the photo | blocked (form) |
 
 ### C. Announcements list
@@ -94,17 +94,15 @@ Endpoint `GET /announcements/{id}/poster`, button `Download poster` on each card
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| D1 | download | click `Download poster` on Mitzi | a PDF downloads, `Content-Type: application/pdf`, opens without errors | blocked |
+| D1 | download | click `Download poster` on Mitzi | a PDF downloads, `Content-Type: application/pdf`, opens without errors | ready |
 | D2 | content | open the PDF | shows main photo, LOST or FOUND, species, pet name, color and distinctive marks, area, event date, contact name and phone, a QR code | blocked |
 | D3 | QR code | scan the QR with a phone | opens the announcement page for that id | blocked |
-| D4 | no photo | poster for an announcement without photos (id 3) | still generates, placeholder instead of photo | blocked |
-| D5 | no pet name | poster for a FOUND announcement without name | no empty `Name:` line and no `null` in the PDF | blocked |
-| D6 | unknown id | `GET /announcements/999/poster` | `404` in the standard error format | blocked |
+| D4 | no photo | poster for an announcement without photos (id 3) | still generates, without a photo | ready |
+| D5 | no pet name | poster for a FOUND announcement without name | no empty `Name:` line and no `null` in the PDF | ready |
+| D6 | unknown id | `GET /announcements/999/poster` | `404` in the standard error format | ready |
 
-## 4. Known issues (3 Nov)
+## 4. Known issues
 
-- `docs/api.md` describes a different API (`/api/v1`, JWT, `/pets`). The API contract from the team rules is the correct one.
-- `docs/usage-guide.md` mentions `application.yml` and creating the database by hand; the real setup is `application.properties` and `docker compose`.
 - `contactPhone` is returned in every response. Accepted for now, to be hidden once messaging exists.
 
 ## 5. Reporting bugs
