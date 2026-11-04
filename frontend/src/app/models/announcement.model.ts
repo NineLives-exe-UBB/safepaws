@@ -1,4 +1,3 @@
-
 import { Photo } from './photo.model';
 
 export type AnnouncementType = 'LOST' | 'FOUND';

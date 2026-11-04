@@ -1,6 +1,9 @@
-
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
+import { Announcement, AnnouncementRequest } from '../../models/announcement.model';
+import { Photo } from '../../models/photo.model';
+import { AnnouncementService } from '../../services/announcement.service';
 import { AnnouncementForm } from './announcement-form';
 
 describe('AnnouncementForm', () => {
@@ -27,14 +30,11 @@ describe('AnnouncementForm', () => {
   });
 
   it('should show the page title', () => {
-    expect(compiled.querySelector('h1')?.textContent)
-      .toContain('Post an announcement');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Post an announcement');
   });
 
   it('should have LOST selected by default', () => {
-    const lostRadio = compiled.querySelector(
-      'input[value="LOST"]',
-    ) as HTMLInputElement;
+    const lostRadio = compiled.querySelector('input[value="LOST"]') as HTMLInputElement;
 
     expect(lostRadio.checked).toBe(true);
   });
@@ -63,12 +63,45 @@ describe('AnnouncementForm', () => {
     const controls = component['form'].controls;
 
     expect(controls.species.hasError('required')).toBe(true);
-    expect(controls.breed.hasError('required')).toBe(true);
-    expect(controls.color.hasError('required')).toBe(true);
     expect(controls.eventDate.hasError('required')).toBe(true);
     expect(controls.area.hasError('required')).toBe(true);
     expect(controls.contactName.hasError('required')).toBe(true);
     expect(controls.contactPhone.hasError('required')).toBe(true);
+  });
+
+  it('should keep breed and color optional', () => {
+    const controls = component['form'].controls;
+
+    expect(controls.breed.valid).toBe(true);
+    expect(controls.color.valid).toBe(true);
+  });
+
+  it('should accept a color with a comma', () => {
+    const color = component['form'].controls.color;
+
+    color.setValue('Grey, white paws');
+
+    expect(color.valid).toBe(true);
+  });
+
+  it('should reject an event date in the future', () => {
+    const eventDate = component['form'].controls.eventDate;
+
+    eventDate.setValue('2999-01-01T10:00');
+    expect(eventDate.hasError('futureDate')).toBe(true);
+
+    eventDate.setValue('2026-10-30T18:00');
+    expect(eventDate.valid).toBe(true);
+  });
+
+  it('should reject blank required text', () => {
+    const controls = component['form'].controls;
+
+    controls.area.setValue('   ');
+    controls.contactName.setValue('   ');
+
+    expect(controls.area.valid).toBe(false);
+    expect(controls.contactName.valid).toBe(false);
   });
 
   it('should allow the pet name to be empty', () => {
@@ -78,8 +111,7 @@ describe('AnnouncementForm', () => {
   it('should reject a pet name longer than 50 characters', () => {
     component['form'].controls.petName.setValue('A'.repeat(51));
 
-    expect(component['form'].controls.petName.hasError('maxlength'))
-      .toBe(true);
+    expect(component['form'].controls.petName.hasError('maxlength')).toBe(true);
   });
 
   it('should reject invalid phone numbers', () => {
@@ -123,9 +155,7 @@ describe('AnnouncementForm', () => {
     controls.contactPhone.setValue('0712345678');
 
     controls.species.markAsTouched();
-    component['selectedFiles'].set([
-      new File(['photo'], 'cat.png', { type: 'image/png' }),
-    ]);
+    component['selectedFiles'].set([new File(['photo'], 'cat.png', { type: 'image/png' })]);
     component['errorMessage'].set('Previous error');
     component['successMessage'].set('Previous success');
 
@@ -156,5 +186,90 @@ describe('AnnouncementForm', () => {
 
     expect(component['selectedFiles']()).toHaveLength(1);
     expect(component['selectedFiles']()[0].name).toBe('cat2.png');
+  });
+
+  describe('submitting', () => {
+    const created = { id: 15 } as Announcement;
+    const photo = new File(['photo'], 'cat.png', { type: 'image/png' });
+    let sentAnnouncements: AnnouncementRequest[];
+    let uploads: number[];
+
+    beforeEach(() => {
+      sentAnnouncements = [];
+      uploads = [];
+
+      const service = TestBed.inject(AnnouncementService);
+      service.create = (announcement) => {
+        sentAnnouncements.push(announcement);
+        return of(created);
+      };
+      service.uploadPhotos = (id) => {
+        uploads.push(id);
+        return of([] as Photo[]);
+      };
+
+      component['form'].patchValue({
+        species: 'CAT',
+        eventDate: '2026-10-30T18:00',
+        area: ' Mănăștur ',
+        contactName: 'Ana Pop',
+        contactPhone: '0712345678',
+      });
+    });
+
+    it('should send empty optional fields as missing, not as empty text', () => {
+      component['onSubmit']();
+
+      const sent = sentAnnouncements[0];
+      expect(sent.area).toBe('Mănăștur');
+      expect(sent.petName).toBeUndefined();
+      expect(sent.breed).toBeUndefined();
+      expect(sent.color).toBeUndefined();
+      expect(sent.distinctiveMarks).toBeUndefined();
+      expect(sent.latitude).toBeUndefined();
+      expect(sent.longitude).toBeUndefined();
+    });
+
+    it('should not send an invalid form', () => {
+      component['form'].controls.area.setValue('');
+
+      component['onSubmit']();
+
+      expect(sentAnnouncements).toHaveLength(0);
+    });
+
+    it('should upload the selected photos to the new announcement', () => {
+      component['selectedFiles'].set([photo]);
+
+      component['onSubmit']();
+
+      expect(uploads).toEqual([15]);
+      expect(component['successMessage']()).toContain('uploaded successfully');
+    });
+
+    it('should show an error when the announcement cannot be created', () => {
+      TestBed.inject(AnnouncementService).create = () => throwError(() => new Error('failed'));
+
+      component['onSubmit']();
+
+      expect(component['errorMessage']()).toContain('Could not create');
+      expect(component['submitting']()).toBe(false);
+    });
+
+    it('should not create a second announcement when retrying a failed photo upload', () => {
+      const service = TestBed.inject(AnnouncementService);
+      const workingUpload = service.uploadPhotos;
+      service.uploadPhotos = () => throwError(() => new Error('failed'));
+      component['selectedFiles'].set([photo]);
+
+      component['onSubmit']();
+      expect(component['errorMessage']()).toContain('could not be uploaded');
+
+      service.uploadPhotos = workingUpload;
+      component['onSubmit']();
+
+      expect(sentAnnouncements).toHaveLength(1);
+      expect(uploads).toEqual([15]);
+    });
   });
 });
