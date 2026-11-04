@@ -7,7 +7,7 @@ This document records the architectural, technological, and procedural decisions
 ## ADR 001: Backend Architecture — Java & Spring Boot
 - **Status:** Accepted
 - **Context:** The application needs a robust, scalable backend framework with strong typing, dependency injection, and native relational database support.
-- **Decision:** Use Java (LTS) with Spring Boot (REST API, Spring Data JPA, Spring Security).
+- **Decision:** Use Java (LTS) with Spring Boot (REST API, Spring Data JPA; Spring Security planned for Milestone 2).
 - **Consequences:** Reliable enterprise ecosystem with mature tooling; requires strict modular layering (Controller, Service, Repository).
 
 ---
@@ -22,7 +22,7 @@ This document records the architectural, technological, and procedural decisions
 
 ## ADR 003: Database Engine — PostgreSQL
 - **Status:** Accepted
-- **Context:** SafePaws stores structured relational entities (users, pet profiles, announcements, geographic locations) requiring ACID compliance and schema enforcement.
+- **Context:** SafePaws stores structured relational entities (announcements with embedded location attributes, and photo attachments) requiring ACID compliance and schema enforcement.
 - **Decision:** Use PostgreSQL as the relational database engine.
 - **Consequences:** Solid transaction guarantees, performant indexing, and native compatibility with Spring Data JPA and Hibernate.
 
@@ -41,7 +41,7 @@ This document records the architectural, technological, and procedural decisions
 ## ADR 005: Quality Assurance — Minimum 70% Test Coverage
 - **Status:** Accepted
 - **Context:** Ensure code reliability and prevent regressions across sprint deliverables.
-- **Decision:** Enforce a minimum 70% automated test coverage requirement on PRs (JUnit 5 and Mockito for backend, Jasmine and Karma for frontend).
+- **Decision:** Enforce a minimum 70% automated test coverage requirement on PRs (JUnit 5 and Mockito for backend, Vitest for frontend).
 - **Consequences:** PRs that lower test coverage below the threshold will not be merged.
 
 ---

@@ -11,6 +11,7 @@ We follow a feature-branch workflow derived from `main`:
   - `fix/` — Bug fixes (e.g., `fix/photo-upload-size`)
   - `docs/` — Documentation updates (e.g., `docs/database-schema`)
   - `test/` — Adding or refactoring tests (e.g., `test/announcement-api`)
+  - `chore/` — Maintenance, dependencies, tooling, or refactoring without functional changes (e.g., `chore/backend-cleanup`)
 - **Lifecycle:** Always branch from the latest `main`. Once a Pull Request is approved and merged, delete the branch immediately.
 
 ---
@@ -22,7 +23,10 @@ We follow a feature-branch workflow derived from `main`:
 ---
 
 ## 3. Pull Requests (PR) Protocol
-- **Sync before PR:** Pull the latest changes from `main` into your local branch before opening a PR. Verify that the build and tests pass locally.
+- **Sync before PR:** Pull the latest changes from `main` into your local branch before opening a PR.
+- **Run tests before opening PR:** Always run all test suites locally to ensure zero regressions:
+  - Backend: `cd backend && ./mvnw verify`
+  - Frontend: `cd frontend && npm run test:coverage`
 - **PR Description:** Clearly describe what was changed, why, and how to verify it.
 - **Review Requirements:**
   - Minimum of 1 peer approval required.
@@ -39,7 +43,8 @@ We follow a feature-branch workflow derived from `main`:
   - Remove dead, commented-out code before opening a PR.
   - Write comments only when explaining complex domain logic, not self-evident code.
   - Remove all debugging artifacts before committing (no leftover `System.out.println()`, `console.log()`, or debug dumps).
-  - **Zero Credentials Policy:** Never hardcode passwords, API tokens, database credentials, or secret keys. Use environment variables and configuration files (`.env`, `application.yml` profiles excluded via `.gitignore`).
+  - **No Build Artifacts in Git:** Never commit build artifacts, compiled binaries, or temporary directories (`target/`, `node_modules/`, `dist/`, `coverage/`, `.class`). Verify with `git status` that only intended source files are staged.
+  - **Zero Credentials Policy:** Never hardcode passwords, API tokens, database credentials, or secret keys. Use environment variables and configuration files (`.env`, `application.properties` profiles excluded via `.gitignore`).
 - **Formatting:** Format all modified files before committing:
   - **IntelliJ IDEA (Backend):** `Ctrl + Alt + L` (Windows/Linux) or `Cmd + Option + L` (macOS).
   - **VS Code (Frontend):** `Shift + Alt + F` (Windows/Linux) or `Shift + Option + F` (macOS).

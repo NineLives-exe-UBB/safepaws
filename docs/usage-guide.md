@@ -1,8 +1,11 @@
 # Usage & Setup Guide
 
+> [!NOTE]
+> **End-User Usage Guide:** An interactive user guide covering end-user journeys (how to post a lost/found announcement, navigate the interactive pet feed, and download printable posters, accompanied by UI screenshots) will be added once the frontend form component is finalized. The instructions below describe local developer environment setup, execution, and testing.
+
 ## 1. Prerequisites
 - **Java:** JDK 21 (Required by `pom.xml` and CI)
-- **Node.js:** Node 22 LTS and npm (>= 10 / 11)
+- **Node.js:** Node.js 22.22.3+ or 24.15.0+ and npm
 - **Database / Containers:** Docker Desktop & Docker Compose (or PostgreSQL 17)
 - **Git**
 
@@ -77,16 +80,10 @@ PostgreSQL 17 runs containerized via Docker Compose.
    ```
 
 3. Start the local development server:
-   - **With Mock Data (Default dev mode):**
-     ```bash
-     npm start
-     ```
-     *(Uses local mock data service; useful when backend is not running).*
-   - **With Live Backend Connection (Production config):**
-     ```bash
-     npm start -- --configuration production
-     ```
-     *(Connects directly to the Spring Boot REST API at `http://localhost:8080`).*
+   ```bash
+   npm start
+   ```
+   *(Connects directly to the Spring Boot REST API at `http://localhost:8080`; requires the backend to be running).*
 
 4. Access the web interface at `http://localhost:4200`.
 

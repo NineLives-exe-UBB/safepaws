@@ -1,17 +1,17 @@
 # SafePaws 🐾
 
-Developed by **NineLives.exe** for the Collectiv Project course at Babeș-Bolyai University.
+Developed by **NineLives.exe** for the Collective Project course at Babeș-Bolyai University.
 
-SafePaws is a collaborative web platform designed to help communities report, track, and reunite lost pets, as well as streamline pet adoptions.
+SafePaws is a collaborative web platform designed to help communities report, track, and reunite lost and found pets.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Java 17+ / 21, Spring Boot (REST API, Spring Data JPA, Spring Security)
-- **Frontend:** Angular, TypeScript, HTML5 / SCSS
-- **Database:** PostgreSQL
-- **Testing & Quality:** JUnit 5, Mockito, Jasmine / Karma (Strict 70%+ code coverage requirement)
+- **Backend:** Java 21, Spring Boot (REST API, Spring Data JPA; Spring Security planned for Milestone 2)
+- **Frontend:** Angular, TypeScript, HTML5 / CSS
+- **Database & Migrations:** PostgreSQL, Flyway, Docker Compose
+- **Testing & Quality:** JUnit 5, Mockito, Testcontainers, Vitest (Strict 70%+ code coverage requirement)
 - **Tooling:** IntelliJ IDEA (Backend), VS Code (Frontend), Git, Trello
 
 ---
@@ -50,11 +50,10 @@ All design records, specifications, and project management files are organized i
 - [Architecture Decisions (ADRs)](./docs/decisions.md) — Tech stack choices, testing thresholds, and architectural rationale.
 - [System Architecture](./docs/architecture.md) — High-level architecture, module organization, and security structure.
 - [Database Design](./docs/database.md) — Domain entities, relationships, and migration plans.
-- [API Specification](./docs/api.md) — REST endpoints, authentication protocols, and error payload definitions.
-- [Testing Strategy](./docs/testing.md) — Test suites, framework setup, and 70% coverage requirements.
+- [API Specification](./docs/api.md) — REST endpoints, request/response models, and standard error formats.
+- [Testing & QA](./docs/testing.md) — Automated tests, coverage thresholds (70%+), manual test scenarios, and bug reporting.
 - [Usage & Setup Guide](./docs/usage-guide.md) — Local environment setup and execution instructions.
 - [Meeting Notes](./docs/meetings.md) — Team standups and mentor review records.
-- [Testing](./docs/testing.md) — Automated tests, manual test scenarios, and bug reporting.
 
 ---
 
