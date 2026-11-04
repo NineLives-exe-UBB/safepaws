@@ -1,25 +1,18 @@
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
-import { Announcement } from '../../models/announcement.model';
+import { AnnouncementSummary } from '../../models/announcement.model';
 import { AnnouncementCard } from './announcement-card';
 
 describe('AnnouncementCard', () => {
-  const announcement: Announcement = {
+  const announcement: AnnouncementSummary = {
     id: 15,
     type: 'LOST',
-    species: 'Cat',
-    breed: 'European',
-    color: 'Grey with white paws',
-    distinctiveMarks: 'Red collar',
-    eventDate: '2026-10-30T18:00:00',
-    latitude: 46.7712,
-    longitude: 23.6236,
+    petName: 'Misi',
+    species: 'CAT',
     area: 'Mănăștur, Cluj-Napoca',
-    contactName: 'Ana Pop',
-    contactPhone: '0712345678',
+    eventDate: '2026-10-30T18:00:00',
     status: 'ACTIVE',
-    createdAt: '2026-11-01T14:30:00',
     photos: [
       { id: 3, url: '/photos/3', isMain: false },
       { id: 4, url: '/photos/4', isMain: true },
@@ -28,7 +21,7 @@ describe('AnnouncementCard', () => {
 
   let fixture: ComponentFixture<AnnouncementCard>;
 
-  async function render(value: Announcement): Promise<HTMLElement> {
+  async function render(value: AnnouncementSummary): Promise<HTMLElement> {
     fixture = TestBed.createComponent(AnnouncementCard);
     fixture.componentRef.setInput('announcement', value);
     await fixture.whenStable();
@@ -48,6 +41,24 @@ describe('AnnouncementCard', () => {
     expect(compiled.querySelector('.species')?.textContent).toContain('Cat');
     expect(compiled.querySelector('.area')?.textContent).toContain('Mănăștur, Cluj-Napoca');
     expect(compiled.querySelector('.date')?.textContent).toContain('30 Oct 2026, 18:00');
+  });
+
+  it('should show the pet name when there is one', async () => {
+    const compiled = await render(announcement);
+
+    expect(compiled.querySelector('.pet-name')?.textContent).toContain('Misi');
+  });
+
+  it('should not show a pet name when there is none', async () => {
+    const compiled = await render({ ...announcement, petName: null });
+
+    expect(compiled.querySelector('.pet-name')).toBeNull();
+  });
+
+  it('should show a readable species name', async () => {
+    const compiled = await render({ ...announcement, species: 'OTHER' });
+
+    expect(compiled.querySelector('.species')?.textContent).toContain('Other');
   });
 
   it('should show the LOST label', async () => {

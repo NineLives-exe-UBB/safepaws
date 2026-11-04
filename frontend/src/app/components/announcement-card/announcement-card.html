@@ -1,7 +1,7 @@
 <article class="card">
   <div class="photo">
     @if (mainPhotoUrl(); as photoUrl) {
-      <img [src]="photoUrl" [alt]="announcement().species + ' photo'" />
+      <img [src]="photoUrl" [alt]="speciesLabel() + ' photo'" />
     } @else {
       <div class="no-photo">No photo</div>
     }
@@ -14,7 +14,10 @@
     </span>
   </div>
   <div class="details">
-    <h2 class="species">{{ announcement().species }}</h2>
+    <h2 class="species">{{ speciesLabel() }}</h2>
+    @if (announcement().petName) {
+      <p class="pet-name">{{ announcement().petName }}</p>
+    }
     <p class="area">{{ announcement().area }}</p>
     <p class="date">{{ announcement().eventDate | date: 'dd MMM yyyy, HH:mm' }}</p>
     <a class="poster-button" [href]="posterUrl()" download>Download poster</a>

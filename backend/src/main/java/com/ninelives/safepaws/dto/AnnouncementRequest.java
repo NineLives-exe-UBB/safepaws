@@ -60,7 +60,9 @@ public record AnnouncementRequest(
         String contactPhone
 ) {
 
-    /** A map pin needs both coordinates, so they are sent together or not at all. */
+    /**
+     * A map pin needs both coordinates, so they are sent together or not at all.
+     */
     @JsonIgnore
     @AssertTrue(message = "Latitude and longitude must be provided together")
     public boolean isCoordinates() {

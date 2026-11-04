@@ -1,11 +1,9 @@
-
 package com.ninelives.safepaws.controller;
 
 import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
-import com.ninelives.safepaws.service.PhotoService;
 import com.ninelives.safepaws.model.Photo;
-
+import com.ninelives.safepaws.service.PhotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -23,9 +21,15 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PhotoController.class)
 class PhotoControllerTest {
@@ -153,8 +157,8 @@ class PhotoControllerTest {
     }
 
 
-        @Test
-        void getExistingPhotoReturns200() throws Exception {
+    @Test
+    void getExistingPhotoReturns200() throws Exception {
         byte[] image = {
                 (byte) 0xFF, (byte) 0xD8, (byte) 0xFF
         };
@@ -172,10 +176,10 @@ class PhotoControllerTest {
                 .andExpect(content().bytes(image));
 
         verify(photoService).getPhoto(1L);
-        }
+    }
 
-        @Test
-        void getNonexistentPhotoReturns404() throws Exception {
+    @Test
+    void getNonexistentPhotoReturns404() throws Exception {
         when(photoService.getPhoto(999L))
                 .thenThrow(new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -188,6 +192,6 @@ class PhotoControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"));
 
         verify(photoService).getPhoto(999L);
-        }
+    }
 
 }

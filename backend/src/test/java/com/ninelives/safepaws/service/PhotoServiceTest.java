@@ -1,4 +1,3 @@
-
 package com.ninelives.safepaws.service;
 
 import com.ninelives.safepaws.dto.PhotoResponse;
@@ -7,7 +6,6 @@ import com.ninelives.safepaws.model.Announcement;
 import com.ninelives.safepaws.model.Photo;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoRepository;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,7 +24,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PhotoServiceTest {
@@ -319,8 +321,8 @@ class PhotoServiceTest {
     }
 
 
-        @Test
-        void getExistingPhoto() {
+    @Test
+    void getExistingPhoto() {
         Photo photo = new Photo(
                 new Announcement(), JPEG, "image/jpeg", "cat.jpg", true
         );
@@ -333,10 +335,10 @@ class PhotoServiceTest {
         assertThat(result).isSameAs(photo);
 
         verify(photoRepository).findById(1L);
-        }
+    }
 
-        @Test
-        void getNonexistentPhoto() {
+    @Test
+    void getNonexistentPhoto() {
         when(photoRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
@@ -345,6 +347,6 @@ class PhotoServiceTest {
                 .hasMessageContaining("Photo not found with id: 999");
 
         verify(photoRepository).findById(999L);
-        }
+    }
 
 }

@@ -8,6 +8,7 @@ import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.service.AnnouncementService;
+import com.ninelives.safepaws.service.PosterService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -59,6 +60,9 @@ class AnnouncementControllerTest {
 
     @MockitoBean
     private AnnouncementService announcementService;
+
+    @MockitoBean
+    private PosterService posterService;
 
     private static AnnouncementResponse response(Long id) {
         return new AnnouncementResponse(id, AnnouncementType.LOST, Species.DOG, "Oscar", "Golden Retriever",
@@ -317,5 +321,5 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
                     .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(containsString("secret"))));
         }
-        }
+    }
 }

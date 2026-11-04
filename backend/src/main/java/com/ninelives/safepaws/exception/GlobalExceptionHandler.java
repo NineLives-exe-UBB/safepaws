@@ -28,7 +28,9 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    /** One or more fields broke a validation rule of the request DTO. */
+    /**
+     * One or more fields broke a validation rule of the request DTO.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         List<ErrorResponse.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
@@ -38,7 +40,9 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Some fields are invalid", fieldErrors);
     }
 
-    /** The body is not valid JSON, or a value has the wrong type (e.g. an unknown enum value or a bad date). */
+    /**
+     * The body is not valid JSON, or a value has the wrong type (e.g. an unknown enum value or a bad date).
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
         if (ex.getCause() instanceof InvalidFormatException invalid && !invalid.getPath().isEmpty()) {
@@ -60,7 +64,9 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());
     }
 
-    /** A path or query parameter has the wrong type, e.g. {@code /announcements/abc}. */
+    /**
+     * A path or query parameter has the wrong type, e.g. {@code /announcements/abc}.
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return build(HttpStatus.BAD_REQUEST, "Some fields are invalid",
