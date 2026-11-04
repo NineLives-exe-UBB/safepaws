@@ -1,5 +1,5 @@
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -8,7 +8,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   AnnouncementRequest,
   Species,
@@ -21,14 +21,18 @@ import { AnnouncementService } from '../../services/announcement.service';
   styleUrl: './announcement-form.css',
   templateUrl: './announcement-form.html',
 })
-export class AnnouncementForm {
+export class AnnouncementForm implements OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly announcementService = inject(AnnouncementService);
+  private readonly router = inject(Router);
 
   protected readonly selectedFiles = signal<File[]>([]);
+  protected readonly previewUrls = signal<string[]>([]);
   protected readonly submitting = signal(false);
   protected readonly successMessage = signal('');
   protected readonly errorMessage = signal('');
+
+  private redirectTimeout?: ReturnType<typeof setTimeout>;
 
   private readonly coordinatesValidator: ValidatorFn = (
     control: AbstractControl,
@@ -105,6 +109,8 @@ export class AnnouncementForm {
   protected onTypeChange(): void {
     const selectedType = this.form.controls.type.value;
 
+    this.clearPreviews();
+
     this.form.reset({
       type: selectedType,
       species: '',
@@ -164,9 +170,18 @@ export class AnnouncementForm {
       }
     }
 
+    const newPreviewUrls = validFiles.map((file) =>
+      URL.createObjectURL(file),
+    );
+
     this.selectedFiles.update((currentFiles) => [
       ...currentFiles,
       ...validFiles,
+    ]);
+
+    this.previewUrls.update((currentUrls) => [
+      ...currentUrls,
+      ...newPreviewUrls,
     ]);
 
     this.errorMessage.set(errors.join(' '));
@@ -174,9 +189,43 @@ export class AnnouncementForm {
   }
 
   protected removeFile(index: number): void {
+    const urls = this.previewUrls();
+    const urlToRemove = urls[index];
+
+    if (urlToRemove) {
+      URL.revokeObjectURL(urlToRemove);
+    }
+
     this.selectedFiles.update((files) =>
       files.filter((_, i) => i !== index),
     );
+
+    this.previewUrls.update((currentUrls) =>
+      currentUrls.filter((_, i) => i !== index),
+    );
+  }
+
+  private clearPreviews(): void {
+    this.previewUrls().forEach((url) => URL.revokeObjectURL(url));
+    this.previewUrls.set([]);
+  }
+
+  private redirectToAnnouncements(): void {
+    if (this.redirectTimeout) {
+      clearTimeout(this.redirectTimeout);
+    }
+
+    this.redirectTimeout = setTimeout(() => {
+      this.router.navigate(['/announcements']);
+    }, 700);
+  }
+
+  ngOnDestroy(): void {
+    this.clearPreviews();
+
+    if (this.redirectTimeout) {
+      clearTimeout(this.redirectTimeout);
+    }
   }
 
   protected onSubmit(): void {
@@ -222,6 +271,7 @@ export class AnnouncementForm {
           this.successMessage.set(
             'Your announcement was created successfully!',
           );
+          this.redirectToAnnouncements();
           return;
         }
 
@@ -233,6 +283,7 @@ export class AnnouncementForm {
               this.successMessage.set(
                 'Your announcement and photos were uploaded successfully!',
               );
+              this.redirectToAnnouncements();
             },
             error: () => {
               this.submitting.set(false);

@@ -305,13 +305,22 @@
         />
       </div>
 
-      @if (selectedFiles().length > 0) {
-        <div class="selected-files">
-          <h3>Selected photos ({{ selectedFiles().length }})</h3>
+        
+  @if (selectedFiles().length > 0) {
+    <div class="selected-files">
+      <h3>Selected photos ({{ selectedFiles().length }})</h3>
 
-          @for (file of selectedFiles(); track $index; let i = $index) {
-            <div class="file-item">
-              <span>{{ file.name }}</span>
+      <div class="photo-preview-grid">
+        @for (file of selectedFiles(); track $index; let i = $index) {
+          <div class="photo-preview-item">
+            <img
+              [src]="previewUrls()[i]"
+              [alt]="'Preview of ' + file.name"
+              class="photo-preview"
+            />  
+
+            <div class="photo-preview-info">
+              <span class="photo-filename">{{ file.name }}</span>
 
               <button
                 type="button"
@@ -322,9 +331,12 @@
                 Remove
               </button>
             </div>
-          }
-        </div>
-      }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
     </fieldset>
 
     <!-- Success message -->
