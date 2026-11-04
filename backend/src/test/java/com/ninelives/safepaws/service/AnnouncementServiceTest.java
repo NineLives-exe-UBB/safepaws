@@ -49,7 +49,9 @@ class AnnouncementServiceTest {
     @InjectMocks
     private AnnouncementService announcementService;
 
-    /** An announcement as it comes back from the database: id and createdAt are set by JPA. */
+    /**
+     * An announcement as it comes back from the database: id and createdAt are set by JPA.
+     */
     private static Announcement storedAnnouncement(Long id, Species species, String petName) {
         Announcement announcement = new Announcement();
         ReflectionTestUtils.setField(announcement, "id", id);

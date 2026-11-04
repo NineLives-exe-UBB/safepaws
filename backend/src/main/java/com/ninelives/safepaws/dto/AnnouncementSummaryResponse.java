@@ -6,6 +6,7 @@ import com.ninelives.safepaws.model.Species;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
 public record AnnouncementSummaryResponse(
         Long id,
         AnnouncementType type,

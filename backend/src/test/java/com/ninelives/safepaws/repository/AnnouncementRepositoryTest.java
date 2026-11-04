@@ -38,7 +38,9 @@ class AnnouncementRepositoryTest {
         announcementRepository.deleteAllInBatch();
     }
 
-    /** created_at is normally set on insert, so rows with a chosen created_at are inserted with SQL. */
+    /**
+     * created_at is normally set on insert, so rows with a chosen created_at are inserted with SQL.
+     */
     private long insertCreatedAt(String area, String createdAt) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO announcement (type, species, event_date, area, contact_name, contact_phone, created_at)

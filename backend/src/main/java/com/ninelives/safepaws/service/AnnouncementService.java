@@ -104,7 +104,7 @@ public class AnnouncementService {
                                 photo.fileSize(),
                                 photo.originalFileName(),
                                 photo.isMain(),
-                                photoUrl(photo.id()),
+                                PhotoResponse.urlFor(photo.id()),
                                 photo.uploadedAt()))
                         .toList()
         );
@@ -121,13 +121,9 @@ public class AnnouncementService {
                 announcement.getStatus(),
                 photos.stream()
                         .map(photo -> new AnnouncementSummaryResponse.Photo(
-                                photo.id(), photoUrl(photo.id()), photo.isMain()))
+                                photo.id(), PhotoResponse.urlFor(photo.id()), photo.isMain()))
                         .toList()
         );
-    }
-
-    private static String photoUrl(Long photoId) {
-        return "/photos/" + photoId;
     }
 }
 

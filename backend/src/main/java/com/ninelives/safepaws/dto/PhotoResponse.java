@@ -12,4 +12,7 @@ public record PhotoResponse(
         String url,
         LocalDateTime uploadedAt
 ) {
+    public static String urlFor(Long photoId) {
+        return "/photos/" + photoId;
+    }
 }

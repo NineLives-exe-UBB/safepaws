@@ -321,5 +321,5 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
                     .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(containsString("secret"))));
         }
-        }
+    }
 }
