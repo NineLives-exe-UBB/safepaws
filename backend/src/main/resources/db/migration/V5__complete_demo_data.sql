@@ -45,7 +45,7 @@ UPDATE announcement SET event_date = CURRENT_DATE - 2 + TIME '08:15', created_at
 UPDATE announcement SET event_date = CURRENT_DATE - 3 + TIME '19:30', created_at = CURRENT_DATE - 3 + TIME '22:45' WHERE contact_phone = '0700000008';
 UPDATE announcement SET event_date = CURRENT_DATE - 5 + TIME '14:00', created_at = CURRENT_DATE - 5 + TIME '15:10' WHERE contact_phone = '0700000009';
 UPDATE announcement SET event_date = CURRENT_DATE - 18 + TIME '09:00', created_at = CURRENT_DATE - 18 + TIME '10:30' WHERE contact_phone = '0700000010';
-UPDATE announcement SET event_date = CURRENT_DATE - 1 + TIME '17:00', created_at = CURRENT_DATE - 1 + TIME '18:25' WHERE contact_phone = '0700000011';
+UPDATE announcement SET event_date = CURRENT_DATE - 15 + TIME '17:00', created_at = CURRENT_DATE - 15 + TIME '18:25' WHERE contact_phone = '0700000011';
 UPDATE announcement SET event_date = CURRENT_DATE - 20 + TIME '11:30', created_at = CURRENT_DATE - 20 + TIME '12:00' WHERE contact_phone = '0700000012';
 UPDATE announcement SET event_date = CURRENT_DATE - 4 + TIME '07:00', created_at = CURRENT_DATE - 4 + TIME '07:45' WHERE contact_phone = '0700000013';
 UPDATE announcement SET event_date = CURRENT_DATE - 13 + TIME '13:00', created_at = CURRENT_DATE - 13 + TIME '13:20' WHERE contact_phone = '0700000014';
