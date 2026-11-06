@@ -35,6 +35,8 @@ export interface AnnouncementSummary {
   eventDate: string;
   status: AnnouncementStatus;
   photos: Photo[];
+  /** Only present when the request included the user's location. */
+  distanceKm?: number | null;
 }
 
 /** Returned by POST /announcements and GET /announcements/{id}. */

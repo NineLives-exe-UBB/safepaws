@@ -61,6 +61,20 @@ describe('AnnouncementCard', () => {
     expect(compiled.querySelector('.species')?.textContent).toContain('Other');
   });
 
+  it('should show the distance when it is known', async () => {
+    const compiled = await render({ ...announcement, distanceKm: 1.234 });
+
+    expect(compiled.querySelector('.distance')?.textContent).toContain('1.2 km away');
+  });
+
+  it('should not show a distance when it is not known', async () => {
+    const withoutDistance = await render(announcement);
+    expect(withoutDistance.querySelector('.distance')).toBeNull();
+
+    const nullDistance = await render({ ...announcement, distanceKm: null });
+    expect(nullDistance.querySelector('.distance')).toBeNull();
+  });
+
   it('should show the LOST label', async () => {
     const compiled = await render(announcement);
     const label = compiled.querySelector('.label');

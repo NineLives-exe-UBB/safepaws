@@ -22,6 +22,11 @@ export class AnnouncementCard {
 
   protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
 
+  protected readonly distanceText = computed(() => {
+    const distanceKm = this.announcement().distanceKm;
+    return distanceKm == null ? null : `${distanceKm.toFixed(1)} km away`;
+  });
+
   protected readonly posterUrl = computed(() =>
     this.announcementService.posterUrl(this.announcement().id),
   );

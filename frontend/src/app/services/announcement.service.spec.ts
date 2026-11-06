@@ -7,6 +7,7 @@ import {
   AnnouncementRequest,
   AnnouncementSummary,
 } from '../models/announcement.model';
+import { DEFAULT_FILTERS } from '../models/announcement-filters.model';
 import { AnnouncementService } from './announcement.service';
 
 describe('AnnouncementService', () => {
@@ -73,11 +74,43 @@ describe('AnnouncementService', () => {
     let result: AnnouncementSummary[] = [];
     service.getAll().subscribe((announcements) => (result = announcements));
 
-    const req = httpController.expectOne(announcementsUrl);
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
     expect(req.request.method).toBe('GET');
     req.flush([summary]);
 
     expect(result).toEqual([summary]);
+  });
+
+  it('should only ask for the default sort when no filter is set', () => {
+    service.getAll().subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.keys()).toEqual(['sort']);
+    expect(req.request.params.get('sort')).toBe('NEWEST');
+    req.flush([]);
+  });
+
+  it('should send the filters as query parameters', () => {
+    service
+      .getAll({ ...DEFAULT_FILTERS, species: 'CAT', color: 'grey', radiusKm: 5, sort: 'NEAREST' })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('species')).toBe('CAT');
+    expect(req.request.params.get('color')).toBe('grey');
+    expect(req.request.params.get('radiusKm')).toBe('5');
+    expect(req.request.params.get('sort')).toBe('NEAREST');
+    expect(req.request.params.has('type')).toBe(false);
+    req.flush([]);
+  });
+
+  it('should send the user location when it is known', () => {
+    service.getAll(DEFAULT_FILTERS, { latitude: 46.77, longitude: 23.6 }).subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('userLatitude')).toBe('46.77');
+    expect(req.request.params.get('userLongitude')).toBe('23.6');
+    req.flush([]);
   });
 
   it('should get one announcement by id', () => {

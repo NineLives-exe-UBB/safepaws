@@ -7,6 +7,12 @@ import {
   AnnouncementRequest,
   AnnouncementSummary,
 } from '../models/announcement.model';
+import {
+  AnnouncementFilters,
+  DEFAULT_FILTERS,
+  UserLocation,
+  toQueryParams,
+} from '../models/announcement-filters.model';
 import { Photo } from '../models/photo.model';
 
 @Injectable({
@@ -16,8 +22,16 @@ export class AnnouncementService {
   private readonly http = inject(HttpClient);
   private readonly announcementsUrl = `${environment.apiUrl}/announcements`;
 
-  getAll(): Observable<AnnouncementSummary[]> {
-    return this.http.get<AnnouncementSummary[]>(this.announcementsUrl);
+  getAll(
+    filters: AnnouncementFilters = DEFAULT_FILTERS,
+    location: UserLocation | null = null,
+  ): Observable<AnnouncementSummary[]> {
+    const params: Record<string, string> = { ...toQueryParams(filters), sort: filters.sort };
+    if (location) {
+      params['userLatitude'] = String(location.latitude);
+      params['userLongitude'] = String(location.longitude);
+    }
+    return this.http.get<AnnouncementSummary[]>(this.announcementsUrl, { params });
   }
 
   getById(id: number): Observable<Announcement> {

@@ -1,111 +1,205 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
+import { DebugElement } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { Observable, of, throwError } from 'rxjs';
+import { FilterBar } from '../../components/filter-bar/filter-bar';
 import { AnnouncementSummary } from '../../models/announcement.model';
+import { DEFAULT_FILTERS, UserLocation } from '../../models/announcement-filters.model';
 import { AnnouncementService } from '../../services/announcement.service';
+import { LocationService } from '../../services/location.service';
 import { AnnouncementList } from './announcement-list';
 
 describe('AnnouncementList', () => {
-  const announcements: AnnouncementSummary[] = [
-    {
-      id: 2,
-      type: 'FOUND',
-      petName: null,
-      species: 'DOG',
-      area: 'Centru, Cluj-Napoca',
-      eventDate: '2026-10-29T09:15:00',
-      status: 'ACTIVE',
-      photos: [{ id: 3, url: '/photos/3', isMain: true }],
-    },
-    {
-      id: 1,
+  const clujNapoca: UserLocation = { latitude: 46.7712, longitude: 23.6236 };
+  const summary = (id: number, eventDate: string, extra: Partial<AnnouncementSummary> = {}) =>
+    ({
+      id,
       type: 'LOST',
-      petName: 'Misi',
+      petName: null,
       species: 'CAT',
-      area: 'Mănăștur, Cluj-Napoca',
-      eventDate: '2026-10-30T18:00:00',
+      area: 'Centru, Cluj-Napoca',
+      eventDate,
       status: 'ACTIVE',
       photos: [],
-    },
+      ...extra,
+    }) as AnnouncementSummary;
+  const announcements = [
+    summary(1, '2026-10-30T18:00:00'),
+    summary(2, '2026-11-02T09:00:00', { type: 'FOUND', species: 'DOG' }),
   ];
 
-  function stubService(response: Observable<AnnouncementSummary[]>): AnnouncementService {
-    const service = TestBed.runInInjectionContext(() => new AnnouncementService());
-    service.getAll = () => response;
-    return service;
-  }
+  let getAll: ReturnType<typeof vi.fn>;
+  let harness: RouterTestingHarness;
+  let fixture: ComponentFixture<AnnouncementList>;
+  let element: HTMLElement;
 
-  async function render(
-    response: Observable<AnnouncementSummary[]>,
-  ): Promise<ComponentFixture<AnnouncementList>> {
-    await TestBed.configureTestingModule({
-      imports: [AnnouncementList],
+  async function setup(
+    options: {
+      url?: string;
+      response?: Observable<AnnouncementSummary[]>;
+      location?: Promise<UserLocation | null>;
+    } = {},
+  ): Promise<void> {
+    getAll = vi.fn().mockReturnValue(options.response ?? of(announcements));
+    TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
-        { provide: AnnouncementService, useFactory: () => stubService(response) },
+        provideRouter([{ path: 'announcements', component: AnnouncementList }]),
+        {
+          provide: AnnouncementService,
+          useValue: { getAll, photoUrl: () => '', posterUrl: () => '#' },
+        },
+        {
+          provide: LocationService,
+          useValue: { getCurrentLocation: () => options.location ?? Promise.resolve(null) },
+        },
       ],
-    }).compileComponents();
-
-    const fixture = TestBed.createComponent(AnnouncementList);
-    await fixture.whenStable();
-    return fixture;
+    });
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(options.url ?? '/announcements');
+    fixture = harness.fixture as unknown as ComponentFixture<AnnouncementList>;
+    await settle();
   }
 
-  it('should show the page title', async () => {
-    const fixture = await render(of([]));
-    const compiled = fixture.nativeElement as HTMLElement;
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+    element = fixture.nativeElement as HTMLElement;
+  }
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('Announcements');
+  const filterBar = (): DebugElement => fixture.debugElement.query(By.directive(FilterBar));
+  const cardIds = () =>
+    Array.from(element.querySelectorAll('.date')).map((date) => date.textContent?.trim());
+
+  it('should show the page title and a card for each announcement', async () => {
+    await setup();
+
+    expect(element.querySelector('h1')?.textContent).toContain('Announcements');
+    expect(element.querySelectorAll('app-announcement-card').length).toBe(2);
+    expect(element.querySelector('app-filter-bar')).toBeTruthy();
   });
 
-  it('should show a card for each announcement', async () => {
-    const fixture = await render(of(announcements));
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should ask for the default filters when the URL has none', async () => {
+    await setup();
 
-    expect(compiled.querySelectorAll('app-announcement-card').length).toBe(announcements.length);
-    expect(compiled.querySelector('.empty')).toBeNull();
+    expect(getAll).toHaveBeenCalledWith(DEFAULT_FILTERS, null);
   });
 
-  it('should sort the cards by event date, newest first', async () => {
-    const posted = (id: number, eventDate: string): AnnouncementSummary => ({
-      ...announcements[0],
-      id,
-      eventDate,
+  it('should read the filters from the URL', async () => {
+    await setup({ url: '/announcements?species=CAT&color=grey' });
+
+    expect(getAll).toHaveBeenCalledWith(
+      { ...DEFAULT_FILTERS, species: 'CAT', color: 'grey' },
+      null,
+    );
+    expect(element.querySelector<HTMLSelectElement>('#filter-species')?.value).toBe('CAT');
+    expect(element.querySelector<HTMLInputElement>('#filter-color')?.value).toBe('grey');
+  });
+
+  it('should put the filters in the URL when they change', async () => {
+    await setup();
+    filterBar().componentInstance.filtersChange.emit({
+      ...DEFAULT_FILTERS,
+      species: 'DOG',
+      area: 'Cluj',
     });
-    const fixture = await render(
-      of([
-        posted(1, '2026-10-30T18:00:00'),
-        posted(2, '2026-11-02T09:00:00'),
-        posted(3, '2026-11-01T12:00:00'),
-        posted(4, '2026-11-01T12:00:00'),
-      ]),
-    );
-    const compiled = fixture.nativeElement as HTMLElement;
-    const dates = Array.from(compiled.querySelectorAll('.date')).map((date) =>
-      date.textContent?.trim(),
-    );
+    await settle();
 
-    expect(dates).toEqual([
-      '02 Nov 2026, 09:00',
-      '01 Nov 2026, 12:00',
-      '01 Nov 2026, 12:00',
-      '30 Oct 2026, 18:00',
-    ]);
+    expect(TestBed.inject(Router).url).toBe('/announcements?species=DOG&area=Cluj');
+    expect(getAll).toHaveBeenLastCalledWith(
+      { ...DEFAULT_FILTERS, species: 'DOG', area: 'Cluj' },
+      null,
+    );
   });
 
-  it('should show a message when there are no announcements', async () => {
-    const fixture = await render(of([]));
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should leave the URL clean when the filters are cleared', async () => {
+    await setup({ url: '/announcements?species=CAT' });
+    filterBar().componentInstance.filtersChange.emit(DEFAULT_FILTERS);
+    await settle();
 
-    expect(compiled.querySelector('.empty')?.textContent).toContain('no announcements');
-    expect(compiled.querySelector('app-announcement-card')).toBeNull();
+    expect(TestBed.inject(Router).url).toBe('/announcements');
   });
 
-  it('should show an error message when loading fails', async () => {
-    const fixture = await render(throwError(() => new Error('Server error')));
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should show a loading message until the announcements arrive', async () => {
+    const pending = new Observable<AnnouncementSummary[]>();
+    await setup({ response: pending });
 
-    expect(compiled.querySelector('.error')?.textContent).toContain('Could not load');
-    expect(compiled.querySelector('app-announcement-card')).toBeNull();
+    expect(element.textContent).toContain('Loading announcements');
+    expect(element.querySelector('app-announcement-card')).toBeNull();
+  });
+
+  it('should show a message when the backend does not respond', async () => {
+    await setup({ response: throwError(() => new Error('Server error')) });
+
+    expect(element.querySelector('.error')?.textContent).toContain('Could not load');
+    expect(element.querySelector('app-announcement-card')).toBeNull();
+  });
+
+  it('should show a message when there are no announcements at all', async () => {
+    await setup({ response: of([]) });
+
+    expect(element.querySelector('.empty')?.textContent).toContain(
+      'There are no announcements yet',
+    );
+  });
+
+  it('should show a message when no announcement matches the filters', async () => {
+    await setup({ url: '/announcements?species=OTHER', response: of([]) });
+
+    expect(element.querySelector('.empty')?.textContent).toContain(
+      'No announcements match your filters',
+    );
+  });
+
+  it('should send the location and enable the radius when the user allows it', async () => {
+    await setup({ location: Promise.resolve(clujNapoca) });
+
+    expect(getAll).toHaveBeenLastCalledWith(DEFAULT_FILTERS, clujNapoca);
+    expect(element.querySelector<HTMLSelectElement>('#filter-radius')?.disabled).toBe(false);
+  });
+
+  it('should disable the radius and explain why when the user refuses', async () => {
+    await setup();
+
+    expect(element.querySelector<HTMLSelectElement>('#filter-radius')?.disabled).toBe(true);
+    expect(element.querySelector('.location-message')?.textContent).toContain(
+      'Allow location access to see announcements near you',
+    );
+  });
+
+  it('should not ask the backend for distance filters when the location is refused', async () => {
+    await setup({ url: '/announcements?radiusKm=5&sort=NEAREST&species=CAT' });
+
+    expect(getAll).toHaveBeenLastCalledWith({ ...DEFAULT_FILTERS, species: 'CAT' }, null);
+  });
+
+  it('should wait for the location before asking for distance filters', async () => {
+    let allow: (location: UserLocation) => void = () => undefined;
+    const location = new Promise<UserLocation | null>((resolve) => (allow = resolve));
+    await setup({ url: '/announcements?radiusKm=5', location });
+
+    expect(getAll).not.toHaveBeenCalled();
+    expect(element.textContent).toContain('Loading announcements');
+
+    allow(clujNapoca);
+    await settle();
+
+    expect(getAll).toHaveBeenCalledWith({ ...DEFAULT_FILTERS, radiusKm: 5 }, clujNapoca);
+  });
+
+  it('should sort by event date, newest first, for the default sort', async () => {
+    await setup();
+
+    expect(cardIds()).toEqual(['02 Nov 2026, 09:00', '30 Oct 2026, 18:00']);
+  });
+
+  it('should keep the order of the backend for the other sort orders', async () => {
+    await setup({ url: '/announcements?sort=OLDEST' });
+
+    expect(cardIds()).toEqual(['30 Oct 2026, 18:00', '02 Nov 2026, 09:00']);
   });
 });

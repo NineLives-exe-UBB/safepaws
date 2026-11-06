@@ -19,6 +19,9 @@
       <p class="pet-name">{{ announcement().petName }}</p>
     }
     <p class="area">{{ announcement().area }}</p>
+    @if (distanceText(); as distance) {
+      <p class="distance">{{ distance }}</p>
+    }
     <p class="date">{{ announcement().eventDate | date: 'dd MMM yyyy, HH:mm' }}</p>
     <a class="poster-button" [href]="posterUrl()" download>Download poster</a>
   </div>
