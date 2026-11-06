@@ -1,0 +1,41 @@
+app-map {
+  display: block;
+  height: 400px;
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.map-pin {
+  background: none;
+  border: none;
+}
+
+.map-pin-shape {
+  display: block;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  background-color: var(--color-lost);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transform: rotate(-45deg);
+}
+
+.map-pin-shape::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 7px;
+  border-radius: 50%;
+  background-color: #ffffff;
+}
+
+.map-pin-found {
+  background-color: var(--color-found);
+}
