@@ -1,3 +1,8 @@
+:root {
+  --color-lost: #c0392b;
+  --color-found: #2e8b57;
+}
+
 body {
   margin: 0;
   font-family:
