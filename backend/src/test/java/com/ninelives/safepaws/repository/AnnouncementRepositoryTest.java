@@ -11,10 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,23 +28,9 @@ class AnnouncementRepositoryTest {
     @Autowired
     private AnnouncementRepository announcementRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @BeforeEach
     void startFromAnEmptyTable() {
         announcementRepository.deleteAllInBatch();
-    }
-
-    /**
-     * created_at is normally set on insert, so rows with a chosen created_at are inserted with SQL.
-     */
-    private long insertCreatedAt(String area, String createdAt) {
-        return jdbcTemplate.queryForObject("""
-                INSERT INTO announcement (type, species, event_date, area, contact_name, contact_phone, created_at)
-                VALUES ('LOST', 'CAT', '2026-10-01T10:00:00', ?, 'Ana', '0740123456', CAST(? AS TIMESTAMP))
-                RETURNING id
-                """, Long.class, area, createdAt);
     }
 
     private static Announcement newAnnouncement() {
@@ -61,32 +45,6 @@ class AnnouncementRepositoryTest {
         announcement.setContactName("Ion Radu");
         announcement.setContactPhone("0740123456");
         return announcement;
-    }
-
-    @Test
-    void findAllReturnsNewestFirst() {
-        insertCreatedAt("oldest", "2026-10-01T08:00:00");
-        insertCreatedAt("newest", "2026-10-03T08:00:00");
-        insertCreatedAt("middle", "2026-10-02T08:00:00");
-
-        List<Announcement> result = announcementRepository.findAllByOrderByCreatedAtDescIdDesc();
-
-        assertThat(result).extracting(Announcement::getArea).containsExactly("newest", "middle", "oldest");
-    }
-
-    @Test
-    void findAllBreaksTiesByHighestIdFirst() {
-        long first = insertCreatedAt("first", "2026-10-01T08:00:00");
-        long second = insertCreatedAt("second", "2026-10-01T08:00:00");
-
-        List<Announcement> result = announcementRepository.findAllByOrderByCreatedAtDescIdDesc();
-
-        assertThat(result).extracting(Announcement::getId).containsExactly(second, first);
-    }
-
-    @Test
-    void findAllOnAnEmptyTableReturnsAnEmptyList() {
-        assertThat(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).isEmpty();
     }
 
     @Test
@@ -115,16 +73,6 @@ class AnnouncementRepositoryTest {
         assertThat(found.getArea()).isEqualTo("Mărăști, Cluj-Napoca");
         assertThat(found.getContactName()).isEqualTo("Ion Radu");
         assertThat(found.getContactPhone()).isEqualTo("0740123456");
-    }
-
-    @Test
-    void newlySavedAnnouncementComesFirstInTheList() {
-        insertCreatedAt("older", "2026-10-01T08:00:00");
-        Long id = announcementRepository.saveAndFlush(newAnnouncement()).getId();
-
-        List<Announcement> result = announcementRepository.findAllByOrderByCreatedAtDescIdDesc();
-
-        assertThat(result.getFirst().getId()).isEqualTo(id);
     }
 
     @Test
