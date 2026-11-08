@@ -1,10 +1,12 @@
 package com.ninelives.safepaws.service;
 
+import com.ninelives.safepaws.dto.AnnouncementFilter;
 import com.ninelives.safepaws.dto.AnnouncementRequest;
 import com.ninelives.safepaws.dto.AnnouncementResponse;
 import com.ninelives.safepaws.dto.AnnouncementSummaryResponse;
 import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
+import com.ninelives.safepaws.exception.InvalidFilterException;
 import com.ninelives.safepaws.model.Announcement;
 import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
@@ -15,9 +17,12 @@ import com.ninelives.safepaws.repository.PhotoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -26,6 +31,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,6 +45,8 @@ class AnnouncementServiceTest {
 
     private static final LocalDateTime EVENT_DATE = LocalDateTime.of(2026, 11, 1, 9, 15);
     private static final LocalDateTime CREATED_AT = LocalDateTime.of(2026, 11, 1, 10, 0);
+    private static final double CLUJ_LAT = 46.7700;
+    private static final double CLUJ_LNG = 23.5900;
 
     @Mock
     private AnnouncementRepository announcementRepository;
@@ -116,12 +124,12 @@ class AnnouncementServiceTest {
 
     @Test
     void findAllReturnsSummariesInRepositoryOrder() {
-        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
                 storedAnnouncement(13L, Species.DOG, "Max"),
                 storedAnnouncement(11L, Species.CAT, "Tom"),
                 storedAnnouncement(14L, Species.OTHER, null)));
 
-        List<AnnouncementSummaryResponse> result = announcementService.findAll();
+        List<AnnouncementSummaryResponse> result = announcementService.findAll(AnnouncementFilter.none());
 
         assertThat(result).extracting(AnnouncementSummaryResponse::id).containsExactly(13L, 11L, 14L);
         AnnouncementSummaryResponse first = result.getFirst();
@@ -140,9 +148,9 @@ class AnnouncementServiceTest {
         Announcement withoutPosition = storedAnnouncement(5L, Species.CAT, "Tom");
         withoutPosition.setLatitude(null);
         withoutPosition.setLongitude(null);
-        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(withoutPosition));
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(withoutPosition));
 
-        AnnouncementSummaryResponse result = announcementService.findAll().getFirst();
+        AnnouncementSummaryResponse result = announcementService.findAll(AnnouncementFilter.none()).getFirst();
 
         assertThat(result.latitude()).isNull();
         assertThat(result.longitude()).isNull();
@@ -150,14 +158,14 @@ class AnnouncementServiceTest {
 
     @Test
     void findAllIncludesEachAnnouncementsPhotos() {
-        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
                 storedAnnouncement(1L, Species.CAT, "Mitzi"),
                 storedAnnouncement(2L, Species.DOG, "Rex")));
         when(photoRepository.findMetadataByAnnouncementIds(List.of(1L, 2L))).thenReturn(List.of(
                 new PhotoMetadata(7L, 1L, "image/jpeg", 100L, "mitzi.jpg", true, CREATED_AT),
                 new PhotoMetadata(8L, 1L, "image/png", 200L, "mitzi2.png", false, CREATED_AT)));
 
-        List<AnnouncementSummaryResponse> result = announcementService.findAll();
+        List<AnnouncementSummaryResponse> result = announcementService.findAll(AnnouncementFilter.none());
 
         assertThat(result.get(0).photos()).containsExactly(
                 new AnnouncementSummaryResponse.Photo(7L, "/photos/7", true),
@@ -167,21 +175,21 @@ class AnnouncementServiceTest {
 
     @Test
     void findAllReturnsTheSpeciesAsTheEnumValue() {
-        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
                 storedAnnouncement(1L, Species.CAT, null),
                 storedAnnouncement(2L, Species.DOG, null),
                 storedAnnouncement(3L, Species.OTHER, null)));
 
-        assertThat(announcementService.findAll())
+        assertThat(announcementService.findAll(AnnouncementFilter.none()))
                 .extracting(AnnouncementSummaryResponse::species)
                 .containsExactly(Species.CAT, Species.DOG, Species.OTHER);
     }
 
     @Test
     void findAllWithNoAnnouncementsReturnsAnEmptyList() {
-        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of());
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of());
 
-        assertThat(announcementService.findAll()).isEmpty();
+        assertThat(announcementService.findAll(AnnouncementFilter.none())).isEmpty();
         verify(photoRepository, never()).findMetadataByAnnouncementIds(any());
     }
 
@@ -228,5 +236,120 @@ class AnnouncementServiceTest {
         assertThatThrownBy(() -> announcementService.findById(999L))
                 .isInstanceOf(AnnouncementNotFoundException.class)
                 .hasMessage("Announcement not found with id: 999");
+    }
+
+    private static Specification<Announcement> anySpecification() {
+        return ArgumentMatchers.any();
+    }
+
+    private static Announcement at(Announcement announcement, Double latitude, Double longitude) {
+        announcement.setLatitude(latitude);
+        announcement.setLongitude(longitude);
+        return announcement;
+    }
+
+    private static AnnouncementFilter locationFilter(Double radiusKm, String sort) {
+        return new AnnouncementFilter(null, null, null, null, null, null, CLUJ_LAT, CLUJ_LNG, radiusKm, sort);
+    }
+
+    private Sort orderSentToTheRepository() {
+        ArgumentCaptor<Sort> captor = ArgumentCaptor.forClass(Sort.class);
+        verify(announcementRepository).findAll(anySpecification(), captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    void findAllRejectsAnInvalidFilterWithoutQueryingTheDatabase() {
+        AnnouncementFilter filter = new AnnouncementFilter(null, null, null, null, null, null,
+                null, null, 5.0, null);
+
+        assertThatThrownBy(() -> announcementService.findAll(filter))
+                .isInstanceOf(InvalidFilterException.class)
+                .satisfies(ex -> assertThat(((InvalidFilterException) ex).getFieldErrors())
+                        .extracting(error -> error.field())
+                        .containsExactly("radiusKm"));
+        verify(announcementRepository, never()).findAll(anySpecification(), any(Sort.class));
+    }
+
+    @Test
+    void findAllOrdersByNewestEventFirstByDefault() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of());
+
+        announcementService.findAll(AnnouncementFilter.none());
+
+        assertThat(orderSentToTheRepository())
+                .isEqualTo(Sort.by(Sort.Order.desc("eventDate"), Sort.Order.desc("id")));
+    }
+
+    @Test
+    void findAllOrdersByOldestEventFirstWhenAsked() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of());
+        AnnouncementFilter filter = new AnnouncementFilter(null, null, null, null, null, null,
+                null, null, null, "oldest");
+
+        announcementService.findAll(filter);
+
+        assertThat(orderSentToTheRepository())
+                .isEqualTo(Sort.by(Sort.Order.asc("eventDate"), Sort.Order.asc("id")));
+    }
+
+    @Test
+    void findAllWithoutLocationHasNoDistance() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class)))
+                .thenReturn(List.of(storedAnnouncement(1L, Species.CAT, "Mitzi")));
+
+        assertThat(announcementService.findAll(AnnouncementFilter.none()).getFirst().distanceKm()).isNull();
+    }
+
+    @Test
+    void findAllWithLocationKeepsOnlyAnnouncementsInsideTheDefaultRadius() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
+                at(storedAnnouncement(1L, Species.CAT, "Centru"), 46.7690, 23.5900),      // 0.1 km
+                at(storedAnnouncement(2L, Species.DOG, "Someseni"), 46.7880, 23.6510),    // 5.1 km
+                at(storedAnnouncement(3L, Species.DOG, "Brasov"), 45.6405, 25.6270)));    // ~200 km
+
+        List<AnnouncementSummaryResponse> result = announcementService.findAll(locationFilter(null, null));
+
+        assertThat(result).extracting(AnnouncementSummaryResponse::id).containsExactly(1L, 2L);
+        assertThat(result).extracting(AnnouncementSummaryResponse::distanceKm).containsExactly(0.1, 5.1);
+    }
+
+    @Test
+    void findAllUsesTheRadiusThatWasSent() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
+                at(storedAnnouncement(1L, Species.CAT, "Centru"), 46.7690, 23.5900),
+                at(storedAnnouncement(2L, Species.DOG, "Someseni"), 46.7880, 23.6510)));
+
+        List<AnnouncementSummaryResponse> result = announcementService.findAll(locationFilter(1.0, null));
+
+        assertThat(result).extracting(AnnouncementSummaryResponse::id).containsExactly(1L);
+    }
+
+    @Test
+    void findAllClosestSortsByDistanceAndKeepsNewestFirstForEqualDistances() {
+        // the repository returns newest event first
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
+                at(storedAnnouncement(1L, Species.DOG, "far"), 46.7880, 23.6510),
+                at(storedAnnouncement(2L, Species.CAT, "near, newer"), 46.7690, 23.5900),
+                at(storedAnnouncement(3L, Species.CAT, "near, older"), 46.7690, 23.5900)));
+
+        List<AnnouncementSummaryResponse> result = announcementService.findAll(locationFilter(null, "closest"));
+
+        assertThat(result).extracting(AnnouncementSummaryResponse::id).containsExactly(2L, 3L, 1L);
+    }
+
+    @Test
+    void findAllWithLocationButNothingInRangeReturnsAnEmptyList() {
+        when(announcementRepository.findAll(anySpecification(), any(Sort.class))).thenReturn(List.of(
+                at(storedAnnouncement(3L, Species.DOG, "Brasov"), 45.6405, 25.6270)));
+
+        assertThat(announcementService.findAll(locationFilter(null, null))).isEmpty();
+        verify(photoRepository, never()).findMetadataByAnnouncementIds(any());
+    }
+
+    @Test
+    void distanceOfOneDegreeOfLatitudeIsAbout111Km() {
+        assertThat(AnnouncementService.distanceKm(0, 0, 1, 0)).isCloseTo(111.19, within(0.01));
+        assertThat(AnnouncementService.distanceKm(46.77, 23.59, 46.77, 23.59)).isZero();
     }
 }

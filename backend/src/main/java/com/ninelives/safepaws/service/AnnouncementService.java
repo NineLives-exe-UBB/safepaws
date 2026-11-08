@@ -1,23 +1,31 @@
 package com.ninelives.safepaws.service;
 
+import com.ninelives.safepaws.dto.AnnouncementFilter;
 import com.ninelives.safepaws.dto.AnnouncementRequest;
 import com.ninelives.safepaws.dto.AnnouncementResponse;
 import com.ninelives.safepaws.dto.AnnouncementSummaryResponse;
+import com.ninelives.safepaws.dto.ErrorResponse;
 import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
+import com.ninelives.safepaws.exception.InvalidFilterException;
 import com.ninelives.safepaws.model.Announcement;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
+import com.ninelives.safepaws.repository.AnnouncementSpecifications;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class AnnouncementService {
+
+    private static final double EARTH_RADIUS_KM = 6371.0;
 
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
@@ -36,22 +44,69 @@ public class AnnouncementService {
     }
 
     @Transactional(readOnly = true)
-    public List<AnnouncementSummaryResponse> findAll() {
-        List<Announcement> announcements = announcementRepository.findAllByOrderByCreatedAtDescIdDesc();
-        if (announcements.isEmpty()) {
+    public List<AnnouncementSummaryResponse> findAll(AnnouncementFilter filter) {
+        List<ErrorResponse.FieldError> errors = filter.validate();
+        if (!errors.isEmpty()) {
+            throw new InvalidFilterException(errors);
+        }
+
+        AnnouncementFilter.Sort sort = filter.sortOrDefault();
+        List<Announcement> announcements = announcementRepository.findAll(
+                AnnouncementSpecifications.matching(filter), databaseOrder(sort));
+
+        List<Match> matches = announcements.stream()
+                .map(announcement -> new Match(announcement, distanceFrom(filter, announcement)))
+                .filter(match -> match.distanceKm() == null || match.distanceKm() <= filter.radiusKmOrDefault())
+                .toList();
+        if (sort == AnnouncementFilter.Sort.CLOSEST) {
+            // a stable sort: equal distances keep the database order, newest event first
+            matches = matches.stream().sorted(Comparator.comparingDouble(Match::distanceKm)).toList();
+        }
+        if (matches.isEmpty()) {
             return List.of();
         }
 
         // one query for the photos of every announcement, instead of one per announcement
         Map<Long, List<PhotoMetadata>> photosByAnnouncement = photoRepository
-                .findMetadataByAnnouncementIds(announcements.stream().map(Announcement::getId).toList())
+                .findMetadataByAnnouncementIds(matches.stream().map(match -> match.announcement().getId()).toList())
                 .stream()
                 .collect(Collectors.groupingBy(PhotoMetadata::announcementId));
 
-        return announcements.stream()
-                .map(announcement -> toSummaryResponse(announcement,
-                        photosByAnnouncement.getOrDefault(announcement.getId(), List.of())))
+        return matches.stream()
+                .map(match -> toSummaryResponse(match.announcement(), roundToOneDecimal(match.distanceKm()),
+                        photosByAnnouncement.getOrDefault(match.announcement().getId(), List.of())))
                 .toList();
+    }
+
+    /** An announcement that passed the filter, with its exact distance when a location was sent. */
+    private record Match(Announcement announcement, Double distanceKm) {
+    }
+
+    /** "newest" and "oldest" are about eventDate, the date shown on the card; ties go by id. */
+    private static Sort databaseOrder(AnnouncementFilter.Sort sort) {
+        return sort == AnnouncementFilter.Sort.OLDEST
+                ? Sort.by(Sort.Order.asc("eventDate"), Sort.Order.asc("id"))
+                : Sort.by(Sort.Order.desc("eventDate"), Sort.Order.desc("id"));
+    }
+
+    private static Double distanceFrom(AnnouncementFilter filter, Announcement announcement) {
+        if (!filter.hasLocation()) {
+            return null;
+        }
+        return distanceKm(filter.lat(), filter.lng(), announcement.getLatitude(), announcement.getLongitude());
+    }
+
+    /** Great-circle (haversine) distance between two points, in kilometres. */
+    static double distanceKm(double lat1, double lng1, double lat2, double lng2) {
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.pow(Math.sin(dLat / 2), 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.pow(Math.sin(dLng / 2), 2);
+        return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(Math.min(1, a)));
+    }
+
+    private static Double roundToOneDecimal(Double value) {
+        return value == null ? null : Math.round(value * 10) / 10.0;
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +165,8 @@ public class AnnouncementService {
         );
     }
 
-    private AnnouncementSummaryResponse toSummaryResponse(Announcement announcement, List<PhotoMetadata> photos) {
+    private AnnouncementSummaryResponse toSummaryResponse(Announcement announcement, Double distanceKm,
+                                                          List<PhotoMetadata> photos) {
         return new AnnouncementSummaryResponse(
                 announcement.getId(),
                 announcement.getType(),
@@ -119,6 +175,7 @@ public class AnnouncementService {
                 announcement.getArea(),
                 announcement.getLatitude(),
                 announcement.getLongitude(),
+                distanceKm,
                 announcement.getEventDate(),
                 announcement.getStatus(),
                 photos.stream()

@@ -1,5 +1,6 @@
 package com.ninelives.safepaws.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
@@ -15,6 +16,9 @@ public record AnnouncementSummaryResponse(
         String area,
         Double latitude,
         Double longitude,
+        // only sent when the request has lat and lng
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Double distanceKm,
         LocalDateTime eventDate,
         AnnouncementStatus status,
         List<Photo> photos
