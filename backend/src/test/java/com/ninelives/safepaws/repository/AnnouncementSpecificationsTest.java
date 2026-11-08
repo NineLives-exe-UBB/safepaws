@@ -112,6 +112,45 @@ class AnnouncementSpecificationsTest {
     }
 
     @Test
+    void speciesAndColorCombine() {
+        save("grey cat", AnnouncementType.LOST, Species.CAT, AnnouncementStatus.ACTIVE,
+                "Grey with white paws", null, null, null, 1);
+        save("grey dog", AnnouncementType.LOST, Species.DOG, AnnouncementStatus.ACTIVE, "grey", null, null, null, 2);
+        save("black cat", AnnouncementType.LOST, Species.CAT, AnnouncementStatus.ACTIVE, "black", null, null, null, 3);
+
+        AnnouncementFilter filter = new AnnouncementFilter(null, Species.CAT, null, "grey", null, null,
+                null, null, null, null);
+
+        assertThat(areas(filter)).containsExactly("grey cat");
+    }
+
+    @Test
+    void textFiltersCombineWithEachOtherAndWithStatus() {
+        save("match", AnnouncementType.FOUND, Species.DOG, AnnouncementStatus.ACTIVE,
+                "White and tan", "Jack Russell Terrier", null, null, 1);
+        save("wrong breed", AnnouncementType.FOUND, Species.DOG, AnnouncementStatus.ACTIVE,
+                "White and tan", "Beagle", null, null, 2);
+        save("resolved", AnnouncementType.FOUND, Species.DOG, AnnouncementStatus.RESOLVED,
+                "White and tan", "Jack Russell Terrier", null, null, 3);
+
+        AnnouncementFilter filter = new AnnouncementFilter(null, null, null, "WHITE", "terrier", null,
+                null, null, null, null);
+
+        assertThat(areas(filter)).containsExactly("match");
+    }
+
+    @Test
+    void sameEventDateIsOrderedById() {
+        Announcement first = save("first", 5);
+        Announcement second = save("second", 5);
+
+        List<Long> newest = announcementRepository.findAll(AnnouncementSpecifications.matching(
+                AnnouncementFilter.none()), NEWEST).stream().map(Announcement::getId).toList();
+
+        assertThat(newest).containsExactly(second.getId(), first.getId());
+    }
+
+    @Test
     void breedSearchSkipsAnnouncementsWithoutABreed() {
         save("terrier", AnnouncementType.FOUND, Species.DOG, AnnouncementStatus.ACTIVE,
                 null, "Jack Russell Terrier", null, null, 1);
