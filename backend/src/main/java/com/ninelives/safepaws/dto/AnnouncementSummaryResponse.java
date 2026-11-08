@@ -13,6 +13,8 @@ public record AnnouncementSummaryResponse(
         String petName,
         Species species,
         String area,
+        Double latitude,
+        Double longitude,
         LocalDateTime eventDate,
         AnnouncementStatus status,
         List<Photo> photos

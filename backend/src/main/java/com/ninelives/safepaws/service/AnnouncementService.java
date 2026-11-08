@@ -117,6 +117,8 @@ public class AnnouncementService {
                 announcement.getPetName(),
                 announcement.getSpecies(),
                 announcement.getArea(),
+                announcement.getLatitude(),
+                announcement.getLongitude(),
                 announcement.getEventDate(),
                 announcement.getStatus(),
                 photos.stream()
