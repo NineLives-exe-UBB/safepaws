@@ -128,9 +128,24 @@ class AnnouncementServiceTest {
         assertThat(first.type()).isEqualTo(AnnouncementType.LOST);
         assertThat(first.petName()).isEqualTo("Max");
         assertThat(first.area()).isEqualTo("Mărăști, Cluj-Napoca");
+        assertThat(first.latitude()).isEqualTo(46.7712);
+        assertThat(first.longitude()).isEqualTo(23.6236);
         assertThat(first.eventDate()).isEqualTo(EVENT_DATE);
         assertThat(first.status()).isEqualTo(AnnouncementStatus.ACTIVE);
         assertThat(first.photos()).isEmpty();
+    }
+
+    @Test
+    void findAllReturnsNullCoordinatesWhenTheAnnouncementHasNoMapPosition() {
+        Announcement withoutPosition = storedAnnouncement(5L, Species.CAT, "Tom");
+        withoutPosition.setLatitude(null);
+        withoutPosition.setLongitude(null);
+        when(announcementRepository.findAllByOrderByCreatedAtDescIdDesc()).thenReturn(List.of(withoutPosition));
+
+        AnnouncementSummaryResponse result = announcementService.findAll().getFirst();
+
+        assertThat(result.latitude()).isNull();
+        assertThat(result.longitude()).isNull();
     }
 
     @Test
