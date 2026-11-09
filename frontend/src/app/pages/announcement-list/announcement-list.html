@@ -1,14 +1,26 @@
 <h1>Announcements</h1>
 
-@if (loading()) {
+<app-filter-bar
+  [filters]="search.filters()"
+  [locationStatus]="search.locationStatus()"
+  (filtersChange)="search.updateFilters($event)"
+/>
+
+@if (search.loading()) {
   <p>Loading announcements...</p>
-} @else if (failed()) {
+} @else if (search.failed()) {
   <p class="message error">Could not load the announcements. Please try again later.</p>
-} @else if (announcements().length === 0) {
-  <p class="message empty">There are no announcements yet.</p>
+} @else if (search.announcements().length === 0) {
+  <p class="message empty">
+    @if (search.filtersActive()) {
+      No announcements match your filters
+    } @else {
+      There are no announcements yet.
+    }
+  </p>
 } @else {
   <div class="grid">
-    @for (announcement of announcements(); track announcement.id) {
+    @for (announcement of search.announcements(); track announcement.id) {
       <app-announcement-card [announcement]="announcement" />
     }
   </div>

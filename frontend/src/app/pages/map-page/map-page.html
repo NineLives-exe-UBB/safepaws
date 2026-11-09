@@ -1,0 +1,41 @@
+<h1>Map</h1>
+
+<app-filter-bar
+  [filters]="search.filters()"
+  [locationStatus]="search.locationStatus()"
+  (filtersChange)="search.updateFilters($event)"
+/>
+
+@if (search.loading()) {
+  <p>Loading announcements...</p>
+} @else if (search.failed()) {
+  <p class="message error">Could not load the announcements. Please try again later.</p>
+} @else if (search.announcements().length === 0) {
+  <p class="message empty">
+    @if (search.filtersActive()) {
+      No announcements match your filters
+    } @else {
+      There are no announcements yet.
+    }
+  </p>
+} @else if (withoutLocationCount() === 1) {
+  <p class="note">1 announcement has no location and is not on the map.</p>
+} @else if (withoutLocationCount() > 1) {
+  <p class="note">
+    {{ withoutLocationCount() }} announcements have no location and are not on the map.
+  </p>
+}
+
+<app-map
+  [pins]="pins()"
+  [center]="search.userLocation()"
+  [zoom]="userZoom"
+  [fitToPins]="true"
+  [popup]="popup"
+/>
+
+<ng-template #popup let-pin>
+  @if (announcementFor(pin); as announcement) {
+    <app-announcement-popup [announcement]="announcement" />
+  }
+</ng-template>

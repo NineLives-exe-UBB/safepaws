@@ -27,16 +27,17 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 3. Open http://localhost:4200 in the browser.
 
-The list needs the backend running on `http://localhost:8080`, with the seeded test data. See `backend/README.md` (copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). Without it, the list page shows "Could not load the announcements."
+The list needs the backend running on `http://localhost:8080` (see `backend/README.md`: copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). It comes with test announcements, so the list is not empty. Without the backend, the list page shows "Could not load the announcements."
 
 The backend URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
 
 ### Pages
 
-| Route                | Page                   |
-| -------------------- | ---------------------- |
-| `/announcements`     | List of announcements  |
-| `/announcements/new` | Form for posting a pet |
+| Route                | Page                                 |
+| -------------------- | ------------------------------------ |
+| `/announcements`     | List of announcements                |
+| `/announcements/new` | Form for posting a pet               |
+| `/map`               | Map with a pin for each announcement |
 
 ### Tests and coverage
 
@@ -54,6 +55,33 @@ npm run build
 ```
 
 The result is in `dist/frontend`.
+
+## Map page
+
+`/map` shows a pin for each announcement that matches the filters, red for LOST and green for FOUND. It uses the same filter bar as the list, so both pages show the same results for the same filters (`/map?species=CAT` works like `/announcements?species=CAT`).
+
+- **Start:** if the browser location is allowed, the map is centered on the user. If it is refused, it zooms so that all the pins fit on the screen.
+- **Popup:** clicking a pin shows the main photo, the pet name (or the species), the area, the date and a "View details" link to `/announcements/:id`.
+- **No position:** announcements without coordinates cannot get a pin, and the page says how many there are.
+- **Shared code:** `AnnouncementSearch` (`services/announcement-search.ts`) reads the filters from the URL, asks for the location and loads the announcements. Each page that shows announcements provides its own instance.
+
+## Filters
+
+The list page has a filter bar (`<app-filter-bar>`, in `components/filter-bar`) that other pages, like the map page, can reuse:
+
+```html
+<app-filter-bar
+  [filters]="filters"
+  [locationStatus]="locationStatus"
+  (filtersChange)="onFiltersChange($event)"
+/>
+```
+
+- **Filters:** type, species and status (dropdowns), color, breed and area (text), radius and sort. The text fields wait 300 ms after the user stops typing.
+- **Defaults:** the same as the backend. Without any filter it returns only active announcements, newest event first, so the status dropdown starts on "Active" and has no "Any" option.
+- **In the URL:** only the values that are not the default, for example `/announcements?species=CAT&color=grey`, so they survive a refresh and can be shared. `fromQueryParams` and `toQueryParams` in `models/announcement-filters.model.ts` read and write them.
+- **Location:** the page asks the browser for the user's location (`LocationService`). If it is refused, the radius and "Closest first" are disabled, with a short message. The location is only sent to the backend when a radius or "Closest first" is chosen, because the backend then also filters by radius (10 km by default) and leaves out announcements without coordinates. "Closest first" without a radius asks for 100 km, the maximum. The distance on a card ("1.2 km away") is only known in those cases.
+- **Backend:** `AnnouncementService.getAll(filters, location)` sends `type`, `species`, `status`, `color`, `breed`, `area`, `lat`, `lng`, `radiusKm` and `sort` (`newest`, `oldest` or `closest`) as query parameters. The backend sorts, the page shows the announcements in the order it returns them.
 
 ## Project structure
 
@@ -80,11 +108,13 @@ imports: [MapView];
 <app-map [pins]="pins" [center]="center" [zoom]="15" (locationSelected)="onMapClick($event)" />
 ```
 
-| Input / output       | What it does                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------ |
-| `pins`               | List of `{ latitude, longitude, type: 'LOST' \| 'FOUND', label? }`. LOST is red, FOUND is green. |
-| `center`             | `{ latitude, longitude }`. Without it, the map shows all of Romania.                             |
-| `zoom`               | Zoom level used together with `center` (default 15).                                             |
-| `(locationSelected)` | Emits `{ latitude, longitude }` (6 decimals) where the user clicked.                             |
+| Input / output       | What it does                                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pins`               | List of `{ latitude, longitude, type: 'LOST' \| 'FOUND', label?, id? }`. LOST is red, FOUND is green. |
+| `center`             | `{ latitude, longitude }`. Without it, the map shows all of Romania.                                  |
+| `zoom`               | Zoom level used together with `center` (default 15).                                                  |
+| `fitToPins`          | Without a `center`, zooms so that all the pins fit on the screen.                                     |
+| `popup`              | A `<ng-template let-pin>` shown in a popup when a pin is clicked. `pin.id` finds what it stands for.  |
+| `(locationSelected)` | Emits `{ latitude, longitude }` (6 decimals) where the user clicked.                                  |
 
 The map does not add a pin by itself when it is clicked. The page decides: for the form, put the clicked location in `pins` and in the latitude and longitude fields. The pin colors are the `--color-lost` and `--color-found` variables in `src/styles.css`. The map is 400px high by default, set another `height` on `app-map` to change it.

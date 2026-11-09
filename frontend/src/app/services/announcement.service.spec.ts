@@ -7,6 +7,7 @@ import {
   AnnouncementRequest,
   AnnouncementSummary,
 } from '../models/announcement.model';
+import { DEFAULT_FILTERS } from '../models/announcement-filters.model';
 import { AnnouncementService } from './announcement.service';
 
 describe('AnnouncementService', () => {
@@ -49,6 +50,8 @@ describe('AnnouncementService', () => {
     petName: 'Misi',
     species: 'CAT',
     area: 'Mănăștur, Cluj-Napoca',
+    latitude: 46.7712,
+    longitude: 23.6236,
     eventDate: '2026-10-30T18:00:00',
     status: 'ACTIVE',
     photos: [],
@@ -73,11 +76,87 @@ describe('AnnouncementService', () => {
     let result: AnnouncementSummary[] = [];
     service.getAll().subscribe((announcements) => (result = announcements));
 
-    const req = httpController.expectOne(announcementsUrl);
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
     expect(req.request.method).toBe('GET');
     req.flush([summary]);
 
     expect(result).toEqual([summary]);
+  });
+
+  it('should only send the default status and sort when no filter is set', () => {
+    service.getAll().subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.keys().sort()).toEqual(['sort', 'status']);
+    expect(req.request.params.get('status')).toBe('ACTIVE');
+    expect(req.request.params.get('sort')).toBe('newest');
+    req.flush([]);
+  });
+
+  it('should send the filters as query parameters', () => {
+    service
+      .getAll({
+        ...DEFAULT_FILTERS,
+        type: 'LOST',
+        species: 'CAT',
+        status: 'RESOLVED',
+        color: 'grey',
+        breed: 'European',
+        area: 'Cluj',
+        sort: 'oldest',
+      })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('type')).toBe('LOST');
+    expect(req.request.params.get('species')).toBe('CAT');
+    expect(req.request.params.get('status')).toBe('RESOLVED');
+    expect(req.request.params.get('color')).toBe('grey');
+    expect(req.request.params.get('breed')).toBe('European');
+    expect(req.request.params.get('area')).toBe('Cluj');
+    expect(req.request.params.get('sort')).toBe('oldest');
+    req.flush([]);
+  });
+
+  it('should send the location and the radius when a radius is chosen', () => {
+    service
+      .getAll({ ...DEFAULT_FILTERS, radiusKm: 5 }, { latitude: 46.77, longitude: 23.6 })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('lat')).toBe('46.77');
+    expect(req.request.params.get('lng')).toBe('23.6');
+    expect(req.request.params.get('radiusKm')).toBe('5');
+    req.flush([]);
+  });
+
+  it('should ask for the largest radius when sorting by distance without a radius', () => {
+    service
+      .getAll({ ...DEFAULT_FILTERS, sort: 'closest' }, { latitude: 46.77, longitude: 23.6 })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('sort')).toBe('closest');
+    expect(req.request.params.get('radiusKm')).toBe('100');
+    req.flush([]);
+  });
+
+  it('should not send the location when the filters do not need it', () => {
+    service.getAll(DEFAULT_FILTERS, { latitude: 46.77, longitude: 23.6 }).subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.has('lat')).toBe(false);
+    expect(req.request.params.has('lng')).toBe(false);
+    expect(req.request.params.has('radiusKm')).toBe(false);
+    req.flush([]);
+  });
+
+  it('should not send a radius without a location', () => {
+    service.getAll({ ...DEFAULT_FILTERS, radiusKm: 5 }).subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.has('radiusKm')).toBe(false);
+    req.flush([]);
   });
 
   it('should get one announcement by id', () => {
@@ -107,6 +186,25 @@ describe('AnnouncementService', () => {
     expect(service.photoUrl({ id: 3, url: '/photos/3', isMain: true })).toBe(
       `${environment.apiUrl}/photos/3`,
     );
+  });
+
+  it('should use the main photo as the main photo url', () => {
+    expect(
+      service.mainPhotoUrl([
+        { id: 3, url: '/photos/3', isMain: false },
+        { id: 4, url: '/photos/4', isMain: true },
+      ]),
+    ).toBe(`${environment.apiUrl}/photos/4`);
+  });
+
+  it('should use the first photo when none is the main one', () => {
+    expect(service.mainPhotoUrl([{ id: 3, url: '/photos/3', isMain: false }])).toBe(
+      `${environment.apiUrl}/photos/3`,
+    );
+  });
+
+  it('should have no main photo url without photos', () => {
+    expect(service.mainPhotoUrl([])).toBeNull();
   });
 
   it('should build the poster url of an announcement', () => {

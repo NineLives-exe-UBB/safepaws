@@ -11,6 +11,8 @@ describe('AnnouncementCard', () => {
     petName: 'Misi',
     species: 'CAT',
     area: 'Mănăștur, Cluj-Napoca',
+    latitude: 46.7712,
+    longitude: 23.6236,
     eventDate: '2026-10-30T18:00:00',
     status: 'ACTIVE',
     photos: [
@@ -59,6 +61,20 @@ describe('AnnouncementCard', () => {
     const compiled = await render({ ...announcement, species: 'OTHER' });
 
     expect(compiled.querySelector('.species')?.textContent).toContain('Other');
+  });
+
+  it('should show the distance when it is known', async () => {
+    const compiled = await render({ ...announcement, distanceKm: 1.234 });
+
+    expect(compiled.querySelector('.distance')?.textContent).toContain('1.2 km away');
+  });
+
+  it('should not show a distance when it is not known', async () => {
+    const withoutDistance = await render(announcement);
+    expect(withoutDistance.querySelector('.distance')).toBeNull();
+
+    const nullDistance = await render({ ...announcement, distanceKm: null });
+    expect(nullDistance.querySelector('.distance')).toBeNull();
   });
 
   it('should show the LOST label', async () => {

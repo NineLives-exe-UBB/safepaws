@@ -14,13 +14,16 @@ export class AnnouncementCard {
 
   readonly announcement = input.required<AnnouncementSummary>();
 
-  protected readonly mainPhotoUrl = computed(() => {
-    const photos = this.announcement().photos;
-    const mainPhoto = photos.find((photo) => photo.isMain) ?? photos[0];
-    return mainPhoto ? this.announcementService.photoUrl(mainPhoto) : null;
-  });
+  protected readonly mainPhotoUrl = computed(() =>
+    this.announcementService.mainPhotoUrl(this.announcement().photos),
+  );
 
   protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
+
+  protected readonly distanceText = computed(() => {
+    const distanceKm = this.announcement().distanceKm;
+    return distanceKm == null ? null : `${distanceKm.toFixed(1)} km away`;
+  });
 
   protected readonly posterUrl = computed(() =>
     this.announcementService.posterUrl(this.announcement().id),
