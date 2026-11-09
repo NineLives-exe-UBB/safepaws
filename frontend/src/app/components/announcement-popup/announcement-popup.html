@@ -1,0 +1,9 @@
+<article class="popup">
+  @if (photoUrl(); as url) {
+    <img class="photo" [src]="url" [alt]="title() + ' photo'" />
+  }
+  <h3 class="title">{{ title() }}</h3>
+  <p class="area">{{ announcement().area }}</p>
+  <p class="date">{{ announcement().eventDate | date: 'dd MMM yyyy, HH:mm' }}</p>
+  <a class="details-link" [routerLink]="['/announcements', announcement().id]">View details</a>
+</article>

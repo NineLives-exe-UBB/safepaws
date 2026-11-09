@@ -1,7 +1,25 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import * as L from 'leaflet';
 import { Coordinates, MapPin } from '../../models/map.model';
 import { MapView } from './map';
+
+@Component({
+  imports: [MapView],
+  template: `
+    <ng-template #popup let-pin
+      ><span class="popup-content">{{ pin.label }} #{{ pin.id }}</span></ng-template
+    >
+    <app-map [pins]="pins" [popup]="popup" />
+  `,
+})
+class PopupHost {
+  pins: MapPin[] = [
+    { latitude: 46.7712, longitude: 23.6236, type: 'LOST', label: 'Lost cat', id: 7 },
+    { latitude: 45.7489, longitude: 21.2087, type: 'FOUND', label: 'Found dog', id: 8 },
+  ];
+}
 
 describe('MapView', () => {
   const clujNapoca: Coordinates = { latitude: 46.7712, longitude: 23.6236 };
@@ -142,5 +160,124 @@ describe('MapView', () => {
     fixture.destroy();
 
     expect(removeSpy).toHaveBeenCalled();
+  });
+
+  describe('fitting the pins', () => {
+    const cluj: MapPin = { latitude: 46.77, longitude: 23.6, type: 'LOST' };
+    const timisoara: MapPin = { latitude: 45.75, longitude: 21.23, type: 'FOUND' };
+
+    it('should show every pin on the screen', async () => {
+      await render({ pins: [cluj, timisoara], fitToPins: true });
+      const bounds = leafletMap().getBounds();
+
+      expect(bounds.contains([cluj.latitude, cluj.longitude])).toBe(true);
+      expect(bounds.contains([timisoara.latitude, timisoara.longitude])).toBe(true);
+      expect(leafletMap().getZoom()).toBeGreaterThan(6);
+    });
+
+    it('should not zoom in too far on a single pin', async () => {
+      await render({ pins: [cluj], fitToPins: true });
+
+      expect(leafletMap().getZoom()).toBeLessThanOrEqual(15);
+    });
+
+    it('should fit the new pins when they change', async () => {
+      await render({ pins: [cluj], fitToPins: true });
+      fixture.componentRef.setInput('pins', [timisoara]);
+      await fixture.whenStable();
+
+      expect(leafletMap().getBounds().contains([timisoara.latitude, timisoara.longitude])).toBe(
+        true,
+      );
+    });
+
+    it('should show all of Romania when there are no pins to fit', async () => {
+      await render({ pins: [], fitToPins: true });
+
+      expect(leafletMap().getBounds().contains([45.9432, 24.9668])).toBe(true);
+    });
+
+    it('should prefer the center over fitting the pins', async () => {
+      await render({ pins: [timisoara], fitToPins: true, center: clujNapoca, zoom: 13 });
+
+      expect(leafletMap().getCenter().lat).toBeCloseTo(clujNapoca.latitude, 4);
+      expect(leafletMap().getZoom()).toBe(13);
+    });
+
+    it('should not move the map when the pins change and there is a center', async () => {
+      await render({ pins: [timisoara], fitToPins: true, center: clujNapoca });
+      leafletMap().setView([44, 26], 8);
+      fixture.componentRef.setInput('pins', [cluj]);
+      await fixture.whenStable();
+
+      expect(leafletMap().getCenter().lat).toBeCloseTo(44, 4);
+    });
+
+    it('should leave the view alone when fitting is not asked for', async () => {
+      await render({ pins: [cluj] });
+
+      expect(leafletMap().getBounds().contains([45.9432, 24.9668])).toBe(true);
+    });
+  });
+
+  describe('popups', () => {
+    let host: ComponentFixture<PopupHost>;
+    let hostElement: HTMLElement;
+
+    const markers = () =>
+      (
+        (host.debugElement.children[0]?.componentInstance as MapView)['pinLayer'] as L.LayerGroup
+      ).getLayers() as L.Marker[];
+
+    beforeEach(async () => {
+      TestBed.configureTestingModule({ providers: [provideRouter([])] });
+      host = TestBed.createComponent(PopupHost);
+      await host.whenStable();
+      hostElement = host.nativeElement as HTMLElement;
+    });
+
+    it('should not show a popup until a pin is clicked', () => {
+      expect(hostElement.querySelector('.popup-content')).toBeNull();
+    });
+
+    it('should show the content of the template for the pin that was clicked', () => {
+      markers()[1].openPopup();
+
+      expect(hostElement.querySelector('.leaflet-popup .popup-content')?.textContent).toContain(
+        'Found dog #8',
+      );
+    });
+
+    it('should open the popup when the pin is clicked', () => {
+      markers()[0].fire('click');
+
+      expect(hostElement.querySelector('.leaflet-popup .popup-content')?.textContent).toContain(
+        'Lost cat #7',
+      );
+    });
+
+    it('should remove the popup content when it is closed', () => {
+      markers()[0].openPopup();
+      markers()[0].closePopup();
+
+      expect(hostElement.querySelector('.popup-content')).toBeNull();
+    });
+
+    it('should open the popup again after it was closed', () => {
+      markers()[0].openPopup();
+      markers()[0].closePopup();
+      markers()[0].openPopup();
+
+      expect(hostElement.querySelectorAll('.popup-content').length).toBe(1);
+    });
+
+    it('should not give pins a popup when there is no template', async () => {
+      await render({ pins: [lostPin] });
+      const marker = (
+        fixture.componentInstance['pinLayer'] as L.LayerGroup
+      ).getLayers()[0] as L.Marker;
+
+      expect(marker.getPopup()).toBeUndefined();
+    });
   });
 });

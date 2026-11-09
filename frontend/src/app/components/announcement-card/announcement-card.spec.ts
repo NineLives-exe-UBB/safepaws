@@ -11,6 +11,8 @@ describe('AnnouncementCard', () => {
     petName: 'Misi',
     species: 'CAT',
     area: 'Mănăștur, Cluj-Napoca',
+    latitude: 46.7712,
+    longitude: 23.6236,
     eventDate: '2026-10-30T18:00:00',
     status: 'ACTIVE',
     photos: [

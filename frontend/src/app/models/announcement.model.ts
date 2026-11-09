@@ -32,6 +32,8 @@ export interface AnnouncementSummary {
   petName: string | null;
   species: Species;
   area: string;
+  latitude: number | null;
+  longitude: number | null;
   eventDate: string;
   status: AnnouncementStatus;
   photos: Photo[];
@@ -44,8 +46,6 @@ export interface Announcement extends AnnouncementSummary {
   breed: string | null;
   color: string | null;
   distinctiveMarks: string | null;
-  latitude: number | null;
-  longitude: number | null;
   contactName: string;
   contactPhone: string;
   createdAt: string;

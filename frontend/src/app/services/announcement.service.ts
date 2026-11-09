@@ -52,6 +52,12 @@ export class AnnouncementService {
     return this.http.post<Announcement>(this.announcementsUrl, announcement);
   }
 
+  /** The photo marked as main, or the first one; null when there are no photos. */
+  mainPhotoUrl(photos: Photo[]): string | null {
+    const mainPhoto = photos.find((photo) => photo.isMain) ?? photos[0];
+    return mainPhoto ? this.photoUrl(mainPhoto) : null;
+  }
+
   photoUrl(photo: Photo): string {
     return `${environment.apiUrl}${photo.url}`;
   }

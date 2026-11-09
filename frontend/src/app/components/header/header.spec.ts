@@ -17,6 +17,7 @@ describe('Header', () => {
         provideRouter([
           { path: 'announcements', component: Page },
           { path: 'announcements/new', component: Page },
+          { path: 'map', component: Page },
         ]),
       ],
     }).compileComponents();
@@ -30,11 +31,11 @@ describe('Header', () => {
     expect(compiled.querySelector('.brand')?.textContent).toContain('SafePaws');
   });
 
-  it('should link to both pages', () => {
+  it('should link to every page', () => {
     const hrefs = Array.from(compiled.querySelectorAll('.nav a')).map((link) =>
       link.getAttribute('href'),
     );
-    expect(hrefs).toEqual(['/announcements', '/announcements/new']);
+    expect(hrefs).toEqual(['/announcements', '/map', '/announcements/new']);
   });
 
   async function activeLinks(url: string): Promise<(string | null)[]> {
@@ -55,5 +56,9 @@ describe('Header', () => {
 
   it('should highlight only the form link on the form page', async () => {
     expect(await activeLinks('/announcements/new')).toEqual(['/announcements/new']);
+  });
+
+  it('should highlight only the map link on the map page', async () => {
+    expect(await activeLinks('/map')).toEqual(['/map']);
   });
 });

@@ -4,15 +4,18 @@ import {
   DestroyRef,
   effect,
   ElementRef,
+  EmbeddedViewRef,
   inject,
   input,
   output,
   signal,
+  TemplateRef,
   viewChild,
+  ViewContainerRef,
   ViewEncapsulation,
 } from '@angular/core';
 import * as L from 'leaflet';
-import { Coordinates, MapPin } from '../../models/map.model';
+import { Coordinates, MapPin, PinPopupContext } from '../../models/map.model';
 import { createPinIcon, fixDefaultMarkerIcons } from '../../shared/leaflet-icons';
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -20,6 +23,9 @@ const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const ROMANIA_BOUNDS = L.latLngBounds([43.6, 20.2], [48.3, 29.7]);
 const COORDINATE_DECIMALS = 6;
+const FIT_PADDING_PX = 40;
+const FIT_MAX_ZOOM = 15;
+const POPUP_OPTIONS: L.PopupOptions = { minWidth: 200, maxWidth: 260 };
 
 @Component({
   selector: 'app-map',
@@ -32,10 +38,15 @@ export class MapView {
   readonly center = input<Coordinates | null>(null);
   readonly zoom = input(15);
   readonly pins = input<MapPin[]>([]);
+  /** Without a center, zooms so that all the pins fit on the screen. */
+  readonly fitToPins = input(false);
+  /** The content of the popup that opens when a pin is clicked. Without it, pins have no popup. */
+  readonly popup = input<TemplateRef<PinPopupContext> | null>(null);
 
   /** The place the user clicked, so the parent can decide what to do with it (e.g. move a pin). */
   readonly locationSelected = output<Coordinates>();
 
+  private readonly viewContainer = inject(ViewContainerRef);
   private readonly container = viewChild.required<ElementRef<HTMLElement>>('container');
   private readonly ready = signal(false);
   private map?: L.Map;
@@ -53,7 +64,7 @@ export class MapView {
       if (!this.ready()) {
         return;
       }
-      this.showView(this.center(), this.zoom());
+      this.showView();
     });
 
     effect(() => {
@@ -75,9 +86,19 @@ export class MapView {
     this.pinLayer = L.layerGroup().addTo(map);
   }
 
-  private showView(center: Coordinates | null, zoom: number): void {
+  private showView(): void {
+    const center = this.center();
     if (center) {
-      this.map?.setView([center.latitude, center.longitude], zoom);
+      this.map?.setView([center.latitude, center.longitude], this.zoom());
+      return;
+    }
+    const pins = this.fitToPins() ? this.pins() : [];
+    if (pins.length > 0) {
+      const bounds = L.latLngBounds(pins.map((pin) => [pin.latitude, pin.longitude]));
+      this.map?.fitBounds(bounds, {
+        padding: [FIT_PADDING_PX, FIT_PADDING_PX],
+        maxZoom: FIT_MAX_ZOOM,
+      });
     } else {
       this.map?.fitBounds(ROMANIA_BOUNDS);
     }
@@ -89,13 +110,33 @@ export class MapView {
       return;
     }
     layer.clearLayers();
-    pins.forEach((pin) =>
-      L.marker([pin.latitude, pin.longitude], {
+    const popup = this.popup();
+    pins.forEach((pin) => {
+      const marker = L.marker([pin.latitude, pin.longitude], {
         icon: createPinIcon(pin.type),
         title: pin.label,
         alt: pin.label ?? `${pin.type} pin`,
-      }).addTo(layer),
-    );
+      }).addTo(layer);
+      if (popup) {
+        this.bindPopup(marker, pin, popup);
+      }
+    });
+  }
+
+  /** The popup is rendered from the template when it opens, and destroyed when it closes. */
+  private bindPopup(marker: L.Marker, pin: MapPin, template: TemplateRef<PinPopupContext>): void {
+    let view: EmbeddedViewRef<PinPopupContext> | undefined;
+    marker.bindPopup(() => {
+      view = this.viewContainer.createEmbeddedView(template, { $implicit: pin });
+      view.detectChanges();
+      const content = document.createElement('div');
+      view.rootNodes.forEach((node) => content.appendChild(node));
+      return content;
+    }, POPUP_OPTIONS);
+    marker.on('popupclose', () => {
+      view?.destroy();
+      view = undefined;
+    });
   }
 
   private reportClick(position: L.LatLng): void {

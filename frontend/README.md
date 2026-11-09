@@ -33,10 +33,11 @@ The backend URL is set in one place, in `src/environments/environment.ts` (and `
 
 ### Pages
 
-| Route                | Page                   |
-| -------------------- | ---------------------- |
-| `/announcements`     | List of announcements  |
-| `/announcements/new` | Form for posting a pet |
+| Route                | Page                                 |
+| -------------------- | ------------------------------------ |
+| `/announcements`     | List of announcements                |
+| `/announcements/new` | Form for posting a pet               |
+| `/map`               | Map with a pin for each announcement |
 
 ### Tests and coverage
 
@@ -54,6 +55,15 @@ npm run build
 ```
 
 The result is in `dist/frontend`.
+
+## Map page
+
+`/map` shows a pin for each announcement that matches the filters, red for LOST and green for FOUND. It uses the same filter bar as the list, so both pages show the same results for the same filters (`/map?species=CAT` works like `/announcements?species=CAT`).
+
+- **Start:** if the browser location is allowed, the map is centered on the user. If it is refused, it zooms so that all the pins fit on the screen.
+- **Popup:** clicking a pin shows the main photo, the pet name (or the species), the area, the date and a "View details" link to `/announcements/:id`.
+- **No position:** announcements without coordinates cannot get a pin, and the page says how many there are.
+- **Shared code:** `AnnouncementSearch` (`services/announcement-search.ts`) reads the filters from the URL, asks for the location and loads the announcements. Each page that shows announcements provides its own instance.
 
 ## Filters
 
@@ -98,11 +108,13 @@ imports: [MapView];
 <app-map [pins]="pins" [center]="center" [zoom]="15" (locationSelected)="onMapClick($event)" />
 ```
 
-| Input / output       | What it does                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------ |
-| `pins`               | List of `{ latitude, longitude, type: 'LOST' \| 'FOUND', label? }`. LOST is red, FOUND is green. |
-| `center`             | `{ latitude, longitude }`. Without it, the map shows all of Romania.                             |
-| `zoom`               | Zoom level used together with `center` (default 15).                                             |
-| `(locationSelected)` | Emits `{ latitude, longitude }` (6 decimals) where the user clicked.                             |
+| Input / output       | What it does                                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pins`               | List of `{ latitude, longitude, type: 'LOST' \| 'FOUND', label?, id? }`. LOST is red, FOUND is green. |
+| `center`             | `{ latitude, longitude }`. Without it, the map shows all of Romania.                                  |
+| `zoom`               | Zoom level used together with `center` (default 15).                                                  |
+| `fitToPins`          | Without a `center`, zooms so that all the pins fit on the screen.                                     |
+| `popup`              | A `<ng-template let-pin>` shown in a popup when a pin is clicked. `pin.id` finds what it stands for.  |
+| `(locationSelected)` | Emits `{ latitude, longitude }` (6 decimals) where the user clicked.                                  |
 
 The map does not add a pin by itself when it is clicked. The page decides: for the form, put the clicked location in `pins` and in the latitude and longitude fields. The pin colors are the `--color-lost` and `--color-found` variables in `src/styles.css`. The map is 400px high by default, set another `height` on `app-map` to change it.

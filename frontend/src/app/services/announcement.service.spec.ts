@@ -50,6 +50,8 @@ describe('AnnouncementService', () => {
     petName: 'Misi',
     species: 'CAT',
     area: 'Mănăștur, Cluj-Napoca',
+    latitude: 46.7712,
+    longitude: 23.6236,
     eventDate: '2026-10-30T18:00:00',
     status: 'ACTIVE',
     photos: [],
@@ -184,6 +186,25 @@ describe('AnnouncementService', () => {
     expect(service.photoUrl({ id: 3, url: '/photos/3', isMain: true })).toBe(
       `${environment.apiUrl}/photos/3`,
     );
+  });
+
+  it('should use the main photo as the main photo url', () => {
+    expect(
+      service.mainPhotoUrl([
+        { id: 3, url: '/photos/3', isMain: false },
+        { id: 4, url: '/photos/4', isMain: true },
+      ]),
+    ).toBe(`${environment.apiUrl}/photos/4`);
+  });
+
+  it('should use the first photo when none is the main one', () => {
+    expect(service.mainPhotoUrl([{ id: 3, url: '/photos/3', isMain: false }])).toBe(
+      `${environment.apiUrl}/photos/3`,
+    );
+  });
+
+  it('should have no main photo url without photos', () => {
+    expect(service.mainPhotoUrl([])).toBeNull();
   });
 
   it('should build the poster url of an announcement', () => {

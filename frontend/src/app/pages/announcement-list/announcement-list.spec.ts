@@ -21,6 +21,8 @@ describe('AnnouncementList', () => {
       petName: null,
       species: 'CAT',
       area: 'Centru, Cluj-Napoca',
+      latitude: 46.77,
+      longitude: 23.6,
       eventDate,
       status: 'ACTIVE',
       photos: [],
@@ -50,7 +52,7 @@ describe('AnnouncementList', () => {
         provideRouter([{ path: 'announcements', component: AnnouncementList }]),
         {
           provide: AnnouncementService,
-          useValue: { getAll, photoUrl: () => '', posterUrl: () => '#' },
+          useValue: { getAll, mainPhotoUrl: () => null, posterUrl: () => '#' },
         },
         {
           provide: LocationService,

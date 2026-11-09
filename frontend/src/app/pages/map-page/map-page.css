@@ -1,0 +1,23 @@
+app-map {
+  height: 60vh;
+  min-height: 400px;
+}
+
+.message,
+.note {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.message {
+  text-align: center;
+}
+
+.message.error {
+  color: var(--color-lost);
+}
+
+.note {
+  color: #555555;
+}

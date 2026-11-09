@@ -14,11 +14,9 @@ export class AnnouncementCard {
 
   readonly announcement = input.required<AnnouncementSummary>();
 
-  protected readonly mainPhotoUrl = computed(() => {
-    const photos = this.announcement().photos;
-    const mainPhoto = photos.find((photo) => photo.isMain) ?? photos[0];
-    return mainPhoto ? this.announcementService.photoUrl(mainPhoto) : null;
-  });
+  protected readonly mainPhotoUrl = computed(() =>
+    this.announcementService.mainPhotoUrl(this.announcement().photos),
+  );
 
   protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
 
