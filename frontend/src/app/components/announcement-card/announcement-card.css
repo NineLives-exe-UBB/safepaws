@@ -39,11 +39,11 @@
 }
 
 .label.lost {
-  background-color: #c0392b;
+  background-color: var(--color-lost);
 }
 
 .label.found {
-  background-color: #2e8b57;
+  background-color: var(--color-found);
 }
 
 .details {

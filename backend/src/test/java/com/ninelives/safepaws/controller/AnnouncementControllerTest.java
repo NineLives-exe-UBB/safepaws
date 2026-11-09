@@ -1,9 +1,12 @@
 package com.ninelives.safepaws.controller;
 
+import com.ninelives.safepaws.dto.AnnouncementFilter;
 import com.ninelives.safepaws.dto.AnnouncementRequest;
 import com.ninelives.safepaws.dto.AnnouncementResponse;
 import com.ninelives.safepaws.dto.AnnouncementSummaryResponse;
+import com.ninelives.safepaws.dto.ErrorResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
+import com.ninelives.safepaws.exception.InvalidFilterException;
 import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
@@ -25,6 +28,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -238,13 +242,13 @@ class AnnouncementControllerTest {
 
         @Test
         void returnsTheSummariesInTheOrderTheServiceGives() throws Exception {
-            when(announcementService.findAll()).thenReturn(List.of(
+            when(announcementService.findAll(any())).thenReturn(List.of(
                     new AnnouncementSummaryResponse(13L, AnnouncementType.LOST, "Max", Species.DOG,
-                            "Someșeni, Cluj-Napoca", LocalDateTime.of(2026, 11, 2, 7, 0),
+                            "Someșeni, Cluj-Napoca", 46.788, 23.651, null, LocalDateTime.of(2026, 11, 2, 7, 0),
                             AnnouncementStatus.ACTIVE,
                             List.of(new AnnouncementSummaryResponse.Photo(3L, "/photos/3", true))),
                     new AnnouncementSummaryResponse(11L, AnnouncementType.FOUND, null, Species.CAT,
-                            "Între Lacuri, Cluj-Napoca", LocalDateTime.of(2026, 11, 1, 17, 0),
+                            "Între Lacuri, Cluj-Napoca", null, null, null, LocalDateTime.of(2026, 11, 1, 17, 0),
                             AnnouncementStatus.RESOLVED, List.of())));
 
             mockMvc.perform(get("/announcements"))
@@ -255,19 +259,100 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$[0].petName").value("Max"))
                     .andExpect(jsonPath("$[0].species").value("DOG"))
                     .andExpect(jsonPath("$[0].area").value("Someșeni, Cluj-Napoca"))
+                    .andExpect(jsonPath("$[0].latitude").value(46.788))
+                    .andExpect(jsonPath("$[0].longitude").value(23.651))
                     .andExpect(jsonPath("$[0].eventDate").value("2026-11-02T07:00:00"))
                     .andExpect(jsonPath("$[0].status").value("ACTIVE"))
                     .andExpect(jsonPath("$[0].photos[0].id").value(3))
                     .andExpect(jsonPath("$[0].photos[0].url").value("/photos/3"))
                     .andExpect(jsonPath("$[0].photos[0].isMain").value(true))
                     .andExpect(jsonPath("$[1].id").value(11))
+                    // no map position: both keys are still sent, as null
+                    .andExpect(jsonPath("$[1].latitude").value(nullValue()))
+                    .andExpect(jsonPath("$[1].longitude").value(nullValue()))
+                    // no location sent: no distanceKm key at all
+                    .andExpect(jsonPath("$[0].distanceKm").doesNotExist())
                     // the list only carries what a card shows
                     .andExpect(jsonPath("$[0].contactPhone").doesNotExist());
         }
 
         @Test
+        void noParametersGiveAnEmptyFilter() throws Exception {
+            when(announcementService.findAll(any())).thenReturn(List.of());
+
+            mockMvc.perform(get("/announcements")).andExpect(status().isOk());
+
+            verify(announcementService).findAll(AnnouncementFilter.none());
+        }
+
+        @Test
+        void passesEveryQueryParameterToTheService() throws Exception {
+            when(announcementService.findAll(any())).thenReturn(List.of());
+
+            mockMvc.perform(get("/announcements")
+                            .param("type", "LOST")
+                            .param("species", "DOG")
+                            .param("status", "RESOLVED")
+                            .param("color", "grey")
+                            .param("breed", "terrier")
+                            .param("area", "manastur")
+                            .param("lat", "46.77")
+                            .param("lng", "23.59")
+                            .param("radiusKm", "5")
+                            .param("sort", "closest"))
+                    .andExpect(status().isOk());
+
+            verify(announcementService).findAll(new AnnouncementFilter(AnnouncementType.LOST, Species.DOG,
+                    AnnouncementStatus.RESOLVED, "grey", "terrier", "manastur", 46.77, 23.59, 5.0, "closest"));
+        }
+
+        @Test
+        void sendsDistanceKmWhenTheServiceSetsIt() throws Exception {
+            when(announcementService.findAll(any())).thenReturn(List.of(
+                    new AnnouncementSummaryResponse(6L, AnnouncementType.FOUND, null, Species.DOG,
+                            "Centru, Cluj-Napoca", 46.769, 23.59, 0.1, LocalDateTime.of(2026, 11, 2, 7, 0),
+                            AnnouncementStatus.ACTIVE, List.of())));
+
+            mockMvc.perform(get("/announcements").param("lat", "46.77").param("lng", "23.59"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].distanceKm").value(0.1));
+        }
+
+        @Test
+        void unknownEnumValueReturns400WithTheAllowedValues() throws Exception {
+            mockMvc.perform(get("/announcements").param("species", "Cat"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("species"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message")
+                            .value("Invalid value 'Cat', allowed values: CAT, DOG, OTHER"));
+
+            verify(announcementService, never()).findAll(any());
+        }
+
+        @Test
+        void notANumberForLatReturns400() throws Exception {
+            mockMvc.perform(get("/announcements").param("lat", "north").param("lng", "23.59"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("lat"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message").value("Invalid value 'north'"));
+        }
+
+        @Test
+        void invalidFilterReturns400WithTheFieldErrors() throws Exception {
+            when(announcementService.findAll(any())).thenThrow(new InvalidFilterException(List.of(
+                    new ErrorResponse.FieldError("sort", "sort=closest requires lat and lng"))));
+
+            mockMvc.perform(get("/announcements").param("sort", "closest"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").value("Some fields are invalid"))
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("sort"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message").value("sort=closest requires lat and lng"));
+        }
+
+        @Test
         void noAnnouncementsGivesAnEmptyList() throws Exception {
-            when(announcementService.findAll()).thenReturn(List.of());
+            when(announcementService.findAll(any())).thenReturn(List.of());
 
             mockMvc.perform(get("/announcements"))
                     .andExpect(status().isOk())

@@ -59,18 +59,33 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Malformed request body", List.of());
     }
 
+    /**
+     * The query parameters of GET /announcements break a rule, e.g. radiusKm without lat and lng.
+     */
+    @ExceptionHandler(InvalidFilterException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFilter(InvalidFilterException ex) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getFieldErrors());
+    }
+
     @ExceptionHandler(AnnouncementNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(AnnouncementNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());
     }
 
     /**
-     * A path or query parameter has the wrong type, e.g. {@code /announcements/abc}.
+     * A path or query parameter has the wrong type, e.g. {@code /announcements/abc} or {@code ?species=Cat}.
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message = "Invalid value '" + ex.getValue() + "'";
+        Class<?> type = ex.getRequiredType();
+        if (type != null && type.isEnum()) {
+            message += ", allowed values: " + Arrays.stream(type.getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+        }
         return build(HttpStatus.BAD_REQUEST, "Some fields are invalid",
-                List.of(new ErrorResponse.FieldError(ex.getName(), "Invalid value '" + ex.getValue() + "'")));
+                List.of(new ErrorResponse.FieldError(ex.getName(), message)));
     }
 
     /**
