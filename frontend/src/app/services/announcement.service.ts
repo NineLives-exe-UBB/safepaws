@@ -10,7 +10,9 @@ import {
 import {
   AnnouncementFilters,
   DEFAULT_FILTERS,
+  MAX_RADIUS_KM,
   UserLocation,
+  needsLocation,
   toQueryParams,
 } from '../models/announcement-filters.model';
 import { Photo } from '../models/photo.model';
@@ -26,10 +28,18 @@ export class AnnouncementService {
     filters: AnnouncementFilters = DEFAULT_FILTERS,
     location: UserLocation | null = null,
   ): Observable<AnnouncementSummary[]> {
-    const params: Record<string, string> = { ...toQueryParams(filters), sort: filters.sort };
-    if (location) {
-      params['userLatitude'] = String(location.latitude);
-      params['userLongitude'] = String(location.longitude);
+    const params: Record<string, string> = {
+      ...toQueryParams(filters),
+      status: filters.status,
+      sort: filters.sort,
+    };
+    delete params['radiusKm'];
+    // With a location the backend also filters by radius (10 km when none is sent) and leaves out
+    // announcements without coordinates, so it is only sent when the user asked for distance.
+    if (location && needsLocation(filters)) {
+      params['lat'] = String(location.latitude);
+      params['lng'] = String(location.longitude);
+      params['radiusKm'] = String(filters.radiusKm ?? MAX_RADIUS_KM);
     }
     return this.http.get<AnnouncementSummary[]>(this.announcementsUrl, { params });
   }

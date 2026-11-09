@@ -10,6 +10,7 @@ import {
   RADIUS_OPTIONS_KM,
   SORT_LABELS,
   STATUS_LABELS,
+  TEXT_FILTER_MAX_LENGTH,
   TYPE_LABELS,
   hasActiveFilters,
 } from '../../models/announcement-filters.model';
@@ -35,6 +36,7 @@ export class FilterBar {
   protected readonly statusOptions = Object.entries(STATUS_LABELS);
   protected readonly sortOptions = Object.entries(SORT_LABELS);
   protected readonly radiusOptions = RADIUS_OPTIONS_KM;
+  protected readonly maxLength = TEXT_FILTER_MAX_LENGTH;
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     type: DEFAULT_FILTERS.type,

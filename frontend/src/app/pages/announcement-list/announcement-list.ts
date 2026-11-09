@@ -53,37 +53,37 @@ export class AnnouncementList {
   );
   protected readonly filtersActive = computed(() => hasActiveFilters(this.filters()));
 
+  /** Null while the page waits for a location that the filters need. */
+  private readonly request = computed(() => {
+    const filters = this.filters();
+    if (!needsLocation(filters)) {
+      return { filters, location: null };
+    }
+    const location = this.location();
+    return location ? { filters, location } : null;
+  });
+
   constructor() {
     this.locationService.getCurrentLocation().then((location) => {
       this.location.set(location);
       this.locationStatus.set(location ? 'granted' : 'denied');
     });
 
-    toObservable(
-      computed(() => ({
-        filters: this.filters(),
-        location: this.location(),
-        locationStatus: this.locationStatus(),
-      })),
-    )
+    toObservable(this.request)
       .pipe(
-        filter(
-          ({ filters, locationStatus }) =>
-            !(needsLocation(filters) && locationStatus === 'pending'),
-        ),
+        filter((request): request is NonNullable<typeof request> => request !== null),
+        distinctUntilChanged((first, second) => JSON.stringify(first) === JSON.stringify(second)),
         tap(() => this.loading.set(true)),
         switchMap(({ filters, location }) =>
           this.announcementService.getAll(filters, location).pipe(
-            map((announcements) => ({ filters, announcements, failed: false })),
-            catchError(() => of({ filters, announcements: [], failed: true })),
+            map((announcements) => ({ announcements, failed: false })),
+            catchError(() => of({ announcements: [], failed: true })),
           ),
         ),
         takeUntilDestroyed(),
       )
-      .subscribe(({ filters, announcements, failed }) => {
-        this.announcements.set(
-          filters.sort === 'NEWEST' ? this.sortByEventDate(announcements) : announcements,
-        );
+      .subscribe(({ announcements, failed }) => {
+        this.announcements.set(announcements);
         this.failed.set(failed);
         this.loading.set(false);
       });
@@ -95,13 +95,5 @@ export class AnnouncementList {
       queryParams: toQueryParams(filters),
       replaceUrl: true,
     });
-  }
-
-  /** Newest event first, so the order matches the date shown on each card. */
-  private sortByEventDate(announcements: AnnouncementSummary[]): AnnouncementSummary[] {
-    return [...announcements].sort(
-      (first, second) =>
-        Date.parse(second.eventDate) - Date.parse(first.eventDate) || second.id - first.id,
-    );
   }
 }

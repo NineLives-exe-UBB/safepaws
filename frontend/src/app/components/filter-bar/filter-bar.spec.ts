@@ -46,8 +46,8 @@ describe('FilterBar', () => {
 
     expect(optionTexts('type')).toEqual(['Any', 'Lost', 'Found']);
     expect(optionTexts('species')).toEqual(['Any', 'Cat', 'Dog', 'Other']);
-    expect(optionTexts('status')).toEqual(['Any', 'Active', 'Resolved']);
-    expect(optionTexts('sort')).toEqual(['Newest first', 'Oldest first', 'Nearest first']);
+    expect(optionTexts('status')).toEqual(['Active', 'Resolved']);
+    expect(optionTexts('sort')).toEqual(['Newest first', 'Oldest first', 'Closest first']);
     expect(optionTexts('radius')).toEqual([
       'Any distance',
       'Within 1 km',
@@ -55,6 +55,7 @@ describe('FilterBar', () => {
       'Within 10 km',
       'Within 25 km',
       'Within 50 km',
+      'Within 100 km',
     ]);
   });
 
@@ -63,21 +64,21 @@ describe('FilterBar', () => {
 
     expect(select('type').value).toBe('');
     expect(select('species').value).toBe('');
-    expect(select('status').value).toBe('');
+    expect(select('status').value).toBe('ACTIVE');
     expect(input('color').value).toBe('');
     expect(input('breed').value).toBe('');
     expect(input('area').value).toBe('');
-    expect(select('sort').value).toBe('NEWEST');
+    expect(select('sort').value).toBe('newest');
   });
 
   it('should show the filters it is given', async () => {
     await render({
-      filters: { ...DEFAULT_FILTERS, species: 'DOG', color: 'grey', sort: 'OLDEST' },
+      filters: { ...DEFAULT_FILTERS, species: 'DOG', color: 'grey', sort: 'oldest' },
     });
 
     expect(select('species').value).toBe('DOG');
     expect(input('color').value).toBe('grey');
-    expect(select('sort').value).toBe('OLDEST');
+    expect(select('sort').value).toBe('oldest');
   });
 
   it('should update when the filters it is given change', async () => {
@@ -87,6 +88,28 @@ describe('FilterBar', () => {
 
     expect(select('type').value).toBe('FOUND');
     expect(emitted).toEqual([]);
+  });
+
+  it('should limit the length of the text fields like the backend does', async () => {
+    await render();
+
+    expect(input('color').maxLength).toBe(100);
+    expect(input('breed').maxLength).toBe(100);
+    expect(input('area').maxLength).toBe(150);
+  });
+
+  it('should count a status other than the default as an active filter', async () => {
+    await render({ filters: { ...DEFAULT_FILTERS, status: 'RESOLVED' } });
+
+    expect(element.querySelector('.clear-button')).toBeTruthy();
+  });
+
+  it('should go back to active announcements when the filters are cleared', async () => {
+    await render({ filters: { ...DEFAULT_FILTERS, status: 'RESOLVED' } });
+    fixture.nativeElement.querySelector('.clear-button').click();
+
+    expect(emitted).toEqual([DEFAULT_FILTERS]);
+    expect(select('status').value).toBe('ACTIVE');
   });
 
   it('should report a dropdown change right away', async () => {
@@ -123,12 +146,12 @@ describe('FilterBar', () => {
   it('should report the radius and the sort order', async () => {
     await render({ locationStatus: 'granted' });
     fixture.componentInstance['form'].controls.radiusKm.setValue(10);
-    choose('sort', 'NEAREST');
+    choose('sort', 'closest');
 
     expect(emitted[emitted.length - 1]).toEqual({
       ...DEFAULT_FILTERS,
       radiusKm: 10,
-      sort: 'NEAREST',
+      sort: 'closest',
     });
   });
 
@@ -139,7 +162,7 @@ describe('FilterBar', () => {
   });
 
   it('should not count the sort order as a filter', async () => {
-    await render({ filters: { ...DEFAULT_FILTERS, sort: 'OLDEST' } });
+    await render({ filters: { ...DEFAULT_FILTERS, sort: 'oldest' } });
 
     expect(element.querySelector('.clear-button')).toBeNull();
   });
@@ -152,12 +175,12 @@ describe('FilterBar', () => {
 
   it('should clear the filters but keep the sort order', async () => {
     await render({
-      filters: { ...DEFAULT_FILTERS, species: 'CAT', color: 'grey', sort: 'OLDEST' },
+      filters: { ...DEFAULT_FILTERS, species: 'CAT', color: 'grey', sort: 'oldest' },
     });
     fixture.nativeElement.querySelector('.clear-button').click();
     await fixture.whenStable();
 
-    expect(emitted).toEqual([{ ...DEFAULT_FILTERS, sort: 'OLDEST' }]);
+    expect(emitted).toEqual([{ ...DEFAULT_FILTERS, sort: 'oldest' }]);
     expect(select('species').value).toBe('');
     expect(input('color').value).toBe('');
     expect(element.querySelector('.clear-button')).toBeNull();
@@ -165,19 +188,19 @@ describe('FilterBar', () => {
 
   it('should enable the radius and the distance sorting when the location is known', async () => {
     await render({ locationStatus: 'granted' });
-    const nearest = Array.from(select('sort').options).find((o) => o.value === 'NEAREST');
+    const closest = Array.from(select('sort').options).find((o) => o.value === 'closest');
 
     expect(select('radius').disabled).toBe(false);
-    expect(nearest?.disabled).toBe(false);
+    expect(closest?.disabled).toBe(false);
     expect(element.querySelector('.location-message')).toBeNull();
   });
 
   it('should disable the radius and the distance sorting when the location is refused', async () => {
     await render({ locationStatus: 'denied' });
-    const nearest = Array.from(select('sort').options).find((o) => o.value === 'NEAREST');
+    const closest = Array.from(select('sort').options).find((o) => o.value === 'closest');
 
     expect(select('radius').disabled).toBe(true);
-    expect(nearest?.disabled).toBe(true);
+    expect(closest?.disabled).toBe(true);
     expect(element.querySelector('.location-message')?.textContent).toContain(
       'Allow location access to see announcements near you',
     );

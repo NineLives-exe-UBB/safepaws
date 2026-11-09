@@ -27,7 +27,7 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 3. Open http://localhost:4200 in the browser.
 
-`npm start` shows **mock data** (`useMockData: true` in `src/environments/environment.development.ts`), with the filters and sorting done in the app, so no backend is needed. To use the real backend, set it to `false`. The backend must then run on `http://localhost:8080` with the seeded test data (see `backend/README.md`: copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). Without it, the list page shows "Could not load the announcements."
+The list needs the backend running on `http://localhost:8080` (see `backend/README.md`: copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). It comes with test announcements, so the list is not empty. Without the backend, the list page shows "Could not load the announcements."
 
 The backend URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
 
@@ -68,9 +68,10 @@ The list page has a filter bar (`<app-filter-bar>`, in `components/filter-bar`) 
 ```
 
 - **Filters:** type, species and status (dropdowns), color, breed and area (text), radius and sort. The text fields wait 300 ms after the user stops typing.
+- **Defaults:** the same as the backend. Without any filter it returns only active announcements, newest event first, so the status dropdown starts on "Active" and has no "Any" option.
 - **In the URL:** only the values that are not the default, for example `/announcements?species=CAT&color=grey`, so they survive a refresh and can be shared. `fromQueryParams` and `toQueryParams` in `models/announcement-filters.model.ts` read and write them.
-- **Location:** the page asks the browser for the user's location (`LocationService`). If it is refused, the radius and the "Nearest first" sorting are disabled, with a short message, and no distance is shown on the cards.
-- **Backend:** `AnnouncementService.getAll(filters, location)` sends the filters as query parameters (`type`, `species`, `status`, `color`, `breed`, `area`, `radiusKm`, `sort`, `userLatitude`, `userLongitude`) and expects an optional `distanceKm` in each announcement. These names are the ones assumed from the API contract, so if the backend uses different ones, change them in one place: `getAll` and `toQueryParams`.
+- **Location:** the page asks the browser for the user's location (`LocationService`). If it is refused, the radius and "Closest first" are disabled, with a short message. The location is only sent to the backend when a radius or "Closest first" is chosen, because the backend then also filters by radius (10 km by default) and leaves out announcements without coordinates. "Closest first" without a radius asks for 100 km, the maximum. The distance on a card ("1.2 km away") is only known in those cases.
+- **Backend:** `AnnouncementService.getAll(filters, location)` sends `type`, `species`, `status`, `color`, `breed`, `area`, `lat`, `lng`, `radiusKm` and `sort` (`newest`, `oldest` or `closest`) as query parameters. The backend sorts, the page shows the announcements in the order it returns them.
 
 ## Project structure
 

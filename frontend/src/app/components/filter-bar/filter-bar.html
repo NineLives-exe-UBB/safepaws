@@ -22,7 +22,6 @@
   <div class="field">
     <label for="filter-status">Status</label>
     <select id="filter-status" formControlName="status">
-      <option value="">Any</option>
       @for (option of statusOptions; track option[0]) {
         <option [value]="option[0]">{{ option[1] }}</option>
       }
@@ -31,17 +30,35 @@
 
   <div class="field">
     <label for="filter-color">Color</label>
-    <input id="filter-color" type="text" formControlName="color" placeholder="e.g. grey" />
+    <input
+      id="filter-color"
+      type="text"
+      formControlName="color"
+      [maxlength]="maxLength.color"
+      placeholder="e.g. grey"
+    />
   </div>
 
   <div class="field">
     <label for="filter-breed">Breed</label>
-    <input id="filter-breed" type="text" formControlName="breed" placeholder="e.g. European" />
+    <input
+      id="filter-breed"
+      type="text"
+      formControlName="breed"
+      [maxlength]="maxLength.breed"
+      placeholder="e.g. European"
+    />
   </div>
 
   <div class="field">
     <label for="filter-area">Area</label>
-    <input id="filter-area" type="text" formControlName="area" placeholder="e.g. Mănăștur" />
+    <input
+      id="filter-area"
+      type="text"
+      formControlName="area"
+      [maxlength]="maxLength.area"
+      placeholder="e.g. Mănăștur"
+    />
   </div>
 
   <div class="field">
@@ -58,7 +75,7 @@
     <label for="filter-sort">Sort by</label>
     <select id="filter-sort" formControlName="sort">
       @for (option of sortOptions; track option[0]) {
-        <option [value]="option[0]" [disabled]="option[0] === 'NEAREST' && !locationAvailable()">
+        <option [value]="option[0]" [disabled]="option[0] === 'closest' && !locationAvailable()">
           {{ option[1] }}
         </option>
       }

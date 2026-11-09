@@ -81,35 +81,79 @@ describe('AnnouncementService', () => {
     expect(result).toEqual([summary]);
   });
 
-  it('should only ask for the default sort when no filter is set', () => {
+  it('should only send the default status and sort when no filter is set', () => {
     service.getAll().subscribe();
 
     const req = httpController.expectOne((request) => request.url === announcementsUrl);
-    expect(req.request.params.keys()).toEqual(['sort']);
-    expect(req.request.params.get('sort')).toBe('NEWEST');
+    expect(req.request.params.keys().sort()).toEqual(['sort', 'status']);
+    expect(req.request.params.get('status')).toBe('ACTIVE');
+    expect(req.request.params.get('sort')).toBe('newest');
     req.flush([]);
   });
 
   it('should send the filters as query parameters', () => {
     service
-      .getAll({ ...DEFAULT_FILTERS, species: 'CAT', color: 'grey', radiusKm: 5, sort: 'NEAREST' })
+      .getAll({
+        ...DEFAULT_FILTERS,
+        type: 'LOST',
+        species: 'CAT',
+        status: 'RESOLVED',
+        color: 'grey',
+        breed: 'European',
+        area: 'Cluj',
+        sort: 'oldest',
+      })
       .subscribe();
 
     const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('type')).toBe('LOST');
     expect(req.request.params.get('species')).toBe('CAT');
+    expect(req.request.params.get('status')).toBe('RESOLVED');
     expect(req.request.params.get('color')).toBe('grey');
-    expect(req.request.params.get('radiusKm')).toBe('5');
-    expect(req.request.params.get('sort')).toBe('NEAREST');
-    expect(req.request.params.has('type')).toBe(false);
+    expect(req.request.params.get('breed')).toBe('European');
+    expect(req.request.params.get('area')).toBe('Cluj');
+    expect(req.request.params.get('sort')).toBe('oldest');
     req.flush([]);
   });
 
-  it('should send the user location when it is known', () => {
+  it('should send the location and the radius when a radius is chosen', () => {
+    service
+      .getAll({ ...DEFAULT_FILTERS, radiusKm: 5 }, { latitude: 46.77, longitude: 23.6 })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('lat')).toBe('46.77');
+    expect(req.request.params.get('lng')).toBe('23.6');
+    expect(req.request.params.get('radiusKm')).toBe('5');
+    req.flush([]);
+  });
+
+  it('should ask for the largest radius when sorting by distance without a radius', () => {
+    service
+      .getAll({ ...DEFAULT_FILTERS, sort: 'closest' }, { latitude: 46.77, longitude: 23.6 })
+      .subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.get('sort')).toBe('closest');
+    expect(req.request.params.get('radiusKm')).toBe('100');
+    req.flush([]);
+  });
+
+  it('should not send the location when the filters do not need it', () => {
     service.getAll(DEFAULT_FILTERS, { latitude: 46.77, longitude: 23.6 }).subscribe();
 
     const req = httpController.expectOne((request) => request.url === announcementsUrl);
-    expect(req.request.params.get('userLatitude')).toBe('46.77');
-    expect(req.request.params.get('userLongitude')).toBe('23.6');
+    expect(req.request.params.has('lat')).toBe(false);
+    expect(req.request.params.has('lng')).toBe(false);
+    expect(req.request.params.has('radiusKm')).toBe(false);
+    req.flush([]);
+  });
+
+  it('should not send a radius without a location', () => {
+    service.getAll({ ...DEFAULT_FILTERS, radiusKm: 5 }).subscribe();
+
+    const req = httpController.expectOne((request) => request.url === announcementsUrl);
+    expect(req.request.params.has('radiusKm')).toBe(false);
     req.flush([]);
   });
 

@@ -5,7 +5,7 @@ import {
   Species,
 } from './announcement.model';
 
-export type SortOption = 'NEWEST' | 'OLDEST' | 'NEAREST';
+export type SortOption = 'newest' | 'oldest' | 'closest';
 export type LocationStatus = 'pending' | 'granted' | 'denied';
 
 export interface UserLocation {
@@ -16,7 +16,7 @@ export interface UserLocation {
 export interface AnnouncementFilters {
   type: AnnouncementType | '';
   species: Species | '';
-  status: AnnouncementStatus | '';
+  status: AnnouncementStatus;
   color: string;
   breed: string;
   area: string;
@@ -27,12 +27,12 @@ export interface AnnouncementFilters {
 export const DEFAULT_FILTERS: AnnouncementFilters = {
   type: '',
   species: '',
-  status: '',
+  status: 'ACTIVE',
   color: '',
   breed: '',
   area: '',
   radiusKm: null,
-  sort: 'NEWEST',
+  sort: 'newest',
 };
 
 export const TYPE_LABELS: Record<AnnouncementType, string> = {
@@ -46,12 +46,16 @@ export const STATUS_LABELS: Record<AnnouncementStatus, string> = {
 };
 
 export const SORT_LABELS: Record<SortOption, string> = {
-  NEWEST: 'Newest first',
-  OLDEST: 'Oldest first',
-  NEAREST: 'Nearest first',
+  newest: 'Newest first',
+  oldest: 'Oldest first',
+  closest: 'Closest first',
 };
 
-export const RADIUS_OPTIONS_KM = [1, 5, 10, 25, 50];
+export const RADIUS_OPTIONS_KM = [1, 5, 10, 25, 50, 100];
+/** The backend limits the radius to 1-100 km and uses 10 km when none is sent with a location. */
+export const MAX_RADIUS_KM = 100;
+
+export const TEXT_FILTER_MAX_LENGTH = { color: 100, breed: 100, area: 150 };
 
 const TEXT_FILTERS = ['color', 'breed', 'area'] as const;
 
@@ -66,7 +70,7 @@ export function hasActiveFilters(filters: AnnouncementFilters): boolean {
 }
 
 export function needsLocation(filters: AnnouncementFilters): boolean {
-  return filters.radiusKm !== null || filters.sort === 'NEAREST';
+  return filters.radiusKm !== null || filters.sort === 'closest';
 }
 
 /** Only the values that differ from the defaults, so the URL stays short. */
@@ -103,7 +107,8 @@ export function fromQueryParams(get: (name: string) => string | null): Announcem
   return {
     type: oneOf('type', TYPE_LABELS, DEFAULT_FILTERS.type),
     species: oneOf('species', SPECIES_LABELS, DEFAULT_FILTERS.species),
-    status: oneOf('status', STATUS_LABELS, DEFAULT_FILTERS.status),
+    status: (oneOf('status', STATUS_LABELS, DEFAULT_FILTERS.status) ||
+      DEFAULT_FILTERS.status) as AnnouncementStatus,
     color: text('color'),
     breed: text('breed'),
     area: text('area'),
@@ -117,6 +122,6 @@ export function withoutLocationFilters(filters: AnnouncementFilters): Announceme
   return {
     ...filters,
     radiusKm: null,
-    sort: filters.sort === 'NEAREST' ? DEFAULT_FILTERS.sort : filters.sort,
+    sort: filters.sort === 'closest' ? DEFAULT_FILTERS.sort : filters.sort,
   };
 }

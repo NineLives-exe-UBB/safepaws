@@ -155,11 +155,29 @@ describe('AnnouncementList', () => {
     );
   });
 
-  it('should send the location and enable the radius when the user allows it', async () => {
+  it('should enable the radius when the user allows the location', async () => {
     await setup({ location: Promise.resolve(clujNapoca) });
 
-    expect(getAll).toHaveBeenLastCalledWith(DEFAULT_FILTERS, clujNapoca);
     expect(element.querySelector<HTMLSelectElement>('#filter-radius')?.disabled).toBe(false);
+  });
+
+  it('should not send the location when the filters do not need it', async () => {
+    await setup({ location: Promise.resolve(clujNapoca) });
+
+    expect(getAll).toHaveBeenCalledTimes(1);
+    expect(getAll).toHaveBeenCalledWith(DEFAULT_FILTERS, null);
+  });
+
+  it('should send the location when a radius is chosen', async () => {
+    await setup({ url: '/announcements?radiusKm=5', location: Promise.resolve(clujNapoca) });
+
+    expect(getAll).toHaveBeenCalledWith({ ...DEFAULT_FILTERS, radiusKm: 5 }, clujNapoca);
+  });
+
+  it('should ask for resolved announcements when the URL says so', async () => {
+    await setup({ url: '/announcements?status=RESOLVED' });
+
+    expect(getAll).toHaveBeenCalledWith({ ...DEFAULT_FILTERS, status: 'RESOLVED' }, null);
   });
 
   it('should disable the radius and explain why when the user refuses', async () => {
@@ -172,7 +190,7 @@ describe('AnnouncementList', () => {
   });
 
   it('should not ask the backend for distance filters when the location is refused', async () => {
-    await setup({ url: '/announcements?radiusKm=5&sort=NEAREST&species=CAT' });
+    await setup({ url: '/announcements?radiusKm=5&sort=closest&species=CAT' });
 
     expect(getAll).toHaveBeenLastCalledWith({ ...DEFAULT_FILTERS, species: 'CAT' }, null);
   });
@@ -191,14 +209,8 @@ describe('AnnouncementList', () => {
     expect(getAll).toHaveBeenCalledWith({ ...DEFAULT_FILTERS, radiusKm: 5 }, clujNapoca);
   });
 
-  it('should sort by event date, newest first, for the default sort', async () => {
+  it('should show the announcements in the order the backend returns them', async () => {
     await setup();
-
-    expect(cardIds()).toEqual(['02 Nov 2026, 09:00', '30 Oct 2026, 18:00']);
-  });
-
-  it('should keep the order of the backend for the other sort orders', async () => {
-    await setup({ url: '/announcements?sort=OLDEST' });
 
     expect(cardIds()).toEqual(['30 Oct 2026, 18:00', '02 Nov 2026, 09:00']);
   });
