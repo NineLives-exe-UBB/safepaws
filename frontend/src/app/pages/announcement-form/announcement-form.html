@@ -1,22 +1,39 @@
+
 <section class="form-page">
   <div class="form-heading">
     <h1>Post an announcement</h1>
-    <p>Help reunite lost pets with their families or give found animals a chance to get home.</p>
+    <p>
+      Help reunite lost pets with their families or give found animals a chance to get home.
+    </p>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="announcement-form">
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    class="announcement-form"
+  >
     <!-- Announcement type -->
     <fieldset [disabled]="submitting()">
       <legend>Announcement type</legend>
 
       <div class="type-options">
         <label class="type-option lost-option">
-          <input type="radio" formControlName="type" value="LOST" (change)="onTypeChange()" />
+          <input
+            type="radio"
+            formControlName="type"
+            value="LOST"
+            (change)="onTypeChange()"
+          />
           <span>Lost animal</span>
         </label>
 
         <label class="type-option found-option">
-          <input type="radio" formControlName="type" value="FOUND" (change)="onTypeChange()" />
+          <input
+            type="radio"
+            formControlName="type"
+            value="FOUND"
+            (change)="onTypeChange()"
+          />
           <span>Found animal</span>
         </label>
       </div>
@@ -29,6 +46,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="species">Species *</label>
+
           <select id="species" formControlName="species">
             <option value="">Select species</option>
             <option value="CAT">Cat</option>
@@ -37,16 +55,26 @@
           </select>
 
           @if (form.controls.species.invalid && form.controls.species.touched) {
-            <small class="field-error">Please select a species.</small>
+            <small class="field-error">
+              Please select a species.
+            </small>
           }
         </div>
 
         <div class="form-group">
           <label for="petName">Pet name</label>
-          <input id="petName" type="text" formControlName="petName" placeholder="e.g. Max, Luna" />
+
+          <input
+            id="petName"
+            type="text"
+            formControlName="petName"
+            placeholder="e.g. Max, Luna"
+          />
 
           @if (form.controls.petName.hasError('maxlength')) {
-            <small class="field-error"> Pet name cannot exceed 50 characters. </small>
+            <small class="field-error">
+              Pet name cannot exceed 50 characters.
+            </small>
           }
 
           @if (form.controls.petName.hasError('pattern')) {
@@ -58,6 +86,7 @@
 
         <div class="form-group">
           <label for="breed">Breed</label>
+
           <input
             id="breed"
             type="text"
@@ -66,7 +95,9 @@
           />
 
           @if (form.controls.breed.hasError('maxlength')) {
-            <small class="field-error"> Breed cannot exceed 100 characters. </small>
+            <small class="field-error">
+              Breed cannot exceed 100 characters.
+            </small>
           }
 
           @if (form.controls.breed.hasError('pattern')) {
@@ -78,6 +109,7 @@
 
         <div class="form-group">
           <label for="color">Color</label>
+
           <input
             id="color"
             type="text"
@@ -86,7 +118,9 @@
           />
 
           @if (form.controls.color.hasError('maxlength')) {
-            <small class="field-error"> Color cannot exceed 100 characters. </small>
+            <small class="field-error">
+              Color cannot exceed 100 characters.
+            </small>
           }
 
           @if (form.controls.color.hasError('pattern')) {
@@ -98,6 +132,7 @@
 
         <div class="form-group full-width">
           <label for="distinctiveMarks">Distinctive marks</label>
+
           <textarea
             id="distinctiveMarks"
             formControlName="distinctiveMarks"
@@ -106,7 +141,9 @@
           ></textarea>
 
           @if (form.controls.distinctiveMarks.hasError('maxlength')) {
-            <small class="field-error"> Distinctive marks cannot exceed 500 characters. </small>
+            <small class="field-error">
+              Distinctive marks cannot exceed 500 characters.
+            </small>
           }
         </div>
       </div>
@@ -119,19 +156,32 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="eventDate">Date and time *</label>
-          <input id="eventDate" type="datetime-local" formControlName="eventDate" />
 
-          @if (form.controls.eventDate.hasError('required') && form.controls.eventDate.touched) {
-            <small class="field-error">Date and time are required.</small>
+          <input
+            id="eventDate"
+            type="datetime-local"
+            formControlName="eventDate"
+          />
+
+          @if (
+            form.controls.eventDate.hasError('required') &&
+            form.controls.eventDate.touched
+          ) {
+            <small class="field-error">
+              Date and time are required.
+            </small>
           }
 
           @if (form.controls.eventDate.hasError('futureDate')) {
-            <small class="field-error">Date and time cannot be in the future.</small>
+            <small class="field-error">
+              Date and time cannot be in the future.
+            </small>
           }
         </div>
 
         <div class="form-group full-width">
           <label for="area">Location / Area *</label>
+
           <input
             id="area"
             type="text"
@@ -140,51 +190,69 @@
           />
 
           @if (form.controls.area.invalid && form.controls.area.touched) {
-            <small class="field-error">Location is required.</small>
+            <small class="field-error">
+              Location is required.
+            </small>
           }
         </div>
 
-        <div class="form-group">
-          <label for="latitude">Latitude</label>
-          <input
-            id="latitude"
-            type="number"
-            step="any"
-            formControlName="latitude"
-            placeholder="e.g. 46.7712"
+        <!-- Interactive map -->
+        <div class="form-group full-width location-picker">
+          <label>Pinpoint the location on the map *</label>
+
+          <p class="field-hint">
+            Click on the map to select where the animal was lost or found.
+            You can move the marker by clicking another location.
+          </p>
+
+          <app-map
+            [center]="mapCenter()"
+            [zoom]="16"
+            [pins]="locationPins"
+            (locationSelected)="onLocationSelected($event)"
           />
 
-          @if (form.controls.latitude.invalid && form.controls.latitude.touched) {
-            <small class="field-error"> Enter a valid latitude (-90 to 90). </small>
+          @if (selectedLocation(); as location) {
+            <p class="selected-location">
+              Selected coordinates:
+              {{ location.latitude }}, {{ location.longitude }}
+            </p>
+          } @else {
+            <small class="field-hint">
+              No location selected yet.
+            </small>
           }
-        </div>
 
-        <div class="form-group">
-          <label for="longitude">Longitude</label>
-          <input
-            id="longitude"
-            type="number"
-            step="any"
-            formControlName="longitude"
-            placeholder="e.g. 23.6236"
-          />
+          @if (
+            (form.controls.latitude.hasError('required') ||
+              form.controls.longitude.hasError('required')) &&
+            (form.controls.latitude.touched ||
+              form.controls.longitude.touched)
+          ) {
+            <small class="field-error">
+              Please select a location on the map before submitting.
+            </small>
+          }
 
-          @if (form.controls.longitude.invalid && form.controls.longitude.touched) {
-            <small class="field-error"> Enter a valid longitude (-180 to 180). </small>
+          @if (
+            form.controls.latitude.hasError('min') ||
+            form.controls.latitude.hasError('max')
+          ) {
+            <small class="field-error">
+              Latitude must be between -90 and 90.
+            </small>
+          }
+
+          @if (
+            form.controls.longitude.hasError('min') ||
+            form.controls.longitude.hasError('max')
+          ) {
+            <small class="field-error">
+              Longitude must be between -180 and 180.
+            </small>
           }
         </div>
       </div>
-
-      <p class="field-hint">Coordinates are optional. If you provide one, you must provide both.</p>
-
-      @if (
-        form.hasError('coordinatesTogether') &&
-        (form.controls.latitude.touched || form.controls.longitude.touched)
-      ) {
-        <small class="field-error">
-          Please provide both latitude and longitude, or leave both empty.
-        </small>
-      }
     </fieldset>
 
     <!-- Contact information -->
@@ -194,6 +262,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="contactName">Your name *</label>
+
           <input
             id="contactName"
             type="text"
@@ -202,13 +271,18 @@
           />
 
           @if (
-            form.controls.contactName.hasError('required') && form.controls.contactName.touched
+            form.controls.contactName.hasError('required') &&
+            form.controls.contactName.touched
           ) {
-            <small class="field-error">Your name is required.</small>
+            <small class="field-error">
+              Your name is required.
+            </small>
           }
 
           @if (form.controls.contactName.hasError('maxlength')) {
-            <small class="field-error"> Your name cannot exceed 100 characters. </small>
+            <small class="field-error">
+              Your name cannot exceed 100 characters.
+            </small>
           }
 
           @if (form.controls.contactName.hasError('pattern')) {
@@ -220,6 +294,7 @@
 
         <div class="form-group">
           <label for="contactPhone">Phone number *</label>
+
           <input
             id="contactPhone"
             type="tel"
@@ -227,7 +302,10 @@
             placeholder="e.g. 0712345678"
           />
 
-          @if (form.controls.contactPhone.invalid && form.controls.contactPhone.touched) {
+          @if (
+            form.controls.contactPhone.invalid &&
+            form.controls.contactPhone.touched
+          ) {
             <small class="field-error">
               Enter a valid phone number (7–15 digits, optionally starting with +).
             </small>
@@ -241,8 +319,8 @@
       <legend>Animal photos</legend>
 
       <p class="field-hint">
-        Add one or more photos to help people recognize the animal. Photos are optional. JPG and PNG
-        only, maximum 5 MB per photo.
+        Add one or more photos to help people recognize the animal.
+        Photos are optional. JPG and PNG only, maximum 5 MB per photo.
       </p>
 
       <div class="upload-area">
@@ -268,6 +346,10 @@
           <div class="photo-preview-grid">
             @for (file of selectedFiles(); track $index; let i = $index) {
               <div class="photo-preview-item">
+                @if (i === 0) {
+                  <span class="main-photo-label">Main photo</span>
+                }
+
                 <img
                   [src]="previewUrls()[i]"
                   [alt]="'Preview of ' + file.name"
@@ -309,7 +391,11 @@
     }
 
     <div class="form-actions">
-      <button type="submit" class="submit-button" [disabled]="submitting()">
+      <button
+        type="submit"
+        class="submit-button"
+        [disabled]="submitting()"
+      >
         {{ submitting() ? 'Submitting...' : 'Submit announcement' }}
       </button>
     </div>
