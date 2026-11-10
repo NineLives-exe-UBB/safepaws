@@ -1,4 +1,5 @@
-import { Component, inject, OnDestroy, signal } from '@angular/core';
+
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -9,17 +10,21 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AnnouncementRequest, Species } from '../../models/announcement.model';
+import { Coordinates, MapPin } from '../../models/map.model';
 import { AnnouncementService } from '../../services/announcement.service';
+import { LocationService } from '../../services/location.service';
+import { MapView } from '../../components/map/map';
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, MapView],
   selector: 'app-announcement-form',
   styleUrl: './announcement-form.css',
   templateUrl: './announcement-form.html',
 })
-export class AnnouncementForm implements OnDestroy {
+export class AnnouncementForm implements OnInit, OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly announcementService = inject(AnnouncementService);
+  private readonly locationService = inject(LocationService);
   private readonly router = inject(Router);
 
   protected readonly selectedFiles = signal<File[]>([]);
@@ -28,58 +33,139 @@ export class AnnouncementForm implements OnDestroy {
   protected readonly successMessage = signal('');
   protected readonly errorMessage = signal('');
 
+  protected readonly mapCenter = signal<Coordinates | null>(null);
+  protected readonly selectedLocation = signal<Coordinates | null>(null);
+
   private redirectTimeout?: ReturnType<typeof setTimeout>;
   private createdAnnouncementId?: number;
 
   private readonly notInFutureValidator: ValidatorFn = (
     control: AbstractControl,
   ): ValidationErrors | null =>
-    control.value && new Date(control.value).getTime() > Date.now() ? { futureDate: true } : null;
+    control.value && new Date(control.value).getTime() > Date.now()
+      ? { futureDate: true }
+      : null;
 
-  private readonly coordinatesValidator: ValidatorFn = (
-    control: AbstractControl,
-  ): ValidationErrors | null => {
-    const latitude = control.get('latitude')?.value;
-    const longitude = control.get('longitude')?.value;
+  protected readonly form = this.formBuilder.group({
+    type: ['LOST' as 'LOST' | 'FOUND', Validators.required],
+    species: ['' as Species | '', Validators.required],
 
-    const latitudeProvided = latitude !== null && latitude !== '';
-    const longitudeProvided = longitude !== null && longitude !== '';
+    petName: [
+      '',
+      [
+        Validators.maxLength(50),
+        Validators.pattern(/^[\p{L}\s'-]*$/u),
+      ],
+    ],
 
-    return latitudeProvided === longitudeProvided ? null : { coordinatesTogether: true };
-  };
+    breed: [
+      '',
+      [
+        Validators.maxLength(100),
+        Validators.pattern(/^[\p{L}\s'-]*$/u),
+      ],
+    ],
 
-  protected readonly form = this.formBuilder.group(
+    color: [
+      '',
+      [
+        Validators.maxLength(100),
+        Validators.pattern(/^[\p{L}\s,'-]*$/u),
+      ],
+    ],
+
+    distinctiveMarks: ['', Validators.maxLength(500)],
+
+    eventDate: ['', [Validators.required, this.notInFutureValidator]],
+
+    latitude: [
+      null as number | null,
+      [
+        Validators.required,
+        Validators.min(-90),
+        Validators.max(90),
+      ],
+    ],
+
+    longitude: [
+      null as number | null,
+      [
+        Validators.required,
+        Validators.min(-180),
+        Validators.max(180),
+      ],
+    ],
+
+    area: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(150),
+        Validators.pattern(/\S/),
+      ],
+    ],
+
+    contactName: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(100),
+        Validators.pattern(/^\s*[\p{L}'-][\p{L}\s'-]*$/u),
+      ],
+    ],
+
+    contactPhone: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(20),
+        Validators.pattern(/^\+?[0-9]{7,15}$/),
+      ],
+    ],
+  });
+
+  ngOnInit(): void {
+    this.locationService.getCurrentLocation().then((location) => {
+      if (location) {
+        this.mapCenter.set(location);
+      }
+    });
+  }
+
+  protected get locationPins(): MapPin[] {
+  const location = this.selectedLocation();
+
+  if (!location) {
+    return [];
+  }
+
+  return [
     {
-      type: ['LOST' as 'LOST' | 'FOUND', Validators.required],
-      species: ['' as Species | '', Validators.required],
-      petName: ['', [Validators.maxLength(50), Validators.pattern(/^[\p{L}\s'-]*$/u)]],
-      breed: ['', [Validators.maxLength(100), Validators.pattern(/^[\p{L}\s'-]*$/u)]],
-      color: ['', [Validators.maxLength(100), Validators.pattern(/^[\p{L}\s,'-]*$/u)]],
-      distinctiveMarks: ['', Validators.maxLength(500)],
-      eventDate: ['', [Validators.required, this.notInFutureValidator]],
-      latitude: [null as number | null, [Validators.min(-90), Validators.max(90)]],
-      longitude: [null as number | null, [Validators.min(-180), Validators.max(180)]],
-      area: ['', [Validators.required, Validators.maxLength(150), Validators.pattern(/\S/)]],
-      contactName: [
-        '',
-        [
-          Validators.required,
-          Validators.maxLength(100),
-          Validators.pattern(/^\s*[\p{L}'-][\p{L}\s'-]*$/u),
-        ],
-      ],
-      contactPhone: [
-        '',
-        [Validators.required, Validators.maxLength(20), Validators.pattern(/^\+?[0-9]{7,15}$/)],
-      ],
+      ...location,
+      type: this.form.controls.type.value ?? 'LOST',
+      label: 'Selected location',
     },
-    { validators: this.coordinatesValidator },
-  );
+  ];
+}
+
+  protected onLocationSelected(location: Coordinates): void {
+    this.selectedLocation.set(location);
+
+    this.form.controls.latitude.setValue(location.latitude);
+    this.form.controls.longitude.setValue(location.longitude);
+
+    this.form.controls.latitude.markAsTouched();
+    this.form.controls.longitude.markAsTouched();
+
+    this.form.controls.latitude.markAsDirty();
+    this.form.controls.longitude.markAsDirty();
+  }
 
   protected onTypeChange(): void {
     const selectedType = this.form.controls.type.value;
 
     this.clearPreviews();
+    this.selectedLocation.set(null);
 
     this.form.reset({
       type: selectedType,
@@ -117,16 +203,23 @@ export class AnnouncementForm implements OnDestroy {
 
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
-        errors.push(`${file.name}: only JPG and PNG images are allowed.`);
+        errors.push(
+          `${file.name}: only JPG and PNG images are allowed.`,
+        );
         continue;
       }
 
       if (file.size > maxSize) {
-        errors.push(`${file.name}: the maximum file size is 5 MB.`);
+        errors.push(
+          `${file.name}: the maximum file size is 5 MB.`,
+        );
         continue;
       }
 
-      const alreadySelected = [...this.selectedFiles(), ...validFiles].some(
+      const alreadySelected = [
+        ...this.selectedFiles(),
+        ...validFiles,
+      ].some(
         (existing) =>
           existing.name === file.name &&
           existing.size === file.size &&
@@ -138,31 +231,45 @@ export class AnnouncementForm implements OnDestroy {
       }
     }
 
-    const newPreviewUrls = validFiles.map((file) => URL.createObjectURL(file));
+    const newPreviewUrls = validFiles.map((file) =>
+      URL.createObjectURL(file),
+    );
 
-    this.selectedFiles.update((currentFiles) => [...currentFiles, ...validFiles]);
+    this.selectedFiles.update((currentFiles) => [
+      ...currentFiles,
+      ...validFiles,
+    ]);
 
-    this.previewUrls.update((currentUrls) => [...currentUrls, ...newPreviewUrls]);
+    this.previewUrls.update((currentUrls) => [
+      ...currentUrls,
+      ...newPreviewUrls,
+    ]);
 
     this.errorMessage.set(errors.join(' '));
     input.value = '';
   }
 
   protected removeFile(index: number): void {
-    const urls = this.previewUrls();
-    const urlToRemove = urls[index];
+    const urlToRemove = this.previewUrls()[index];
 
     if (urlToRemove) {
       URL.revokeObjectURL(urlToRemove);
     }
 
-    this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
+    this.selectedFiles.update((files) =>
+      files.filter((_, i) => i !== index),
+    );
 
-    this.previewUrls.update((currentUrls) => currentUrls.filter((_, i) => i !== index));
+    this.previewUrls.update((urls) =>
+      urls.filter((_, i) => i !== index),
+    );
   }
 
   private clearPreviews(): void {
-    this.previewUrls().forEach((url) => URL.revokeObjectURL(url));
+    this.previewUrls().forEach((url) =>
+      URL.revokeObjectURL(url),
+    );
+
     this.previewUrls.set([]);
   }
 
@@ -195,7 +302,7 @@ export class AnnouncementForm implements OnDestroy {
     this.successMessage.set('');
     this.errorMessage.set('');
 
-    // The announcement already exists after a failed photo upload, so only the upload is retried.
+    // If the announcement already exists, retry only the photo upload.
     if (this.createdAnnouncementId !== undefined) {
       this.uploadSelectedPhotos(this.createdAnnouncementId);
       return;
@@ -211,8 +318,8 @@ export class AnnouncementForm implements OnDestroy {
       color: this.optionalText(values.color),
       distinctiveMarks: this.optionalText(values.distinctiveMarks),
       eventDate: values.eventDate!,
-      latitude: values.latitude ?? undefined,
-      longitude: values.longitude ?? undefined,
+      latitude: values.latitude!,
+      longitude: values.longitude!,
       area: values.area!.trim(),
       contactName: values.contactName!.trim(),
       contactPhone: values.contactPhone!.trim(),
@@ -223,8 +330,10 @@ export class AnnouncementForm implements OnDestroy {
         this.createdAnnouncementId = createdAnnouncement.id;
         this.uploadSelectedPhotos(createdAnnouncement.id);
       },
+
       error: () => {
         this.submitting.set(false);
+
         this.errorMessage.set(
           'Could not create the announcement. Please check your information and try again.',
         );
@@ -237,7 +346,11 @@ export class AnnouncementForm implements OnDestroy {
 
     if (files.length === 0) {
       this.submitting.set(false);
-      this.successMessage.set('Your announcement was created successfully!');
+
+      this.successMessage.set(
+        'Your announcement was created successfully!',
+      );
+
       this.redirectToAnnouncements();
       return;
     }
@@ -245,11 +358,17 @@ export class AnnouncementForm implements OnDestroy {
     this.announcementService.uploadPhotos(announcementId, files).subscribe({
       next: () => {
         this.submitting.set(false);
-        this.successMessage.set('Your announcement and photos were uploaded successfully!');
+
+        this.successMessage.set(
+          'Your announcement and photos were uploaded successfully!',
+        );
+
         this.redirectToAnnouncements();
       },
+
       error: () => {
         this.submitting.set(false);
+
         this.errorMessage.set(
           'Your announcement was created, but the photos could not be uploaded. Check the photos and submit again to retry, or remove them to continue without photos.',
         );
@@ -257,7 +376,9 @@ export class AnnouncementForm implements OnDestroy {
     });
   }
 
-  private optionalText(value: string | null | undefined): string | undefined {
+  private optionalText(
+    value: string | null | undefined,
+  ): string | undefined {
     return value?.trim() || undefined;
   }
 }
