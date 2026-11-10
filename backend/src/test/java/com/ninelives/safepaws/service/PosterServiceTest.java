@@ -4,26 +4,25 @@ import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
 import com.ninelives.safepaws.model.Announcement;
+import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Photo;
 import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,6 +49,7 @@ class PosterServiceTest {
         ReflectionTestUtils.setField(announcement, "id", id);
         ReflectionTestUtils.setField(announcement, "createdAt", CREATED_AT);
         announcement.setType(type);
+        announcement.setStatus(AnnouncementStatus.ACTIVE);
         announcement.setSpecies(species);
         announcement.setPetName(petName);
         announcement.setBreed("Golden Retriever");
@@ -58,14 +58,14 @@ class PosterServiceTest {
         announcement.setEventDate(EVENT_DATE);
         announcement.setLatitude(46.7712);
         announcement.setLongitude(23.6236);
-        announcement.setArea("Mărăști, Cluj-Napoca");
+        announcement.setArea("Mănăștur, Cluj-Napoca");
         announcement.setContactName("Ion Radu");
         announcement.setContactPhone("0740123456");
         return announcement;
     }
 
     @Test
-    void generatePosterIncludesEveryAnnouncementDetailAndMainPhoto() throws Exception {
+    void generatePosterIncludesEveryAnnouncementDetailMainPhotoAndQrSection() throws Exception {
         Announcement announcement = storedAnnouncement(1L, AnnouncementType.LOST, Species.DOG, "Oscar");
 
         BufferedImage img = new BufferedImage(80, 80, BufferedImage.TYPE_INT_RGB);
@@ -85,25 +85,32 @@ class PosterServiceTest {
 
         assertThat(pdfBytes).isNotEmpty();
         try (PdfReader reader = new PdfReader(pdfBytes)) {
+            assertThat(reader.getNumberOfPages()).isEqualTo(1);
             String text = new PdfTextExtractor(reader).getTextFromPage(1);
             assertThat(text)
                     .contains("LOST")
                     .contains("Oscar")
-                    .contains("DOG")
+                    .contains("Dog")
+                    .doesNotContain("DOG")
                     .contains("Golden Retriever")
                     .contains("Golden")
                     .contains("Red nylon collar with bell")
                     .contains("2026-11-01 09:15")
-                    .contains("Ion Radu - 0740123456");
+                    .contains("Mănăștur, Cluj-Napoca")
+                    .contains("Ion Radu - 0740123456")
+                    .contains("Scan for updates")
+                    .doesNotContain("No photo available")
+                    .doesNotContain("RESOLVED");
         }
     }
 
     @Test
-    void generatePosterForFoundAnnouncementWithoutPhotoUsesFallbackValues() throws IOException {
+    void generatePosterWithoutPhotoHidesMissingFieldsAndShowsPhotoPlaceholder() throws Exception {
         Announcement announcement = storedAnnouncement(2L, AnnouncementType.FOUND, Species.CAT, null);
-        announcement.setBreed("");
+        announcement.setBreed("   ");
         announcement.setDistinctiveMarks(null);
         announcement.setContactName("");
+        announcement.setArea("Florești, Cluj");
 
         when(announcementRepository.findById(2L)).thenReturn(Optional.of(announcement));
         when(photoRepository.findMetadataByAnnouncementIds(List.of(2L))).thenReturn(List.of());
@@ -112,13 +119,46 @@ class PosterServiceTest {
 
         assertThat(pdfBytes).isNotEmpty();
         try (PdfReader reader = new PdfReader(pdfBytes)) {
+            assertThat(reader.getNumberOfPages()).isEqualTo(1);
             String text = new PdfTextExtractor(reader).getTextFromPage(1);
             assertThat(text)
                     .contains("FOUND")
-                    .contains("CAT")
-                    .contains("Unknown / Mixed")
-                    .contains("None specified")
-                    .contains("0740123456");
+                    .contains("Cat")
+                    .doesNotContain("CAT")
+                    .contains("No photo available")
+                    .contains("Florești, Cluj")
+                    .contains("0740123456")
+                    .contains("Scan for updates")
+                    .doesNotContain("NAME:")
+                    .doesNotContain("BREED:")
+                    .doesNotContain("MARKS:")
+                    .doesNotContain("N/A")
+                    .doesNotContain("Unknown / Mixed")
+                    .doesNotContain("None specified");
+        }
+    }
+
+    @Test
+    void generatePosterShowsResolvedMarkAndFitsLongTextOnSinglePage() throws Exception {
+        Announcement announcement = storedAnnouncement(3L, AnnouncementType.LOST, Species.DOG, "Rex");
+        announcement.setStatus(AnnouncementStatus.RESOLVED);
+        announcement.setArea("Bartolomeu, Brașov");
+        announcement.setDistinctiveMarks("Very long distinctive marks description ".repeat(10));
+
+        when(announcementRepository.findById(3L)).thenReturn(Optional.of(announcement));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(3L))).thenReturn(List.of());
+
+        byte[] pdfBytes = posterService.generatePoster(3L);
+
+        assertThat(pdfBytes).isNotEmpty();
+        try (PdfReader reader = new PdfReader(pdfBytes)) {
+            assertThat(reader.getNumberOfPages()).isEqualTo(1);
+            String text = new PdfTextExtractor(reader).getTextFromPage(1);
+            assertThat(text)
+                    .contains("LOST")
+                    .contains("RESOLVED")
+                    .contains("Bartolomeu, Brașov")
+                    .contains("...");
         }
     }
 
