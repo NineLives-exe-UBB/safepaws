@@ -20,6 +20,20 @@ export class AnnouncementDetails {
   protected readonly state = signal<PageState>('loading');
   protected readonly announcement = signal<Announcement | null>(null);
 
+  protected readonly selectedPhotoIndex = signal(0);
+
+  /** The main photo first, so it is the one shown when the page opens. */
+  protected readonly photoUrls = computed(() => {
+    const photos = this.announcement()?.photos ?? [];
+    return [...photos]
+      .sort((a, b) => Number(b.isMain) - Number(a.isMain))
+      .map((photo) => this.announcementService.photoUrl(photo));
+  });
+
+  protected readonly selectedPhotoUrl = computed(
+    () => this.photoUrls()[this.selectedPhotoIndex()] ?? null,
+  );
+
   /** The pet's name, or its species when it has no name (e.g. a found pet). */
   protected readonly heading = computed(() => {
     const announcement = this.announcement();
@@ -45,5 +59,8 @@ export class AnnouncementDetails {
         this.state.set(notFound ? 'not-found' : 'error');
       },
     });
+  }
+  protected selectPhoto(index: number): void {
+    this.selectedPhotoIndex.set(index);
   }
 }

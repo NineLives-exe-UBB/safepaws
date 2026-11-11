@@ -14,7 +14,47 @@
   @case ('error') {
     <p class="message error">Could not load the announcement. Please try again later.</p>
   }
-  @case ('loaded') {
-    <h1>{{ heading() }}</h1>
+    @case ('loaded') {
+    @if (announcement(); as announcement) {
+      <article class="details">
+        <section class="gallery">
+          <div class="main-photo">
+            @if (selectedPhotoUrl(); as photoUrl) {
+              <img [src]="photoUrl" [alt]="heading() + ' photo'" />
+            } @else {
+              <span class="no-photo">No photo</span>
+            }
+            <span
+              class="label"
+              [class.lost]="announcement.type === 'LOST'"
+              [class.found]="announcement.type === 'FOUND'"
+            >
+              {{ announcement.type }}
+            </span>
+          </div>
+
+          @if (photoUrls().length > 1) {
+            <div class="thumbnails">
+              @for (url of photoUrls(); track url; let index = $index) {
+                <button
+                  type="button"
+                  class="thumbnail"
+                  [class.selected]="index === selectedPhotoIndex()"
+                  [attr.aria-label]="'Show photo ' + (index + 1)"
+                  [attr.aria-pressed]="index === selectedPhotoIndex()"
+                  (click)="selectPhoto(index)"
+                >
+                  <img [src]="url" alt="" />
+                </button>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="info">
+          <h1>{{ heading() }}</h1>
+        </section>
+      </article>
+    }
   }
 }
