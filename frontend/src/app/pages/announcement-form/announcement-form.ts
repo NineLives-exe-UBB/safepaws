@@ -37,7 +37,10 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
   protected readonly mapCenter = signal<Coordinates | null>(null);
   protected readonly selectedLocation = signal<Coordinates | null>(null);
-
+  
+  /** The latest date the picker offers: now, in the user's local time. */
+  protected readonly maxEventDate = this.toDateTimeInputValue(new Date());
+  
   private redirectTimeout?: ReturnType<typeof setTimeout>;
   private createdAnnouncementId?: number;
 
@@ -370,6 +373,12 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
   protected serverError(name: string): string | null {
     return this.form.get(name)?.getError('server') ?? null;
+  }
+
+    /** Formats a date the way a datetime-local input expects it: YYYY-MM-DDTHH:mm, local time. */
+  private toDateTimeInputValue(date: Date): string {
+    const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localTime.toISOString().slice(0, 16);
   }
 
   private optionalText(

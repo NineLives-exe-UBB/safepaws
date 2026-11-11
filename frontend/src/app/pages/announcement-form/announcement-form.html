@@ -5,7 +5,6 @@
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="announcement-form">
-    <!-- Announcement type -->
     <fieldset [disabled]="submitting()">
       <legend>Announcement type</legend>
 
@@ -22,7 +21,6 @@
       </div>
     </fieldset>
 
-    <!-- Animal information -->
     <fieldset [disabled]="submitting()">
       <legend>Animal information</legend>
 
@@ -119,7 +117,6 @@
       </div>
     </fieldset>
 
-    <!-- Date and location -->
     <fieldset [disabled]="submitting()">
       <legend>Date and location</legend>
 
@@ -127,7 +124,7 @@
         <div class="form-group">
           <label for="eventDate">Date and time *</label>
 
-          <input id="eventDate" type="datetime-local" formControlName="eventDate" />
+          <input id="eventDate" type="datetime-local" formControlName="eventDate" [max]="maxEventDate"/>
 
           @if (form.controls.eventDate.hasError('required') && form.controls.eventDate.touched) {
             <small class="field-error">Date and time are required.</small>
@@ -152,6 +149,8 @@
             placeholder="e.g. Mănăștur, Cluj-Napoca"
           />
 
+          <small class="field-hint">Format: Neighborhood, City</small>
+
           @if (
             (form.controls.area.hasError('required') || form.controls.area.hasError('pattern')) &&
             form.controls.area.touched
@@ -168,7 +167,6 @@
           }
         </div>
 
-        <!-- Interactive map -->
         <div class="form-group full-width location-picker">
           <label>Pinpoint the location on the map *</label>
 
@@ -215,7 +213,6 @@
       </div>
     </fieldset>
 
-    <!-- Contact information -->
     <fieldset [disabled]="submitting()">
       <legend>Contact information</legend>
 
@@ -275,7 +272,6 @@
       </div>
     </fieldset>
 
-    <!-- Animal photos -->
     <fieldset [disabled]="submitting()">
       <legend>Animal photos</legend>
 
@@ -332,7 +328,6 @@
       }
     </fieldset>
 
-    <!-- Success message -->
     @if (successMessage()) {
       <div class="message success" role="status">
         {{ successMessage() }}
@@ -340,7 +335,6 @@
       </div>
     }
 
-    <!-- Error message -->
     @if (errorMessage()) {
       <div class="message error" role="alert">
         {{ errorMessage() }}

@@ -139,6 +139,13 @@ describe('AnnouncementForm', () => {
     expect(eventDate.valid).toBe(true);
   });
 
+  it('should not offer future dates in the date picker', () => {
+    const input = compiled.querySelector('#eventDate') as HTMLInputElement;
+
+    expect(input.max).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(new Date(input.max).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
   it('should reject blank required text', () => {
     const controls = component['form'].controls;
 
