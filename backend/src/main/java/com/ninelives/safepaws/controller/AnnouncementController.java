@@ -9,6 +9,7 @@ import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.service.AnnouncementService;
 import com.ninelives.safepaws.service.PosterService;
+import com.ninelives.safepaws.dto.AnnouncementStatusRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -91,6 +93,13 @@ public class AnnouncementController {
     public AnnouncementResponse findById(@PathVariable Long id) {
         return announcementService.findById(id);
     }
+
+
+    @PatchMapping("/{id}/status")
+    public AnnouncementResponse updateStatus(@PathVariable Long id,@Valid @RequestBody AnnouncementStatusRequest request) {
+        return announcementService.updateStatus(id, request.status());
+    }
+
 
     @GetMapping("/{id}/poster")
     public ResponseEntity<byte[]> getAnnouncementPoster(@PathVariable Long id) {

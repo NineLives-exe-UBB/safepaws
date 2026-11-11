@@ -352,4 +352,59 @@ class AnnouncementServiceTest {
         assertThat(AnnouncementService.distanceKm(0, 0, 1, 0)).isCloseTo(111.19, within(0.01));
         assertThat(AnnouncementService.distanceKm(46.77, 23.59, 46.77, 23.59)).isZero();
     }
+
+
+    @Test
+    void updateStatusMarksAnnouncementResolved() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+
+        when(announcementRepository.findById(13L))
+                .thenReturn(Optional.of(announcement));
+        when(announcementRepository.save(announcement))
+                .thenReturn(announcement);
+
+        AnnouncementResponse result = announcementService.updateStatus(
+                13L, AnnouncementStatus.RESOLVED
+        );
+
+        assertThat(result.status()).isEqualTo(AnnouncementStatus.RESOLVED);
+        assertThat(announcement.getStatus()).isEqualTo(AnnouncementStatus.RESOLVED);
+
+        verify(announcementRepository).save(announcement);
+    }
+
+    @Test
+    void updateStatusCanReactivateAnnouncement() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+        announcement.setStatus(AnnouncementStatus.RESOLVED);
+
+        when(announcementRepository.findById(13L))
+                .thenReturn(Optional.of(announcement));
+        when(announcementRepository.save(announcement))
+                .thenReturn(announcement);
+
+        AnnouncementResponse result = announcementService.updateStatus(
+                13L, AnnouncementStatus.ACTIVE
+        );
+
+        assertThat(result.status()).isEqualTo(AnnouncementStatus.ACTIVE);
+        assertThat(announcement.getStatus()).isEqualTo(AnnouncementStatus.ACTIVE);
+
+        verify(announcementRepository).save(announcement);
+    }
+
+    @Test
+    void updateStatusThrowsWhenAnnouncementDoesNotExist() {
+        when(announcementRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> announcementService.updateStatus(
+                999L, AnnouncementStatus.RESOLVED
+        ))
+                .isInstanceOf(AnnouncementNotFoundException.class)
+                .hasMessageContaining("Announcement not found");
+
+        verify(announcementRepository, never()).save(any(Announcement.class));
+    }
+
 }
