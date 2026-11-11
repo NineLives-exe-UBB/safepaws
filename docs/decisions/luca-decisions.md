@@ -72,7 +72,9 @@ Decisions and team messages for the frontend cards "Announcements list", "Leafle
 
 > I ran the UI scenarios of the list, the filter bar and the map page in a browser (Brave, driven by a script) against the real backend on 11 Nov, with the 23 announcements of a database that has all 5 migrations (19 active, 18 of them with coordinates, one without). Results: C1, C7, E4, E7 to E9, F12, G12 to G14, H1 to H9 all pass. C8 passes too: a new announcement posted through the form shows up in the list without a reload, at the right place for its event date.
 >
-> Not run: C2 (deletes all announcements), C3 and H10 (stop the backend). H11 stays blocked, because `View details` goes to `/announcements/:id`, which has no page yet, so it goes back to the list. The script created one announcement for C8 and I deleted it afterwards, so the database is as I found it.
+> C2, C3 and H10 would delete all announcements or stop the backend, so I checked what they test in the browser instead: with the answer of the backend replaced by an empty list the page says `There are no announcements yet.`, and with the backend made unreachable the list and the map say `Could not load the announcements. Please try again later.`, with no cards, no pins and no crash. All pass, but these three were simulated, so they are worth running once for real (Jessica, on a throwaway database).
+>
+> H11 stays blocked, because `View details` goes to `/announcements/:id`, which has no page yet, so it goes back to the list. The script created one announcement for C8 and I deleted it afterwards, so the database is as I found it.
 
 ### Tudor
 
