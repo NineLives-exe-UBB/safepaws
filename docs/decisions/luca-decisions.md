@@ -70,6 +70,10 @@ Decisions and team messages for the frontend cards "Announcements list", "Leafle
 >
 > New manual scenarios for the map page (`/map`): the "Map" link in the header is highlighted, and the tab title is "Map | SafePaws". Allow the location, and the map starts around you. Refuse it, and the map shows all the pins, with the message about the location in the filter bar. Click a pin, and a popup shows the photo, the name (or species), the area, the date and "View details". Choose "Found" in the filter bar, and only green pins stay. Create an announcement through the API without coordinates, and the note says that one announcement is not on the map.
 
+> I ran the UI scenarios of the list, the filter bar and the map page in a browser (Brave, driven by a script) against the real backend on 11 Nov, with the 23 announcements of a database that has all 5 migrations (19 active, 18 of them with coordinates, one without). Results: C1, C7, E4, E7 to E9, F12, G12 to G14, H1 to H9 all pass. C8 passes too: a new announcement posted through the form shows up in the list without a reload, at the right place for its event date.
+>
+> Not run: C2 (deletes all announcements), C3 and H10 (stop the backend). H11 stays blocked, because `View details` goes to `/announcements/:id`, which has no page yet, so it goes back to the list. The script created one announcement for C8 and I deleted it afterwards, so the database is as I found it.
+
 ### Tudor
 
 > For `architecture.md`: the map uses Leaflet with OpenStreetMap tiles (free, no API key). It is a reusable component, `<app-map>`, in `frontend/src/app/components/map`. It shows Romania by default or centers on `[center]`, shows pins from `[pins]` (red for LOST, green for FOUND), and emits `(locationSelected)` with the coordinates the user clicked. Usage is in `frontend/README.md`.
