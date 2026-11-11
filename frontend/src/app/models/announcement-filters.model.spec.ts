@@ -110,7 +110,12 @@ describe('announcement filters', () => {
 
     it('should ignore names that every JavaScript object has', () => {
       expect(
-        fromUrl({ type: 'constructor', species: 'toString', status: 'hasOwnProperty', sort: 'valueOf' }),
+        fromUrl({
+          type: 'constructor',
+          species: 'toString',
+          status: 'hasOwnProperty',
+          sort: 'valueOf',
+        }),
       ).toEqual(DEFAULT_FILTERS);
     });
 

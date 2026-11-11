@@ -1,4 +1,3 @@
-
 import {
   afterNextRender,
   Component,
@@ -56,8 +55,7 @@ export class MapView {
   readonly locationSelected = output<Coordinates>();
 
   private readonly viewContainer = inject(ViewContainerRef);
-  private readonly container =
-    viewChild.required<ElementRef<HTMLElement>>('container');
+  private readonly container = viewChild.required<ElementRef<HTMLElement>>('container');
 
   private readonly ready = signal(false);
 
@@ -142,19 +140,14 @@ export class MapView {
     const center = this.center();
 
     if (center) {
-      this.map?.setView(
-        [center.latitude, center.longitude],
-        this.zoom(),
-      );
+      this.map?.setView([center.latitude, center.longitude], this.zoom());
       return;
     }
 
     const pins = this.fitToPins() ? this.pins() : [];
 
     if (pins.length > 0) {
-      const bounds = L.latLngBounds(
-        pins.map((pin) => [pin.latitude, pin.longitude]),
-      );
+      const bounds = L.latLngBounds(pins.map((pin) => [pin.latitude, pin.longitude]));
 
       this.map?.fitBounds(bounds, {
         padding: [FIT_PADDING_PX, FIT_PADDING_PX],
@@ -177,14 +170,11 @@ export class MapView {
     const popup = this.popup();
 
     pins.forEach((pin) => {
-      const marker = L.marker(
-        [pin.latitude, pin.longitude],
-        {
-          icon: createPinIcon(pin.type),
-          title: pin.label,
-          alt: pin.label ?? `${pin.type} pin`,
-        },
-      ).addTo(layer);
+      const marker = L.marker([pin.latitude, pin.longitude], {
+        icon: createPinIcon(pin.type),
+        title: pin.label,
+        alt: pin.label ?? `${pin.type} pin`,
+      }).addTo(layer);
 
       if (popup) {
         this.bindPopup(marker, pin, popup);
@@ -193,18 +183,11 @@ export class MapView {
   }
 
   /** Renders popup content when opened and destroys it when closed. */
-  private bindPopup(
-    marker: L.Marker,
-    pin: MapPin,
-    template: TemplateRef<PinPopupContext>,
-  ): void {
+  private bindPopup(marker: L.Marker, pin: MapPin, template: TemplateRef<PinPopupContext>): void {
     let view: EmbeddedViewRef<PinPopupContext> | undefined;
 
     marker.bindPopup(() => {
-      view = this.viewContainer.createEmbeddedView(
-        template,
-        { $implicit: pin },
-      );
+      view = this.viewContainer.createEmbeddedView(template, { $implicit: pin });
 
       view.detectChanges();
 

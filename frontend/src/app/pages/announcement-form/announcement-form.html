@@ -124,7 +124,12 @@
         <div class="form-group">
           <label for="eventDate">Date and time *</label>
 
-          <input id="eventDate" type="datetime-local" formControlName="eventDate" [max]="maxEventDate"/>
+          <input
+            id="eventDate"
+            type="datetime-local"
+            formControlName="eventDate"
+            [max]="maxEventDate"
+          />
 
           @if (form.controls.eventDate.hasError('required') && form.controls.eventDate.touched) {
             <small class="field-error">Date and time are required.</small>
@@ -195,7 +200,9 @@
               form.controls.longitude.hasError('required')) &&
             (form.controls.latitude.touched || form.controls.longitude.touched)
           ) {
-            <small class="field-error">Please select a location on the map before submitting.</small>
+            <small class="field-error"
+              >Please select a location on the map before submitting.</small
+            >
           }
 
           @if (form.controls.latitude.hasError('min') || form.controls.latitude.hasError('max')) {
@@ -307,7 +314,11 @@
                   <span class="main-photo-label">Main photo</span>
                 }
 
-                <img [src]="previewUrls()[i]" [alt]="'Preview of ' + file.name" class="photo-preview" />
+                <img
+                  [src]="previewUrls()[i]"
+                  [alt]="'Preview of ' + file.name"
+                  class="photo-preview"
+                />
 
                 <div class="photo-preview-info">
                   <span class="photo-filename">{{ file.name }}</span>

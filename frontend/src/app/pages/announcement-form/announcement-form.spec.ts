@@ -1,4 +1,3 @@
-
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -51,15 +50,11 @@ describe('AnnouncementForm', () => {
   });
 
   it('should show the page title', () => {
-    expect(compiled.querySelector('h1')?.textContent).toContain(
-      'Post an announcement',
-    );
+    expect(compiled.querySelector('h1')?.textContent).toContain('Post an announcement');
   });
 
   it('should have LOST selected by default', () => {
-    const lostRadio = compiled.querySelector(
-      'input[value="LOST"]',
-    ) as HTMLInputElement;
+    const lostRadio = compiled.querySelector('input[value="LOST"]') as HTMLInputElement;
 
     expect(lostRadio.checked).toBe(true);
   });
@@ -74,9 +69,7 @@ describe('AnnouncementForm', () => {
   });
 
   it('should include an optional pet name field', () => {
-    const petName = compiled.querySelector(
-      '#petName',
-    ) as HTMLInputElement;
+    const petName = compiled.querySelector('#petName') as HTMLInputElement;
 
     expect(petName).toBeTruthy();
     expect(petName.required).toBe(false);
@@ -112,7 +105,6 @@ describe('AnnouncementForm', () => {
 
     expect(color.valid).toBe(true);
   });
-
 
   it('should accept the same text as the backend in the optional fields', () => {
     const controls = component['form'].controls;
@@ -164,9 +156,7 @@ describe('AnnouncementForm', () => {
   it('should reject a pet name longer than 50 characters', () => {
     component['form'].controls.petName.setValue('A'.repeat(51));
 
-    expect(
-      component['form'].controls.petName.hasError('maxlength'),
-    ).toBe(true);
+    expect(component['form'].controls.petName.hasError('maxlength')).toBe(true);
   });
 
   it('should reject invalid phone numbers', () => {
@@ -201,7 +191,6 @@ describe('AnnouncementForm', () => {
     expect(controls.longitude.valid).toBe(true);
     expect(component['selectedLocation']()).toEqual(location);
   });
-
 
   it('should lock every section and the map while submitting', () => {
     component['submitting'].set(true);
@@ -252,7 +241,7 @@ describe('AnnouncementForm', () => {
     newFixture.destroy();
   });
 
-    it('should keep the filled-in details when switching announcement type', () => {
+  it('should keep the filled-in details when switching announcement type', () => {
     const controls = component['form'].controls;
     controls.species.setValue('CAT');
     controls.petName.setValue('Luna');
@@ -299,20 +288,15 @@ describe('AnnouncementForm', () => {
       new File(['photo2'], 'cat2.png', { type: 'image/png' }),
     ]);
 
-    component['previewUrls'].set([
-      'blob:first',
-      'blob:second',
-    ]);
+    component['previewUrls'].set(['blob:first', 'blob:second']);
 
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.main-photo-label')?.textContent).toContain(
-      'Main photo',
-    );
+    expect(compiled.querySelector('.main-photo-label')?.textContent).toContain('Main photo');
   });
 
   describe('choosing photos', () => {
-        let createUrl: Mock<(file: Blob | MediaSource) => string>;
+    let createUrl: Mock<(file: Blob | MediaSource) => string>;
     const originalCreateObjectURL = URL.createObjectURL;
 
     // jsdom has no URL.createObjectURL, so the previews get fake URLs
@@ -350,12 +334,19 @@ describe('AnnouncementForm', () => {
       choose(image('notes.pdf', 'application/pdf'), image('cat.gif', 'image/gif'));
 
       expect(component['selectedFiles']()).toHaveLength(0);
-      expect(component['errorMessage']()).toContain('notes.pdf: only JPG and PNG images are allowed.');
-      expect(component['errorMessage']()).toContain('cat.gif: only JPG and PNG images are allowed.');
+      expect(component['errorMessage']()).toContain(
+        'notes.pdf: only JPG and PNG images are allowed.',
+      );
+      expect(component['errorMessage']()).toContain(
+        'cat.gif: only JPG and PNG images are allowed.',
+      );
     });
 
     it('should reject photos larger than 5 MB', () => {
-      choose(image('big.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1), image('ok.jpg', 'image/jpeg', 5 * 1024 * 1024));
+      choose(
+        image('big.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1),
+        image('ok.jpg', 'image/jpeg', 5 * 1024 * 1024),
+      );
 
       expect(component['selectedFiles']().map((file) => file.name)).toEqual(['ok.jpg']);
       expect(component['errorMessage']()).toContain('big.jpg: the maximum file size is 5 MB.');
@@ -375,7 +366,10 @@ describe('AnnouncementForm', () => {
       choose(image('first.jpg'));
       choose(image('second.jpg'));
 
-      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['first.jpg', 'second.jpg']);
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual([
+        'first.jpg',
+        'second.jpg',
+      ]);
     });
 
     it('should empty the file input, so the same photo can be chosen again after removing it', () => {
@@ -456,21 +450,17 @@ describe('AnnouncementForm', () => {
       component['onSubmit']();
 
       expect(uploads).toEqual([15]);
-      expect(component['successMessage']()).toContain(
-        'uploaded successfully',
-      );
+      expect(component['successMessage']()).toContain('uploaded successfully');
     });
 
     it('should show an error when the announcement cannot be created', () => {
-      TestBed.inject(AnnouncementService).create = () =>
-        throwError(() => new Error('failed'));
+      TestBed.inject(AnnouncementService).create = () => throwError(() => new Error('failed'));
 
       component['onSubmit']();
 
       expect(component['errorMessage']()).toContain('Could not create');
       expect(component['submitting']()).toBe(false);
     });
-
 
     it('should show the backend validation errors next to their fields', () => {
       TestBed.inject(AnnouncementService).create = () =>
@@ -481,7 +471,10 @@ describe('AnnouncementForm', () => {
               error: {
                 fieldErrors: [
                   { field: 'contactPhone', message: 'Contact phone must be a valid phone number' },
-                  { field: 'coordinates', message: 'Latitude and longitude must be provided together' },
+                  {
+                    field: 'coordinates',
+                    message: 'Latitude and longitude must be provided together',
+                  },
                 ],
               },
             }),
@@ -490,8 +483,12 @@ describe('AnnouncementForm', () => {
       component['onSubmit']();
       fixture.detectChanges();
 
-      expect(component['serverError']('contactPhone')).toBe('Contact phone must be a valid phone number');
-      expect(component['serverError']('latitude')).toBe('Latitude and longitude must be provided together');
+      expect(component['serverError']('contactPhone')).toBe(
+        'Contact phone must be a valid phone number',
+      );
+      expect(component['serverError']('latitude')).toBe(
+        'Latitude and longitude must be provided together',
+      );
       expect(compiled.textContent).toContain('Contact phone must be a valid phone number');
       expect(component['errorMessage']()).toContain('check the highlighted fields');
     });
@@ -516,16 +513,13 @@ describe('AnnouncementForm', () => {
       const service = TestBed.inject(AnnouncementService);
       const workingUpload = service.uploadPhotos;
 
-      service.uploadPhotos = () =>
-        throwError(() => new Error('failed'));
+      service.uploadPhotos = () => throwError(() => new Error('failed'));
 
       component['selectedFiles'].set([photo]);
 
       component['onSubmit']();
 
-      expect(component['errorMessage']()).toContain(
-        'could not be uploaded',
-      );
+      expect(component['errorMessage']()).toContain('could not be uploaded');
 
       service.uploadPhotos = workingUpload;
 

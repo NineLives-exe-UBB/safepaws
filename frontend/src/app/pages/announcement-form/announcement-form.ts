@@ -1,4 +1,3 @@
-
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -37,44 +36,27 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
   protected readonly mapCenter = signal<Coordinates | null>(null);
   protected readonly selectedLocation = signal<Coordinates | null>(null);
-  
+
   /** The latest date the picker offers: now, in the user's local time. */
   protected readonly maxEventDate = this.toDateTimeInputValue(new Date());
-  
+
   private redirectTimeout?: ReturnType<typeof setTimeout>;
   private createdAnnouncementId?: number;
 
   private readonly notInFutureValidator: ValidatorFn = (
     control: AbstractControl,
   ): ValidationErrors | null =>
-    control.value && new Date(control.value).getTime() > Date.now()
-      ? { futureDate: true }
-      : null;
+    control.value && new Date(control.value).getTime() > Date.now() ? { futureDate: true } : null;
 
   protected readonly form = this.formBuilder.group({
     type: ['LOST' as 'LOST' | 'FOUND', Validators.required],
     species: ['' as Species | '', Validators.required],
 
-    petName: [
-      '',
-      [
-        Validators.maxLength(50)
-      ],
-    ],
+    petName: ['', [Validators.maxLength(50)]],
 
-    breed: [
-      '',
-      [
-        Validators.maxLength(100)
-      ],
-    ],
+    breed: ['', [Validators.maxLength(100)]],
 
-    color: [
-      '',
-      [
-        Validators.maxLength(100)
-      ],
-    ],
+    color: ['', [Validators.maxLength(100)]],
 
     distinctiveMarks: ['', Validators.maxLength(500)],
 
@@ -82,51 +64,25 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
     latitude: [
       null as number | null,
-      [
-        Validators.required,
-        Validators.min(-90),
-        Validators.max(90),
-      ],
+      [Validators.required, Validators.min(-90), Validators.max(90)],
     ],
 
     longitude: [
       null as number | null,
-      [
-        Validators.required,
-        Validators.min(-180),
-        Validators.max(180),
-      ],
+      [Validators.required, Validators.min(-180), Validators.max(180)],
     ],
 
-    area: [
-      '',
-      [
-        Validators.required,
-        Validators.maxLength(150),
-        Validators.pattern(/\S/),
-      ],
-    ],
+    area: ['', [Validators.required, Validators.maxLength(150), Validators.pattern(/\S/)]],
 
-    contactName: [
-      '',
-      [
-        Validators.required,
-        Validators.maxLength(100),
-        Validators.pattern(/\S/),
-      ],
-    ],
+    contactName: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
 
     contactPhone: [
       '',
-      [
-        Validators.required,
-        Validators.maxLength(20),
-        Validators.pattern(/^\+?[0-9]{7,15}$/),
-      ],
+      [Validators.required, Validators.maxLength(20), Validators.pattern(/^\+?[0-9]{7,15}$/)],
     ],
   });
 
-    private readonly selectedType = toSignal(this.form.controls.type.valueChanges, {
+  private readonly selectedType = toSignal(this.form.controls.type.valueChanges, {
     initialValue: this.form.controls.type.value,
   });
 
@@ -175,23 +131,16 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
-        errors.push(
-          `${file.name}: only JPG and PNG images are allowed.`,
-        );
+        errors.push(`${file.name}: only JPG and PNG images are allowed.`);
         continue;
       }
 
       if (file.size > maxSize) {
-        errors.push(
-          `${file.name}: the maximum file size is 5 MB.`,
-        );
+        errors.push(`${file.name}: the maximum file size is 5 MB.`);
         continue;
       }
 
-      const alreadySelected = [
-        ...this.selectedFiles(),
-        ...validFiles,
-      ].some(
+      const alreadySelected = [...this.selectedFiles(), ...validFiles].some(
         (existing) =>
           existing.name === file.name &&
           existing.size === file.size &&
@@ -203,19 +152,11 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       }
     }
 
-    const newPreviewUrls = validFiles.map((file) =>
-      URL.createObjectURL(file),
-    );
+    const newPreviewUrls = validFiles.map((file) => URL.createObjectURL(file));
 
-    this.selectedFiles.update((currentFiles) => [
-      ...currentFiles,
-      ...validFiles,
-    ]);
+    this.selectedFiles.update((currentFiles) => [...currentFiles, ...validFiles]);
 
-    this.previewUrls.update((currentUrls) => [
-      ...currentUrls,
-      ...newPreviewUrls,
-    ]);
+    this.previewUrls.update((currentUrls) => [...currentUrls, ...newPreviewUrls]);
 
     this.errorMessage.set(errors.join(' '));
     input.value = '';
@@ -228,19 +169,13 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       URL.revokeObjectURL(urlToRemove);
     }
 
-    this.selectedFiles.update((files) =>
-      files.filter((_, i) => i !== index),
-    );
+    this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
 
-    this.previewUrls.update((urls) =>
-      urls.filter((_, i) => i !== index),
-    );
+    this.previewUrls.update((urls) => urls.filter((_, i) => i !== index));
   }
 
   private clearPreviews(): void {
-    this.previewUrls().forEach((url) =>
-      URL.revokeObjectURL(url),
-    );
+    this.previewUrls().forEach((url) => URL.revokeObjectURL(url));
 
     this.previewUrls.set([]);
   }
@@ -320,9 +255,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     if (files.length === 0) {
       this.submitting.set(false);
 
-      this.successMessage.set(
-        'Your announcement was created successfully!',
-      );
+      this.successMessage.set('Your announcement was created successfully!');
 
       this.redirectToAnnouncements();
       return;
@@ -332,9 +265,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       next: () => {
         this.submitting.set(false);
 
-        this.successMessage.set(
-          'Your announcement and photos were uploaded successfully!',
-        );
+        this.successMessage.set('Your announcement and photos were uploaded successfully!');
 
         this.redirectToAnnouncements();
       },
@@ -375,15 +306,13 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     return this.form.get(name)?.getError('server') ?? null;
   }
 
-    /** Formats a date the way a datetime-local input expects it: YYYY-MM-DDTHH:mm, local time. */
+  /** Formats a date the way a datetime-local input expects it: YYYY-MM-DDTHH:mm, local time. */
   private toDateTimeInputValue(date: Date): string {
     const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
     return localTime.toISOString().slice(0, 16);
   }
 
-  private optionalText(
-    value: string | null | undefined,
-  ): string | undefined {
+  private optionalText(value: string | null | undefined): string | undefined {
     return value?.trim() || undefined;
   }
 }
