@@ -208,7 +208,7 @@
           <app-map
             [center]="mapCenter()"
             [zoom]="16"
-            [pins]="locationPins"
+            [pins]="locationPins()"
             (locationSelected)="onLocationSelected($event)"
           />
 

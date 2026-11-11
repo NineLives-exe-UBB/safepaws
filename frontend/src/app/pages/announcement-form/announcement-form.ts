@@ -1,5 +1,5 @@
 
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -14,6 +14,7 @@ import { Coordinates, MapPin } from '../../models/map.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { LocationService } from '../../services/location.service';
 import { MapView } from '../../components/map/map';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   imports: [ReactiveFormsModule, RouterLink, MapView],
@@ -124,6 +125,10 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     ],
   });
 
+    private readonly selectedType = toSignal(this.form.controls.type.valueChanges, {
+    initialValue: this.form.controls.type.value,
+  });
+
   ngOnInit(): void {
     this.locationService.getCurrentLocation().then((location) => {
       if (location) {
@@ -132,21 +137,13 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     });
   }
 
-  protected get locationPins(): MapPin[] {
-  const location = this.selectedLocation();
-
-  if (!location) {
-    return [];
-  }
-
-  return [
-    {
-      ...location,
-      type: this.form.controls.type.value ?? 'LOST',
-      label: 'Selected location',
-    },
-  ];
-}
+  protected readonly locationPins = computed<MapPin[]>(() => {
+    const location = this.selectedLocation();
+    if (!location) {
+      return [];
+    }
+    return [{ ...location, type: this.selectedType() ?? 'LOST', label: 'Selected location' }];
+  });
 
   protected onLocationSelected(location: Coordinates): void {
     this.selectedLocation.set(location);

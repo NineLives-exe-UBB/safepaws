@@ -184,7 +184,7 @@ describe('AnnouncementForm', () => {
       longitude: 23.6236,
     });
 
-    expect(component['locationPins']).toEqual([
+    expect(component['locationPins']()).toEqual([
       {
         latitude: 46.7712,
         longitude: 23.6236,
