@@ -11,6 +11,7 @@ import { AnnouncementService } from '../../services/announcement.service';
 import { LocationService } from '../../services/location.service';
 import { AnnouncementForm } from './announcement-form';
 import { HttpErrorResponse } from '@angular/common/http';
+import type { Mock } from 'vitest';
 
 describe('AnnouncementForm', () => {
   let fixture: ComponentFixture<AnnouncementForm>;
@@ -308,6 +309,80 @@ describe('AnnouncementForm', () => {
     expect(compiled.querySelector('.main-photo-label')?.textContent).toContain(
       'Main photo',
     );
+  });
+
+  describe('choosing photos', () => {
+        let createUrl: Mock<(file: Blob | MediaSource) => string>;
+    const originalCreateObjectURL = URL.createObjectURL;
+
+    // jsdom has no URL.createObjectURL, so the previews get fake URLs
+    beforeEach(() => {
+      let next = 0;
+      createUrl = vi.fn((_file: Blob | MediaSource) => `blob:preview-${next++}`);
+      URL.createObjectURL = createUrl;
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = originalCreateObjectURL;
+    });
+
+    const image = (name: string, type = 'image/jpeg', size = 1000): File => {
+      const file = new File(['photo'], name, { type, lastModified: 1 });
+      Object.defineProperty(file, 'size', { value: size });
+      return file;
+    };
+
+    const choose = (...files: File[]): HTMLInputElement => {
+      const input = { files, value: 'C:\\fakepath\\photo.jpg' } as unknown as HTMLInputElement;
+      component['onFilesSelected']({ target: input } as unknown as Event);
+      return input;
+    };
+
+    it('should add JPG and PNG photos with a preview for each', () => {
+      choose(image('cat.jpg'), image('cat.png', 'image/png'));
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['cat.jpg', 'cat.png']);
+      expect(component['previewUrls']()).toEqual(['blob:preview-0', 'blob:preview-1']);
+      expect(component['errorMessage']()).toBe('');
+    });
+
+    it('should reject files that are not JPG or PNG', () => {
+      choose(image('notes.pdf', 'application/pdf'), image('cat.gif', 'image/gif'));
+
+      expect(component['selectedFiles']()).toHaveLength(0);
+      expect(component['errorMessage']()).toContain('notes.pdf: only JPG and PNG images are allowed.');
+      expect(component['errorMessage']()).toContain('cat.gif: only JPG and PNG images are allowed.');
+    });
+
+    it('should reject photos larger than 5 MB', () => {
+      choose(image('big.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1), image('ok.jpg', 'image/jpeg', 5 * 1024 * 1024));
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['ok.jpg']);
+      expect(component['errorMessage']()).toContain('big.jpg: the maximum file size is 5 MB.');
+    });
+
+    it('should not add the same photo twice', () => {
+      const photo = image('cat.jpg');
+
+      choose(photo);
+      choose(photo);
+
+      expect(component['selectedFiles']()).toHaveLength(1);
+      expect(createUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('should keep the photos already chosen when more are added', () => {
+      choose(image('first.jpg'));
+      choose(image('second.jpg'));
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['first.jpg', 'second.jpg']);
+    });
+
+    it('should empty the file input, so the same photo can be chosen again after removing it', () => {
+      const input = choose(image('cat.jpg'));
+
+      expect(input.value).toBe('');
+    });
   });
 
   describe('submitting', () => {
