@@ -14,9 +14,9 @@
   @case ('error') {
     <p class="message error">Could not load the announcement. Please try again later.</p>
   }
-    @case ('loaded') {
+  @case ('loaded') {
     @if (announcement(); as announcement) {
-      <article class="details">
+      <article class="details" [class.resolved]="announcement.status === 'RESOLVED'">
         <section class="gallery">
           <div class="main-photo">
             @if (selectedPhotoUrl(); as photoUrl) {
@@ -50,7 +50,8 @@
             </div>
           }
         </section>
-                <section class="info">
+
+        <section class="info">
           <div class="title-row">
             <h1>{{ heading() }}</h1>
             @if (announcement.status === 'RESOLVED') {
@@ -87,6 +88,21 @@
               {{ announcement.contactPhone }}
             </a>
           </div>
+
+          <div class="actions">
+            <a class="button" [href]="posterUrl()" download>Download poster</a>
+            <button
+              type="button"
+              class="button secondary"
+              [disabled]="updatingStatus()"
+              (click)="toggleStatus()"
+            >
+              {{ announcement.status === 'ACTIVE' ? 'Mark as resolved' : 'Mark as active' }}
+            </button>
+          </div>
+          @if (statusError()) {
+            <p class="status-error">Could not update the status. Please try again.</p>
+          }
         </section>
       </article>
     }

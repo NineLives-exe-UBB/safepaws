@@ -24,6 +24,9 @@ export class AnnouncementDetails {
 
   protected readonly selectedPhotoIndex = signal(0);
 
+  protected readonly updatingStatus = signal(false);
+  protected readonly statusError = signal(false);
+
   /** The main photo first, so it is the one shown when the page opens. */
   protected readonly photoUrls = computed(() => {
     const photos = this.announcement()?.photos ?? [];
@@ -50,6 +53,11 @@ export class AnnouncementDetails {
       : '';
   });
 
+  protected readonly posterUrl = computed(() => {
+    const announcement = this.announcement();
+    return announcement ? this.announcementService.posterUrl(announcement.id) : null;
+  });
+
   constructor() {
     const id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
@@ -70,7 +78,30 @@ export class AnnouncementDetails {
       },
     });
   }
+  
   protected selectPhoto(index: number): void {
     this.selectedPhotoIndex.set(index);
+  }
+
+  protected toggleStatus(): void {
+    const announcement = this.announcement();
+    if (!announcement || this.updatingStatus()) {
+      return;
+    }
+
+    const status = announcement.status === 'ACTIVE' ? 'RESOLVED' : 'ACTIVE';
+    this.updatingStatus.set(true);
+    this.statusError.set(false);
+
+    this.announcementService.updateStatus(announcement.id, status).subscribe({
+      next: (updated) => {
+        this.announcement.set(updated);
+        this.updatingStatus.set(false);
+      },
+      error: () => {
+        this.statusError.set(true);
+        this.updatingStatus.set(false);
+      },
+    });
   }
 }
