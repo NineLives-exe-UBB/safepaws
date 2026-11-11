@@ -23,14 +23,15 @@ import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
-import java.awt.Color;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PosterService {
@@ -39,7 +40,7 @@ public class PosterService {
     private static final String FONT_RESOURCE_PATH = "/fonts/DejaVuSans-Bold.ttf";
     private static final int MAX_MARKS_LENGTH = 140;
     private static final int MAX_FIELD_LENGTH = 70;
-
+    private static final float QR_SIZE_PT = 120f;
 
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
@@ -54,7 +55,6 @@ public class PosterService {
         this.photoRepository = photoRepository;
         this.qrCodeService = qrCodeService;
     }
-
 
     @Transactional(readOnly = true)
     public byte[] generatePoster(Long announcementId) {
@@ -75,10 +75,7 @@ public class PosterService {
                     .orElse(null);
         }
 
-
-
         byte[] qrCodeBytes = qrCodeService.generateQrCode(announcementId);
-
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4, 32, 32, 28, 28);
@@ -250,7 +247,7 @@ public class PosterService {
     }
 
     private void addContactAndQrFooter(Document document, Announcement announcement, byte[] qrCodeBytes, BaseFont baseFont) {
-        PdfPTable footerTable = new PdfPTable(new float[]{2.5f, 1.1f});
+        PdfPTable footerTable = new PdfPTable(new float[]{2.2f, 1.4f});
         footerTable.setWidthPercentage(100);
 
         Font headerFont = createFont(baseFont, 16f, Color.WHITE);
@@ -258,20 +255,20 @@ public class PosterService {
 
         String name = announcement.getContactName() != null ? announcement.getContactName().trim() : "";
         String phone = announcement.getContactPhone() != null ? announcement.getContactPhone().trim() : "";
-        String contactDetails;
-        if (!name.isEmpty() && !phone.isEmpty()) {
-            contactDetails = name + " - " + phone;
-        } else if (!phone.isEmpty()) {
-            contactDetails = phone;
-        } else {
-            contactDetails = name;
-        }
+        String callToAction = announcement.getType() == AnnouncementType.FOUND
+                ? "IS THIS YOUR PET? CONTACT:"
+                : "IF SEEN, PLEASE CONTACT:";
 
         Paragraph contactParagraph = new Paragraph();
         contactParagraph.setLeading(26f);
-        contactParagraph.add(new Chunk("IF SEEN, PLEASE CONTACT:\n", headerFont));
-        if (!contactDetails.isEmpty()) {
-            contactParagraph.add(new Chunk(contactDetails, contactFont));
+        contactParagraph.add(new Chunk(callToAction, headerFont));
+        if (!name.isEmpty()) {
+            contactParagraph.add(Chunk.NEWLINE);
+            contactParagraph.add(new Chunk(name, contactFont));
+        }
+        if (!phone.isEmpty()) {
+            contactParagraph.add(Chunk.NEWLINE);
+            contactParagraph.add(new Chunk(phone, contactFont));
         }
 
         PdfPCell contactCell = new PdfPCell(contactParagraph);
@@ -298,13 +295,13 @@ public class PosterService {
         boxCell.setBorderColor(new Color(180, 180, 180));
         boxCell.setBorderWidth(1f);
         boxCell.setBackgroundColor(Color.WHITE);
-        boxCell.setFixedHeight(84f);
+        boxCell.setFixedHeight(QR_SIZE_PT + 8f);
 
         boolean qrAdded = false;
         if (qrCodeBytes != null && qrCodeBytes.length > 0) {
             try {
                 Image qrImage = Image.getInstance(qrCodeBytes);
-                qrImage.scaleToFit(76f, 76f);
+                qrImage.scaleToFit(QR_SIZE_PT, QR_SIZE_PT);
                 qrImage.setAlignment(Element.ALIGN_CENTER);
                 boxCell.addElement(qrImage);
                 qrAdded = true;

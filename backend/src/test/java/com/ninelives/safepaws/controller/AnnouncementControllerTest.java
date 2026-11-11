@@ -69,7 +69,6 @@ class AnnouncementControllerTest {
     @MockitoBean
     private PosterService posterService;
 
-
     private static AnnouncementResponse response(Long id) {
         return response(id, AnnouncementStatus.ACTIVE);
     }
@@ -84,7 +83,6 @@ class AnnouncementControllerTest {
                 status, LocalDateTime.of(2026, 11, 1, 10, 0), List.of()
         );
     }
-
 
     private ResultActions postJson(String body) throws Exception {
         return mockMvc.perform(post("/announcements").contentType(MediaType.APPLICATION_JSON).content(body));
@@ -250,14 +248,13 @@ class AnnouncementControllerTest {
 
     @Nested
     class FindAll {
-
         @Test
         void returnsTheSummariesInTheOrderTheServiceGives() throws Exception {
             when(announcementService.findAll(any())).thenReturn(List.of(
                     new AnnouncementSummaryResponse(13L, AnnouncementType.LOST, "Max", Species.DOG,
                             "Someșeni, Cluj-Napoca", 46.788, 23.651, null, LocalDateTime.of(2026, 11, 2, 7, 0),
                             AnnouncementStatus.ACTIVE,
-                            List.of(new AnnouncementSummaryResponse.Photo(3L, "/photos/3", true))),
+                            List.of(new AnnouncementSummaryResponse.PhotoSummary(3L, "/photos/3", true))),
                     new AnnouncementSummaryResponse(11L, AnnouncementType.FOUND, null, Species.CAT,
                             "Între Lacuri, Cluj-Napoca", null, null, null, LocalDateTime.of(2026, 11, 1, 17, 0),
                             AnnouncementStatus.RESOLVED, List.of())));
@@ -373,7 +370,6 @@ class AnnouncementControllerTest {
 
     @Nested
     class FindById {
-
         @Test
         void existingAnnouncementReturns200WithAllDetails() throws Exception {
             when(announcementService.findById(1L)).thenReturn(response(1L));
@@ -419,10 +415,8 @@ class AnnouncementControllerTest {
         }
     }
 
-
     @Nested
     class UpdateStatus {
-
         @Test
         void markAnnouncementResolvedReturns200() throws Exception {
             when(announcementService.updateStatus(13L, AnnouncementStatus.RESOLVED))
@@ -493,5 +487,4 @@ class AnnouncementControllerTest {
             verify(announcementService, never()).updateStatus(any(), any());
         }
     }
-
 }

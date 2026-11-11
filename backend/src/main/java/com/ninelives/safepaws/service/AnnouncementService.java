@@ -9,11 +9,11 @@ import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
 import com.ninelives.safepaws.exception.InvalidFilterException;
 import com.ninelives.safepaws.model.Announcement;
+import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.AnnouncementSpecifications;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
-import com.ninelives.safepaws.model.AnnouncementStatus;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,11 +79,15 @@ public class AnnouncementService {
                 .toList();
     }
 
-    /** An announcement that passed the filter, with its exact distance when a location was sent. */
+    /**
+     * An announcement that passed the filter, with its exact distance when a location was sent.
+     */
     private record Match(Announcement announcement, Double distanceKm) {
     }
 
-    /** "newest" and "oldest" are about eventDate, the date shown on the card; ties go by id. */
+    /**
+     * "newest" and "oldest" are about eventDate, the date shown on the card; ties go by id.
+     */
     private static Sort databaseOrder(AnnouncementFilter.Sort sort) {
         return sort == AnnouncementFilter.Sort.OLDEST
                 ? Sort.by(Sort.Order.asc("eventDate"), Sort.Order.asc("id"))
@@ -97,7 +101,9 @@ public class AnnouncementService {
         return distanceKm(filter.lat(), filter.lng(), announcement.getLatitude(), announcement.getLongitude());
     }
 
-    /** Great-circle (haversine) distance between two points, in kilometres. */
+    /**
+     * Great-circle (haversine) distance between two points, in kilometres.
+     */
     static double distanceKm(double lat1, double lng1, double lat2, double lng2) {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLng = Math.toRadians(lng2 - lng1);
@@ -117,7 +123,6 @@ public class AnnouncementService {
         return toResponse(announcement, photoRepository.findMetadataByAnnouncementIds(List.of(id)));
     }
 
-
     @Transactional
     public AnnouncementResponse updateStatus(Long id, AnnouncementStatus status) {
 
@@ -131,7 +136,6 @@ public class AnnouncementService {
         return toResponse(saved,
                 photoRepository.findMetadataByAnnouncementIds(List.of(id)));
     }
-
 
     private Announcement toEntity(AnnouncementRequest request) {
         Announcement announcement = new Announcement();
@@ -196,7 +200,7 @@ public class AnnouncementService {
                 announcement.getEventDate(),
                 announcement.getStatus(),
                 photos.stream()
-                        .map(photo -> new AnnouncementSummaryResponse.Photo(
+                        .map(photo -> new AnnouncementSummaryResponse.PhotoSummary(
                                 photo.id(), PhotoResponse.urlFor(photo.id()), photo.isMain()))
                         .toList()
         );

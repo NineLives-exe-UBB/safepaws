@@ -156,7 +156,6 @@ class PhotoControllerTest {
         verifyNoInteractions(photoService);
     }
 
-
     @Test
     void getExistingPhotoReturns200() throws Exception {
         byte[] image = {
@@ -193,5 +192,4 @@ class PhotoControllerTest {
 
         verify(photoService).getPhoto(999L);
     }
-
 }

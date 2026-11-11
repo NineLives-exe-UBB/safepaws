@@ -21,10 +21,10 @@ public record AnnouncementSummaryResponse(
         Double distanceKm,
         LocalDateTime eventDate,
         AnnouncementStatus status,
-        List<Photo> photos
+        List<PhotoSummary> photos
 ) {
 
-    public record Photo(
+    public record PhotoSummary(
             Long id,
             String url,
             boolean isMain

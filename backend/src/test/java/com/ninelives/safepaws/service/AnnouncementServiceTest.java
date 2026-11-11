@@ -168,8 +168,8 @@ class AnnouncementServiceTest {
         List<AnnouncementSummaryResponse> result = announcementService.findAll(AnnouncementFilter.none());
 
         assertThat(result.get(0).photos()).containsExactly(
-                new AnnouncementSummaryResponse.Photo(7L, "/photos/7", true),
-                new AnnouncementSummaryResponse.Photo(8L, "/photos/8", false));
+                new AnnouncementSummaryResponse.PhotoSummary(7L, "/photos/7", true),
+                new AnnouncementSummaryResponse.PhotoSummary(8L, "/photos/8", false));
         assertThat(result.get(1).photos()).isEmpty();
     }
 
@@ -406,5 +406,4 @@ class AnnouncementServiceTest {
 
         verify(announcementRepository, never()).save(any(Announcement.class));
     }
-
 }

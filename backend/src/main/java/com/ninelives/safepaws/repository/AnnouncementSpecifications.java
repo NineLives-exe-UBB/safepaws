@@ -65,7 +65,9 @@ public final class AnnouncementSpecifications {
         return cb.function("unaccent", String.class, value);
     }
 
-    /** % and _ typed by the user are matched literally, not as wildcards. */
+    /**
+     * % and _ typed by the user are matched literally, not as wildcards.
+     */
     static String escapeLike(String text) {
         return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
