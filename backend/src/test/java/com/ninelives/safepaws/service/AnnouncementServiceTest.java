@@ -353,7 +353,6 @@ class AnnouncementServiceTest {
         assertThat(AnnouncementService.distanceKm(46.77, 23.59, 46.77, 23.59)).isZero();
     }
 
-
     @Test
     void updateStatusMarksAnnouncementResolved() {
         Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");

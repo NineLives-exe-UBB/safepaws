@@ -320,7 +320,6 @@ class PhotoServiceTest {
                 .saveAndFlush(any(Photo.class));
     }
 
-
     @Test
     void getExistingPhoto() {
         Photo photo = new Photo(
