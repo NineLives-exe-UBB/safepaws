@@ -6,14 +6,16 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 
 ### Endpoint Overview & Team Assignments
 
-| Method | Endpoint | Description | Implemented by | Used by |
+| Method | Endpoint | Description | Implemented by | Used by (frontend) |
 |---|---|---|---|---|
-| `POST` | `/announcements` | Creates a new announcement | Antonia | Victor (form) |
-| `GET` | `/announcements` | Returns all announcements (summary projection, newest first) | Antonia | Luca (list) |
-| `GET` | `/announcements/{id}` | Returns one announcement with full details and attached photos | Antonia | Luca (details) |
-| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Patrick | Victor (upload) |
-| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Luca |
-| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | Luca |
+| `POST` | `/announcements` | Creates a new announcement | Antonia | Announcement form |
+| `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Antonia | List page, map page |
+| `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Antonia | Not used by a page yet |
+| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Patrick | Announcement form |
+| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Announcement cards, map popups |
+| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | `Download poster` on each card |
+
+There is no authentication: all endpoints are public.
 
 ---
 
@@ -28,7 +30,7 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
   - Announcement Type: `LOST`, `FOUND`
   - Status: `ACTIVE`, `RESOLVED`
   - Species: `CAT`, `DOG`, `OTHER`
-- **Privacy Notice:** `contactPhone` is temporarily exposed in read endpoints to enable public contact and poster generation during Demo 1. It will be restricted once in-app messaging and user authentication are added.
+- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements` response, and printed on the poster. They are not part of `GET /announcements`.
 
 ---
 
@@ -100,7 +102,30 @@ Creates a new lost or found announcement.
 ---
 
 #### `GET /announcements`
-Returns all announcements in descending order by creation date and ID (newest first). Returns a lightweight summary projection (`AnnouncementSummaryResponse`) that omits detailed descriptions and contact information to optimize listing bandwidth.
+Returns the announcements that match the optional query parameters, as a lightweight summary projection (`AnnouncementSummaryResponse`) without detailed descriptions or contact information. All parameters combine with AND.
+
+**Without any parameter:** only `ACTIVE` announcements, newest `eventDate` first (ties by `id`, highest first).
+
+##### Query Parameters (all optional)
+| Parameter | Type | Rules |
+|---|---|---|
+| `type` | `string` | `LOST` or `FOUND`, exact match. |
+| `species` | `string` | `CAT`, `DOG` or `OTHER`, exact match. |
+| `status` | `string` | `ACTIVE` or `RESOLVED`, exact match. Default: `ACTIVE` (there is no value for "all statuses"). |
+| `color` | `string` | Part of the color, max 100 characters. Ignores case, diacritics and spaces at the ends (`grey` finds `Dark grey`). |
+| `breed` | `string` | Part of the breed, max 100 characters. Same matching as `color`. |
+| `area` | `string` | Part of the area, max 150 characters. Same matching as `color` (`manastur` finds `Mănăștur, Cluj-Napoca`). |
+| `lat` | `number` | User latitude, `-90` to `90`. Must be sent together with `lng`. |
+| `lng` | `number` | User longitude, `-180` to `180`. Must be sent together with `lat`. |
+| `radiusKm` | `number` | `1` to `100`. Requires `lat` and `lng`. Default when a location is sent: `10`. |
+| `sort` | `string` | `newest` (default) or `oldest`, by `eventDate`; or `closest`, which requires `lat` and `lng`. |
+
+Blank text parameters are ignored. In `color`, `breed` and `area`, `%` and `_` are matched literally, not as wildcards.
+
+**When `lat` and `lng` are sent:** the distance to each announcement is calculated (great-circle / haversine), announcements without coordinates or farther than `radiusKm` are left out, and each result has `distanceKm` (rounded to one decimal). With `sort=closest`, results are ordered by distance; equal distances keep the newest-first order.
+
+##### Example
+`GET /announcements?species=CAT&area=manastur&lat=46.77&lng=23.59&radiusKm=5&sort=closest`
 
 ##### Response (`200 OK`)
 ```json
@@ -111,6 +136,9 @@ Returns all announcements in descending order by creation date and ID (newest fi
     "petName": "Misi",
     "species": "CAT",
     "area": "Mănăștur, Cluj-Napoca",
+    "latitude": 46.7712,
+    "longitude": 23.6236,
+    "distanceKm": 2.6,
     "eventDate": "2026-10-30T18:00:00",
     "status": "ACTIVE",
     "photos": [
@@ -123,6 +151,16 @@ Returns all announcements in descending order by creation date and ID (newest fi
   }
 ]
 ```
+
+`distanceKm` is only present when `lat` and `lng` were sent. `latitude` and `longitude` are `null` for an announcement without coordinates. Photos are ordered with the main photo first.
+
+##### Error Responses
+- `400 Bad Request` (`message: Some fields are invalid`) with one `fieldErrors` entry per broken rule, for example:
+  - `type`, `species`, `status`, `lat`, `lng`, `radiusKm`: `Invalid value 'xyz'` (for enums followed by `, allowed values: ...`) when the value cannot be converted
+  - `color`: `color must be at most 100 characters` (same for `breed`, and `area` with 150)
+  - `lat` / `lng`: `Latitude and longitude must be provided together`, `Latitude must be between -90 and 90`, `Longitude must be between -180 and 180`
+  - `radiusKm`: `radiusKm requires lat and lng`, `radiusKm must be between 1 and 100`
+  - `sort`: `Invalid value 'xyz', allowed values: newest, oldest, closest`, `sort=closest requires lat and lng`
 
 ---
 
@@ -190,7 +228,8 @@ Uploads one or more binary photos and attaches them to the specified announcemen
 - **File Types:** Only `image/jpeg` and `image/png` are accepted (validated by inspecting magic byte headers).
 - **File Size Limits:** Max 5 MB per file (`413 Payload Too Large`), max 25 MB total request payload.
 - **Filename:** Max 255 characters.
-- **Main Photo Behavior:** If the announcement does not yet have a main photo, the first uploaded photo is automatically marked `isMain: true`. Subsequent uploads default to `isMain: false`.
+- **Main Photo Behavior:** If the announcement does not yet have a main photo, the first uploaded photo is automatically marked `isMain: true`. All other photos get `isMain: false`.
+- **Unknown Announcement:** `404 Not Found` (`Announcement not found with id: {id}`).
 
 ##### Response (`201 Created`)
 ```json
@@ -280,7 +319,8 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`), sorted alphabetically by field name |
 | `400 Bad Request` | `Bad Request` | Invalid enum value (`HttpMessageNotReadableException`) | `Some fields are invalid` | `[{"field": "<fieldName>", "message": "Invalid value '<val>', allowed values: <ALLOWED_VALUES>"}]` |
 | `400 Bad Request` | `Bad Request` | Malformed JSON request body (`HttpMessageNotReadableException`) | `Malformed request body` | `[]` (empty) |
-| `400 Bad Request` | `Bad Request` | Path or query parameter type mismatch (`MethodArgumentTypeMismatchException`, e.g. `/announcements/abc`) | `Some fields are invalid` | `[{"field": "id", "message": "Invalid value 'abc'"}]` |
+| `400 Bad Request` | `Bad Request` | Path or query parameter type mismatch (`MethodArgumentTypeMismatchException`, e.g. `/announcements/abc` or `?species=cat`) | `Some fields are invalid` | `[{"field": "id", "message": "Invalid value 'abc'"}]` (for enums followed by `, allowed values: ...`) |
+| `400 Bad Request` | `Bad Request` | Invalid `GET /announcements` filter combination (`InvalidFilterException`) | `Some fields are invalid` | Array of `{field, message}`, see `GET /announcements` above |
 | `400 Bad Request` | `Bad Request` | No files provided in upload (`PhotoService`) | `No files provided` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Uploaded file is empty (`PhotoService`) | `File is empty` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Non-JPG/PNG mime type (`PhotoService`) | `Only JPG and PNG images are allowed` | `[]` (empty) |
