@@ -10,6 +10,7 @@ import { Photo } from '../../models/photo.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { LocationService } from '../../services/location.service';
 import { AnnouncementForm } from './announcement-form';
+import { HttpErrorResponse } from '@angular/common/http';
 
 describe('AnnouncementForm', () => {
   let fixture: ComponentFixture<AnnouncementForm>;
@@ -386,6 +387,47 @@ describe('AnnouncementForm', () => {
 
       expect(component['errorMessage']()).toContain('Could not create');
       expect(component['submitting']()).toBe(false);
+    });
+
+
+    it('should show the backend validation errors next to their fields', () => {
+      TestBed.inject(AnnouncementService).create = () =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: {
+                fieldErrors: [
+                  { field: 'contactPhone', message: 'Contact phone must be a valid phone number' },
+                  { field: 'coordinates', message: 'Latitude and longitude must be provided together' },
+                ],
+              },
+            }),
+        );
+
+      component['onSubmit']();
+      fixture.detectChanges();
+
+      expect(component['serverError']('contactPhone')).toBe('Contact phone must be a valid phone number');
+      expect(component['serverError']('latitude')).toBe('Latitude and longitude must be provided together');
+      expect(compiled.textContent).toContain('Contact phone must be a valid phone number');
+      expect(component['errorMessage']()).toContain('check the highlighted fields');
+    });
+
+    it('should clear a backend error when the field is changed', () => {
+      TestBed.inject(AnnouncementService).create = () =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { fieldErrors: [{ field: 'area', message: 'Area is required' }] },
+            }),
+        );
+
+      component['onSubmit']();
+      component['form'].controls.area.setValue('Mărăști, Cluj-Napoca');
+
+      expect(component['serverError']('area')).toBeNull();
     });
 
     it('should not create a second announcement when retrying a failed photo upload', () => {

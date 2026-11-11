@@ -15,6 +15,7 @@ import { AnnouncementService } from '../../services/announcement.service';
 import { LocationService } from '../../services/location.service';
 import { MapView } from '../../components/map/map';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   imports: [ReactiveFormsModule, RouterLink, MapView],
@@ -299,11 +300,12 @@ export class AnnouncementForm implements OnInit, OnDestroy {
         this.uploadSelectedPhotos(createdAnnouncement.id);
       },
 
-      error: () => {
+      error: (error: unknown) => {
         this.submitting.set(false);
-
         this.errorMessage.set(
-          'Could not create the announcement. Please check your information and try again.',
+          this.showFieldErrors(error)
+            ? 'Some details are not valid. Please check the highlighted fields.'
+            : 'Could not create the announcement. Please check your information and try again.',
         );
       },
     });
@@ -342,6 +344,32 @@ export class AnnouncementForm implements OnInit, OnDestroy {
         );
       },
     });
+  }
+
+  /** Shows the backend's validation errors next to their fields. Returns false if none matched a field. */
+  private showFieldErrors(error: unknown): boolean {
+    if (!(error instanceof HttpErrorResponse) || error.status !== 400) {
+      return false;
+    }
+    const fieldErrors: { field: string; message: string }[] = error.error?.fieldErrors ?? [];
+    let shown = false;
+    for (const { field, message } of fieldErrors) {
+      // the backend reports a missing half of the coordinates as "coordinates"
+      const names = field === 'coordinates' ? ['latitude', 'longitude'] : [field];
+      for (const name of names) {
+        const control = this.form.get(name);
+        if (control) {
+          control.setErrors({ ...control.errors, server: message });
+          control.markAsTouched();
+          shown = true;
+        }
+      }
+    }
+    return shown;
+  }
+
+  protected serverError(name: string): string | null {
+    return this.form.get(name)?.getError('server') ?? null;
   }
 
   private optionalText(
