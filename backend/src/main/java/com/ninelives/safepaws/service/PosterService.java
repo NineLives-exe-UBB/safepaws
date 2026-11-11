@@ -40,13 +40,21 @@ public class PosterService {
     private static final int MAX_MARKS_LENGTH = 140;
     private static final int MAX_FIELD_LENGTH = 70;
 
+
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
+    private final QrCodeService qrCodeService;
 
-    public PosterService(AnnouncementRepository announcementRepository, PhotoRepository photoRepository) {
+    public PosterService(
+            AnnouncementRepository announcementRepository,
+            PhotoRepository photoRepository,
+            QrCodeService qrCodeService) {
+
         this.announcementRepository = announcementRepository;
         this.photoRepository = photoRepository;
+        this.qrCodeService = qrCodeService;
     }
+
 
     @Transactional(readOnly = true)
     public byte[] generatePoster(Long announcementId) {
@@ -67,8 +75,10 @@ public class PosterService {
                     .orElse(null);
         }
 
-        // TODO: Once Patrick's QR service is ready, replace null with qrService.generateQrCode(announcementId)
-        byte[] qrCodeBytes = null;
+
+
+        byte[] qrCodeBytes = qrCodeService.generateQrCode(announcementId);
+
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4, 32, 32, 28, 28);
