@@ -7,7 +7,7 @@ app-map {
 .note {
   padding: 12px 16px;
   border-radius: 8px;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
 }
 
 .message {
@@ -15,9 +15,9 @@ app-map {
 }
 
 .message.error {
-  color: var(--color-lost);
+  color: var(--color-error);
 }
 
 .note {
-  color: #555555;
+  color: var(--color-text-muted);
 }
