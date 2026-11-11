@@ -23,14 +23,15 @@ import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
-import java.awt.Color;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PosterService {
@@ -40,7 +41,6 @@ public class PosterService {
     private static final int MAX_MARKS_LENGTH = 140;
     private static final int MAX_FIELD_LENGTH = 70;
     private static final float QR_SIZE_PT = 120f;
-
 
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
@@ -55,7 +55,6 @@ public class PosterService {
         this.photoRepository = photoRepository;
         this.qrCodeService = qrCodeService;
     }
-
 
     @Transactional(readOnly = true)
     public byte[] generatePoster(Long announcementId) {
@@ -76,10 +75,7 @@ public class PosterService {
                     .orElse(null);
         }
 
-
-
         byte[] qrCodeBytes = qrCodeService.generateQrCode(announcementId);
-
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4, 32, 32, 28, 28);

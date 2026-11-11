@@ -1,4 +1,3 @@
-
 package com.ninelives.safepaws.service;
 
 import com.google.zxing.BinaryBitmap;

@@ -406,5 +406,4 @@ class AnnouncementServiceTest {
 
         verify(announcementRepository, never()).save(any(Announcement.class));
     }
-
 }

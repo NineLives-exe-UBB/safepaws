@@ -69,7 +69,6 @@ class AnnouncementControllerTest {
     @MockitoBean
     private PosterService posterService;
 
-
     private static AnnouncementResponse response(Long id) {
         return response(id, AnnouncementStatus.ACTIVE);
     }
@@ -84,7 +83,6 @@ class AnnouncementControllerTest {
                 status, LocalDateTime.of(2026, 11, 1, 10, 0), List.of()
         );
     }
-
 
     private ResultActions postJson(String body) throws Exception {
         return mockMvc.perform(post("/announcements").contentType(MediaType.APPLICATION_JSON).content(body));
@@ -250,7 +248,6 @@ class AnnouncementControllerTest {
 
     @Nested
     class FindAll {
-
         @Test
         void returnsTheSummariesInTheOrderTheServiceGives() throws Exception {
             when(announcementService.findAll(any())).thenReturn(List.of(
@@ -373,7 +370,6 @@ class AnnouncementControllerTest {
 
     @Nested
     class FindById {
-
         @Test
         void existingAnnouncementReturns200WithAllDetails() throws Exception {
             when(announcementService.findById(1L)).thenReturn(response(1L));
@@ -419,10 +415,8 @@ class AnnouncementControllerTest {
         }
     }
 
-
     @Nested
     class UpdateStatus {
-
         @Test
         void markAnnouncementResolvedReturns200() throws Exception {
             when(announcementService.updateStatus(13L, AnnouncementStatus.RESOLVED))
@@ -493,5 +487,4 @@ class AnnouncementControllerTest {
             verify(announcementService, never()).updateStatus(any(), any());
         }
     }
-
 }

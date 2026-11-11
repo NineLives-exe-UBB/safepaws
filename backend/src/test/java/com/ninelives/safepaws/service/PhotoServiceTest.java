@@ -348,5 +348,4 @@ class PhotoServiceTest {
 
         verify(photoRepository).findById(999L);
     }
-
 }

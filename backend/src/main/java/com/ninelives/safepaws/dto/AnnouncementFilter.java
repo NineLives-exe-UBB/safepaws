@@ -34,7 +34,9 @@ public record AnnouncementFilter(
     public enum Sort {
         NEWEST, OLDEST, CLOSEST;
 
-        /** The value used in the API, e.g. {@code newest}. */
+        /**
+         * The value used in the API, e.g. {@code newest}.
+         */
         public String value() {
             return name().toLowerCase(Locale.ROOT);
         }
@@ -47,7 +49,9 @@ public record AnnouncementFilter(
         sort = blankToNull(sort);
     }
 
-    /** No parameters sent: active announcements, newest first. */
+    /**
+     * No parameters sent: active announcements, newest first.
+     */
     public static AnnouncementFilter none() {
         return new AnnouncementFilter(null, null, null, null, null, null, null, null, null, null);
     }
@@ -103,7 +107,9 @@ public record AnnouncementFilter(
         return radiusKm != null ? radiusKm : DEFAULT_RADIUS_KM;
     }
 
-    /** Call only on a valid filter. */
+    /**
+     * Call only on a valid filter.
+     */
     public Sort sortOrDefault() {
         return sort != null ? parseSort() : Sort.NEWEST;
     }

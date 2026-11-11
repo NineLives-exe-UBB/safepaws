@@ -11,24 +11,25 @@ import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import javax.imageio.ImageIO;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import org.mockito.Spy;
 
 @ExtendWith(MockitoExtension.class)
 class PosterServiceTest {
@@ -39,7 +40,6 @@ class PosterServiceTest {
     @Mock
     private AnnouncementRepository announcementRepository;
 
-
     @Mock
     private PhotoRepository photoRepository;
 
@@ -49,7 +49,6 @@ class PosterServiceTest {
 
     @InjectMocks
     private PosterService posterService;
-
 
     private static Announcement storedAnnouncement(Long id, AnnouncementType type, Species species, String petName) {
         Announcement announcement = new Announcement();
