@@ -14,7 +14,11 @@
     </span>
   </div>
   <div class="details">
-    <h2 class="species">{{ speciesLabel() }}</h2>
+    <h2 class="species">
+      <a class="card-link" [routerLink]="['/announcements', announcement().id]">
+        {{ speciesLabel() }}
+      </a>
+    </h2>
     @if (announcement().petName) {
       <p class="pet-name">{{ announcement().petName }}</p>
     }
