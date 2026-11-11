@@ -111,6 +111,21 @@ describe('AnnouncementForm', () => {
     expect(color.valid).toBe(true);
   });
 
+
+  it('should accept the same text as the backend in the optional fields', () => {
+    const controls = component['form'].controls;
+
+    controls.petName.setValue('Max 2');
+    controls.breed.setValue('Mix (50/50)');
+    controls.color.setValue('Black & white, 2 white paws');
+    controls.contactName.setValue("Ana-Maria O'Brien 2");
+
+    expect(controls.petName.valid).toBe(true);
+    expect(controls.breed.valid).toBe(true);
+    expect(controls.color.valid).toBe(true);
+    expect(controls.contactName.valid).toBe(true);
+  });
+
   it('should reject an event date in the future', () => {
     const eventDate = component['form'].controls.eventDate;
 

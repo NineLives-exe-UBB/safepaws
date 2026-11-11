@@ -74,12 +74,6 @@
               Pet name cannot exceed 50 characters.
             </small>
           }
-
-          @if (form.controls.petName.hasError('pattern')) {
-            <small class="field-error">
-              Pet name can contain only letters, spaces, apostrophes and hyphens.
-            </small>
-          }
         </div>
 
         <div class="form-group">
@@ -97,12 +91,6 @@
               Breed cannot exceed 100 characters.
             </small>
           }
-
-          @if (form.controls.breed.hasError('pattern')) {
-            <small class="field-error">
-              Breed can contain only letters, spaces, apostrophes and hyphens.
-            </small>
-          }
         </div>
 
         <div class="form-group">
@@ -118,12 +106,6 @@
           @if (form.controls.color.hasError('maxlength')) {
             <small class="field-error">
               Color cannot exceed 100 characters.
-            </small>
-          }
-
-          @if (form.controls.color.hasError('pattern')) {
-            <small class="field-error">
-              Color can contain only letters, spaces, commas, apostrophes and hyphens.
             </small>
           }
         </div>
@@ -269,7 +251,8 @@
           />
 
           @if (
-            form.controls.contactName.hasError('required') &&
+            (form.controls.contactName.hasError('required') ||
+              form.controls.contactName.hasError('pattern')) &&
             form.controls.contactName.touched
           ) {
             <small class="field-error">
@@ -280,12 +263,6 @@
           @if (form.controls.contactName.hasError('maxlength')) {
             <small class="field-error">
               Your name cannot exceed 100 characters.
-            </small>
-          }
-
-          @if (form.controls.contactName.hasError('pattern')) {
-            <small class="field-error">
-              Your name can contain only letters, spaces, apostrophes and hyphens.
             </small>
           }
         </div>

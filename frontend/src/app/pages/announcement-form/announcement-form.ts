@@ -54,24 +54,21 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     petName: [
       '',
       [
-        Validators.maxLength(50),
-        Validators.pattern(/^[\p{L}\s'-]*$/u),
+        Validators.maxLength(50)
       ],
     ],
 
     breed: [
       '',
       [
-        Validators.maxLength(100),
-        Validators.pattern(/^[\p{L}\s'-]*$/u),
+        Validators.maxLength(100)
       ],
     ],
 
     color: [
       '',
       [
-        Validators.maxLength(100),
-        Validators.pattern(/^[\p{L}\s,'-]*$/u),
+        Validators.maxLength(100)
       ],
     ],
 
@@ -111,7 +108,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       [
         Validators.required,
         Validators.maxLength(100),
-        Validators.pattern(/^\s*[\p{L}'-][\p{L}\s'-]*$/u),
+        Validators.pattern(/\S/),
       ],
     ],
 
@@ -149,7 +146,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     if (this.submitting()) {
       return;
     }
-    
+
     this.selectedLocation.set(location);
 
     this.form.controls.latitude.setValue(location.latitude);
