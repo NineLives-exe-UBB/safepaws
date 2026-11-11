@@ -96,7 +96,7 @@ export class AnnouncementDetails {
       },
     });
   }
-  
+
   protected selectPhoto(index: number): void {
     this.selectedPhotoIndex.set(index);
   }
