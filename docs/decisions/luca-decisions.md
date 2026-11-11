@@ -22,7 +22,7 @@ Decisions and team messages for the frontend cards "Announcements list", "Leafle
 
 ### Filter bar (`frontend/src/app/components/filter-bar`)
 
-- **One reusable component:** `<app-filter-bar>` is used by the list page and, later, by the map page, so both show the same results for the same filters.
+- **One reusable component:** `<app-filter-bar>` is used by the list page and the map page, so both show the same results for the same filters.
 - **Same defaults as the backend:** with no filter the backend returns only active announcements, newest event first. So the status dropdown starts on "Active" and has no "Any" option, because the backend has no value for all statuses.
 - **Filters in the URL:** only the values that are not the default, for example `/announcements?species=CAT&color=grey`. They survive a refresh and can be shared. The text fields wait 300 ms after the user stops typing before asking the backend.
 - **Location is only sent when needed:** `lat` and `lng` make the backend filter by radius (10 km by default) and leave out announcements without coordinates. So the frontend only sends them when the user picks a radius or "Closest first". Because of that, "1.2 km away" is only shown on the cards in those cases.

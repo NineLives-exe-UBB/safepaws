@@ -8,7 +8,7 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 ### Requirements
 
-- Node.js 22.22.3 or newer (24 LTS recommended) and npm
+- Node.js 22.22.3+ or 24.15.0+ (the versions Angular 22 supports) and npm
 
 ### Steps
 
@@ -88,11 +88,11 @@ The list page has a filter bar (`<app-filter-bar>`, in `components/filter-bar`) 
 ```
 src/
 ├── app/
-│   ├── pages/        pages (list, form)
-│   ├── components/   reusable pieces (header, announcement card, map)
-│   ├── services/     calls to the backend
-│   ├── models/       data types (Announcement, Photo, MapPin)
-│   └── shared/       things used everywhere
+│   ├── pages/        pages (list, form, map)
+│   ├── components/   reusable pieces (header, announcement card, map popup, filter bar, map)
+│   ├── services/     calls to the backend, browser location, AnnouncementSearch
+│   ├── models/       data types (Announcement, Photo, filters, MapPin, Coordinates)
+│   └── shared/       Leaflet icon helper
 └── environments/     backend URL
 ```
 

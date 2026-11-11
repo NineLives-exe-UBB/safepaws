@@ -8,10 +8,11 @@ SafePaws is a collaborative web platform designed to help communities report, tr
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Java 21, Spring Boot (REST API, Spring Data JPA; Spring Security planned for Milestone 2)
-- **Frontend:** Angular, TypeScript, HTML5 / CSS
-- **Database & Migrations:** PostgreSQL, Flyway, Docker Compose
-- **Testing & Quality:** JUnit 5, Mockito, Testcontainers, Vitest (Strict 70%+ code coverage requirement)
+- **Backend:** Java 21, Spring Boot 4.1 (Spring Web, Spring Data JPA, Bean Validation), SpringDoc OpenAPI (Swagger UI), OpenPDF (posters)
+- **Frontend:** Angular 22, TypeScript, HTML, CSS, Leaflet with OpenStreetMap tiles (maps)
+- **Database & Migrations:** PostgreSQL 17, Flyway
+- **Docker:** Docker Compose runs the local PostgreSQL database; Testcontainers starts a PostgreSQL container for the backend tests
+- **Testing & Quality:** JUnit 5, Mockito, Testcontainers, JaCoCo (backend); Vitest with jsdom (frontend). Both fail under 70% coverage. GitHub Actions runs the tests on every pull request.
 - **Tooling:** IntelliJ IDEA (Backend), VS Code (Frontend), Git, Trello
 
 ---
@@ -47,12 +48,12 @@ SafePaws is a collaborative web platform designed to help communities report, tr
 All design records, specifications, and project management files are organized in the [`docs/`](./docs) directory:
 
 - [Team Workflow & Guidelines](./docs/workflow.md) — Git branching, PR rules, commit conventions, and clean code standards.
-- [Architecture Decisions (ADRs)](./docs/decisions.md) — Tech stack choices, testing thresholds, and architectural rationale.
-- [System Architecture](./docs/architecture.md) — High-level architecture, module organization, and security structure.
-- [Database Design](./docs/database.md) — Domain entities, relationships, and migration plans.
+- [Architecture Decisions (ADRs)](./docs/decisions.md) — Tech stack choices, testing thresholds, photo storage, search, and maps.
+- [System Architecture](./docs/architecture.md) — High-level architecture, data flows, module organization, and the CI pipeline.
+- [Database Design](./docs/database.md) — Tables, relationships, indexes, and Flyway migrations.
 - [API Specification](./docs/api.md) — REST endpoints, request/response models, and standard error formats.
 - [Testing & QA](./docs/testing.md) — Automated tests, coverage thresholds (70%+), manual test scenarios, and bug reporting.
-- [Usage & Setup Guide](./docs/usage-guide.md) — Local environment setup and execution instructions.
+- [Usage & Setup Guide](./docs/usage-guide.md) — Using the app, local environment setup, and running the tests.
 - [Meeting Notes](./docs/meetings.md) — Team standups and mentor review records.
 
 ---
