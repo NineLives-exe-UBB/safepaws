@@ -6,11 +6,13 @@ import { Announcement, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { DatePipe } from '@angular/common';
 import { TYPE_LABELS } from '../../models/announcement-filters.model';
+import { MapView } from '../../components/map/map';
+import { MapPin } from '../../models/map.model';
 
 type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 
 @Component({
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, MapView, RouterLink],
   selector: 'app-announcement-details',
   styleUrl: './announcement-details.css',
   templateUrl: './announcement-details.html',
@@ -56,6 +58,22 @@ export class AnnouncementDetails {
   protected readonly posterUrl = computed(() => {
     const announcement = this.announcement();
     return announcement ? this.announcementService.posterUrl(announcement.id) : null;
+  });
+
+  /** One pin for the announcement, or none when it has no coordinates. */
+  protected readonly pins = computed<MapPin[]>(() => {
+    const announcement = this.announcement();
+    if (announcement?.latitude == null || announcement.longitude == null) {
+      return [];
+    }
+    return [
+      {
+        latitude: announcement.latitude,
+        longitude: announcement.longitude,
+        type: announcement.type,
+        label: announcement.area,
+      },
+    ];
   });
 
   constructor() {

@@ -104,6 +104,13 @@
             <p class="status-error">Could not update the status. Please try again.</p>
           }
         </section>
+
+        @if (pins().length > 0) {
+          <section class="location">
+            <h2>Location</h2>
+            <app-map [center]="pins()[0]" [zoom]="15" [pins]="pins()" />
+          </section>
+        }
       </article>
     }
   }
