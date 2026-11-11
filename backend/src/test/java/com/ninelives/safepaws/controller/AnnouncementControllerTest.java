@@ -257,7 +257,7 @@ class AnnouncementControllerTest {
                     new AnnouncementSummaryResponse(13L, AnnouncementType.LOST, "Max", Species.DOG,
                             "Someșeni, Cluj-Napoca", 46.788, 23.651, null, LocalDateTime.of(2026, 11, 2, 7, 0),
                             AnnouncementStatus.ACTIVE,
-                            List.of(new AnnouncementSummaryResponse.Photo(3L, "/photos/3", true))),
+                            List.of(new AnnouncementSummaryResponse.PhotoSummary(3L, "/photos/3", true))),
                     new AnnouncementSummaryResponse(11L, AnnouncementType.FOUND, null, Species.CAT,
                             "Între Lacuri, Cluj-Napoca", null, null, null, LocalDateTime.of(2026, 11, 1, 17, 0),
                             AnnouncementStatus.RESOLVED, List.of())));

@@ -196,7 +196,7 @@ public class AnnouncementService {
                 announcement.getEventDate(),
                 announcement.getStatus(),
                 photos.stream()
-                        .map(photo -> new AnnouncementSummaryResponse.Photo(
+                        .map(photo -> new AnnouncementSummaryResponse.PhotoSummary(
                                 photo.id(), PhotoResponse.urlFor(photo.id()), photo.isMain()))
                         .toList()
         );
