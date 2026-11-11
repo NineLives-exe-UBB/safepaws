@@ -213,49 +213,22 @@ describe('AnnouncementForm', () => {
     newFixture.destroy();
   });
 
-  it('should reset the form and selected location when switching announcement type', () => {
+    it('should keep the filled-in details when switching announcement type', () => {
     const controls = component['form'].controls;
-
     controls.species.setValue('CAT');
     controls.petName.setValue('Luna');
-    controls.breed.setValue('European');
-    controls.color.setValue('Grey');
-    controls.contactName.setValue('Ana');
     controls.contactPhone.setValue('0712345678');
-
-    component['onLocationSelected']({
-      latitude: 46.7712,
-      longitude: 23.6236,
-    });
-
-    controls.species.markAsTouched();
-
-    component['selectedFiles'].set([
-      new File(['photo'], 'cat.png', { type: 'image/png' }),
-    ]);
-
-    component['errorMessage'].set('Previous error');
-    component['successMessage'].set('Previous success');
+    component['onLocationSelected']({ latitude: 46.7712, longitude: 23.6236 });
+    component['selectedFiles'].set([new File(['photo'], 'cat.png', { type: 'image/png' })]);
 
     controls.type.setValue('FOUND');
-    component['onTypeChange']();
 
-    expect(controls.type.value).toBe('FOUND');
-    expect(controls.species.value).toBe('');
-    expect(controls.petName.value).toBe('');
-    expect(controls.breed.value).toBe('');
-    expect(controls.color.value).toBe('');
-    expect(controls.contactName.value).toBe('');
-    expect(controls.contactPhone.value).toBe('');
-
-    expect(controls.latitude.value).toBeNull();
-    expect(controls.longitude.value).toBeNull();
-
-    expect(controls.species.touched).toBe(false);
-    expect(component['selectedLocation']()).toBeNull();
-    expect(component['selectedFiles']()).toHaveLength(0);
-    expect(component['errorMessage']()).toBe('');
-    expect(component['successMessage']()).toBe('');
+    expect(controls.species.value).toBe('CAT');
+    expect(controls.petName.value).toBe('Luna');
+    expect(controls.contactPhone.value).toBe('0712345678');
+    expect(component['selectedLocation']()).toEqual({ latitude: 46.7712, longitude: 23.6236 });
+    expect(component['selectedFiles']()).toHaveLength(1);
+    expect(component['locationPins']()[0].type).toBe('FOUND');
   });
 
   it('should remove a selected photo and its preview URL', () => {

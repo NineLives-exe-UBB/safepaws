@@ -158,36 +158,6 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     this.form.controls.longitude.markAsDirty();
   }
 
-  protected onTypeChange(): void {
-    const selectedType = this.form.controls.type.value;
-
-    this.clearPreviews();
-    this.selectedLocation.set(null);
-
-    this.form.reset({
-      type: selectedType,
-      species: '',
-      petName: '',
-      breed: '',
-      color: '',
-      distinctiveMarks: '',
-      eventDate: '',
-      latitude: null,
-      longitude: null,
-      area: '',
-      contactName: '',
-      contactPhone: '',
-    });
-
-    this.selectedFiles.set([]);
-    this.createdAnnouncementId = undefined;
-    this.successMessage.set('');
-    this.errorMessage.set('');
-
-    this.form.markAsPristine();
-    this.form.markAsUntouched();
-  }
-
   protected onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
