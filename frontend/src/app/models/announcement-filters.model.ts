@@ -99,7 +99,7 @@ export function fromQueryParams(get: (name: string) => string | null): Announcem
     fallback: T | '',
   ): T | '' => {
     const value = get(name);
-    return value !== null && value in allowed ? (value as T) : fallback;
+    return value !== null && Object.hasOwn(allowed, value) ? (value as T) : fallback;
   };
   const text = (name: (typeof TEXT_FILTERS)[number]): string => get(name)?.trim() ?? '';
   const radius = Number(get('radiusKm'));

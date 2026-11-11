@@ -108,6 +108,12 @@ describe('announcement filters', () => {
       ).toEqual(DEFAULT_FILTERS);
     });
 
+    it('should ignore names that every JavaScript object has', () => {
+      expect(
+        fromUrl({ type: 'constructor', species: 'toString', status: 'hasOwnProperty', sort: 'valueOf' }),
+      ).toEqual(DEFAULT_FILTERS);
+    });
+
     it('should give back the same filters that were written to the URL', () => {
       const filters: AnnouncementFilters = {
         ...DEFAULT_FILTERS,
