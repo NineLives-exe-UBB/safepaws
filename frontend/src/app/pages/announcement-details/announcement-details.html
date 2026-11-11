@@ -1,0 +1,20 @@
+<a class="back-link" routerLink="/announcements">← Back to announcements</a>
+
+@switch (state()) {
+  @case ('loading') {
+    <p class="message">Loading announcement...</p>
+  }
+  @case ('not-found') {
+    <div class="message">
+      <h1>Announcement not found</h1>
+      <p>It may have been removed, or the link is not correct.</p>
+      <a class="button" routerLink="/announcements">See all announcements</a>
+    </div>
+  }
+  @case ('error') {
+    <p class="message error">Could not load the announcement. Please try again later.</p>
+  }
+  @case ('loaded') {
+    <h1>{{ heading() }}</h1>
+  }
+}
