@@ -259,20 +259,20 @@ public class PosterService {
 
         String name = announcement.getContactName() != null ? announcement.getContactName().trim() : "";
         String phone = announcement.getContactPhone() != null ? announcement.getContactPhone().trim() : "";
-        String contactDetails;
-        if (!name.isEmpty() && !phone.isEmpty()) {
-            contactDetails = name + " - " + phone;
-        } else if (!phone.isEmpty()) {
-            contactDetails = phone;
-        } else {
-            contactDetails = name;
-        }
+        String callToAction = announcement.getType() == AnnouncementType.FOUND
+                ? "IS THIS YOUR PET? CONTACT:"
+                : "IF SEEN, PLEASE CONTACT:";
 
         Paragraph contactParagraph = new Paragraph();
         contactParagraph.setLeading(26f);
-        contactParagraph.add(new Chunk("IF SEEN, PLEASE CONTACT:\n", headerFont));
-        if (!contactDetails.isEmpty()) {
-            contactParagraph.add(new Chunk(contactDetails, contactFont));
+        contactParagraph.add(new Chunk(callToAction, headerFont));
+        if (!name.isEmpty()) {
+            contactParagraph.add(Chunk.NEWLINE);
+            contactParagraph.add(new Chunk(name, contactFont));
+        }
+        if (!phone.isEmpty()) {
+            contactParagraph.add(Chunk.NEWLINE);
+            contactParagraph.add(new Chunk(phone, contactFont));
         }
 
         PdfPCell contactCell = new PdfPCell(contactParagraph);

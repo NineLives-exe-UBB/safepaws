@@ -104,7 +104,10 @@ class PosterServiceTest {
                     .contains("Red nylon collar with bell")
                     .contains("2026-11-01 09:15")
                     .contains("Mănăștur, Cluj-Napoca")
-                    .contains("Ion Radu - 0740123456")
+                    .contains("IF SEEN, PLEASE CONTACT:")
+                    .contains("Ion Radu")
+                    .contains("0740123456")
+                    .doesNotContain("Ion Radu - ")
                     .contains("Scan for updates")
                     .doesNotContain("QR CODE")
                     .doesNotContain("No photo available")
@@ -130,7 +133,8 @@ class PosterServiceTest {
             assertThat(reader.getNumberOfPages()).isEqualTo(1);
             String text = new PdfTextExtractor(reader).getTextFromPage(1);
             assertThat(text)
-                    .contains("FOUND")
+                    .contains("IS THIS YOUR PET? CONTACT:")
+                    .doesNotContain("IF SEEN")
                     .contains("Cat")
                     .doesNotContain("CAT")
                     .contains("No photo available")
