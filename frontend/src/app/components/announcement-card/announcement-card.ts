@@ -3,6 +3,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { AnnouncementSummary, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { RouterLink } from '@angular/router';
+import { TYPE_LABELS } from '../../models/announcement-filters.model';
 
 @Component({
   imports: [DatePipe, RouterLink],
@@ -20,7 +21,8 @@ export class AnnouncementCard {
   );
 
   protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
-
+  protected readonly typeLabel = computed(() => TYPE_LABELS[this.announcement().type]);
+  
   protected readonly distanceText = computed(() => {
     const distanceKm = this.announcement().distanceKm;
     return distanceKm == null ? null : `${distanceKm.toFixed(1)} km away`;

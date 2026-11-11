@@ -55,6 +55,11 @@ export class AnnouncementDetails {
       : '';
   });
 
+  protected readonly typeLabel = computed(() => {
+    const announcement = this.announcement();
+    return announcement ? TYPE_LABELS[announcement.type] : '';
+  });
+
   protected readonly posterUrl = computed(() => {
     const announcement = this.announcement();
     return announcement ? this.announcementService.posterUrl(announcement.id) : null;
