@@ -4,11 +4,13 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Announcement, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
+import { DatePipe } from '@angular/common';
+import { TYPE_LABELS } from '../../models/announcement-filters.model';
 
 type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 
 @Component({
-  imports: [RouterLink],
+  imports: [DatePipe, RouterLink],
   selector: 'app-announcement-details',
   styleUrl: './announcement-details.css',
   templateUrl: './announcement-details.html',
@@ -38,6 +40,14 @@ export class AnnouncementDetails {
   protected readonly heading = computed(() => {
     const announcement = this.announcement();
     return announcement ? (announcement.petName ?? SPECIES_LABELS[announcement.species]) : '';
+  });
+
+  /** E.g. "Lost cat" or "Found dog". */
+  protected readonly subtitle = computed(() => {
+    const announcement = this.announcement();
+    return announcement
+      ? `${TYPE_LABELS[announcement.type]} ${SPECIES_LABELS[announcement.species].toLowerCase()}`
+      : '';
   });
 
   constructor() {

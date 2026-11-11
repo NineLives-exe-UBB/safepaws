@@ -50,9 +50,43 @@
             </div>
           }
         </section>
+                <section class="info">
+          <div class="title-row">
+            <h1>{{ heading() }}</h1>
+            @if (announcement.status === 'RESOLVED') {
+              <span class="resolved-badge">Resolved</span>
+            }
+          </div>
+          <p class="subtitle">{{ subtitle() }}</p>
 
-        <section class="info">
-          <h1>{{ heading() }}</h1>
+          <dl class="facts">
+            @if (announcement.breed) {
+              <dt>Breed</dt>
+              <dd>{{ announcement.breed }}</dd>
+            }
+            @if (announcement.color) {
+              <dt>Color</dt>
+              <dd>{{ announcement.color }}</dd>
+            }
+            @if (announcement.distinctiveMarks) {
+              <dt>Distinctive marks</dt>
+              <dd>{{ announcement.distinctiveMarks }}</dd>
+            }
+            <dt>{{ announcement.type === 'LOST' ? 'Lost on' : 'Found on' }}</dt>
+            <dd>{{ announcement.eventDate | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dt>Area</dt>
+            <dd>{{ announcement.area }}</dd>
+            <dt>Posted on</dt>
+            <dd>{{ announcement.createdAt | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </dl>
+
+          <div class="contact">
+            <h2>Contact</h2>
+            <p>{{ announcement.contactName }}</p>
+            <a class="phone" [href]="'tel:' + announcement.contactPhone">
+              {{ announcement.contactPhone }}
+            </a>
+          </div>
         </section>
       </article>
     }
