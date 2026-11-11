@@ -34,6 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,12 +69,22 @@ class AnnouncementControllerTest {
     @MockitoBean
     private PosterService posterService;
 
+
     private static AnnouncementResponse response(Long id) {
-        return new AnnouncementResponse(id, AnnouncementType.LOST, Species.DOG, "Oscar", "Golden Retriever",
-                "Golden", "Red nylon collar with bell", LocalDateTime.of(2026, 11, 1, 9, 15),
-                46.7712, 23.6236, "Mărăști, Cluj-Napoca", "Ion Radu", "0740123456",
-                AnnouncementStatus.ACTIVE, LocalDateTime.of(2026, 11, 1, 10, 0), List.of());
+        return response(id, AnnouncementStatus.ACTIVE);
     }
+
+    private static AnnouncementResponse response(Long id, AnnouncementStatus status) {
+        return new AnnouncementResponse(
+                id, AnnouncementType.LOST, Species.DOG, "Oscar",
+                "Golden Retriever", "Golden", "Red nylon collar with bell",
+                LocalDateTime.of(2026, 11, 1, 9, 15),
+                46.7712, 23.6236, "Mărăști, Cluj-Napoca",
+                "Ion Radu", "0740123456",
+                status, LocalDateTime.of(2026, 11, 1, 10, 0), List.of()
+        );
+    }
+
 
     private ResultActions postJson(String body) throws Exception {
         return mockMvc.perform(post("/announcements").contentType(MediaType.APPLICATION_JSON).content(body));
@@ -407,4 +418,80 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(containsString("secret"))));
         }
     }
+
+
+    @Nested
+    class UpdateStatus {
+
+        @Test
+        void markAnnouncementResolvedReturns200() throws Exception {
+            when(announcementService.updateStatus(13L, AnnouncementStatus.RESOLVED))
+                    .thenReturn(response(13L, AnnouncementStatus.RESOLVED));
+
+            mockMvc.perform(patch("/announcements/13/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"RESOLVED\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(13))
+                    .andExpect(jsonPath("$.status").value("RESOLVED"));
+
+            verify(announcementService)
+                    .updateStatus(13L, AnnouncementStatus.RESOLVED);
+        }
+
+        @Test
+        void reactivateAnnouncementReturns200() throws Exception {
+            when(announcementService.updateStatus(13L, AnnouncementStatus.ACTIVE))
+                    .thenReturn(response(13L, AnnouncementStatus.ACTIVE));
+
+            mockMvc.perform(patch("/announcements/13/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"ACTIVE\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+            verify(announcementService)
+                    .updateStatus(13L, AnnouncementStatus.ACTIVE);
+        }
+
+        @Test
+        void nonexistentAnnouncementReturns404() throws Exception {
+            when(announcementService.updateStatus(999L, AnnouncementStatus.RESOLVED))
+                    .thenThrow(new AnnouncementNotFoundException(999L));
+
+            mockMvc.perform(patch("/announcements/999/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"RESOLVED\"}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.error").value("Not Found"));
+        }
+
+        @Test
+        void invalidStatusReturns400() throws Exception {
+            mockMvc.perform(patch("/announcements/13/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"DELETED\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("status"));
+
+            verify(announcementService, never()).updateStatus(any(), any());
+        }
+
+        @Test
+        void missingStatusReturns400() throws Exception {
+            mockMvc.perform(patch("/announcements/13/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("status"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message")
+                            .value("Status is required"));
+
+            verify(announcementService, never()).updateStatus(any(), any());
+        }
+    }
+
 }

@@ -13,6 +13,7 @@ import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.AnnouncementSpecifications;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
+import com.ninelives.safepaws.model.AnnouncementStatus;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,6 +116,22 @@ public class AnnouncementService {
                 .orElseThrow(() -> new AnnouncementNotFoundException(id));
         return toResponse(announcement, photoRepository.findMetadataByAnnouncementIds(List.of(id)));
     }
+
+
+    @Transactional
+    public AnnouncementResponse updateStatus(Long id, AnnouncementStatus status) {
+
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new AnnouncementNotFoundException(id));
+
+        announcement.setStatus(status);
+
+        Announcement saved = announcementRepository.save(announcement);
+
+        return toResponse(saved,
+                photoRepository.findMetadataByAnnouncementIds(List.of(id)));
+    }
+
 
     private Announcement toEntity(AnnouncementRequest request) {
         Announcement announcement = new Announcement();
