@@ -71,6 +71,27 @@
   background-color: var(--color-found);
 }
 
+.resolved-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background-color: var(--color-text-subtle);
+  color: var(--color-on-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.card.resolved {
+  background-color: var(--color-background);
+}
+
+.card.resolved .photo img {
+  filter: grayscale(0.6);
+}
+
 .details {
   display: flex;
   flex-direction: column;

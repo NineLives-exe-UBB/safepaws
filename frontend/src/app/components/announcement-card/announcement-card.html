@@ -1,4 +1,4 @@
-<article class="card">
+<article class="card" [class.resolved]="announcement().status === 'RESOLVED'">
   <div class="photo">
     @if (mainPhotoUrl(); as photoUrl) {
       <img [src]="photoUrl" [alt]="speciesLabel() + ' photo'" />
@@ -12,6 +12,9 @@
     >
       {{ typeLabel() }}
     </span>
+    @if (announcement().status === 'RESOLVED') {
+      <span class="resolved-badge">Resolved</span>
+    }
   </div>
   <div class="details">
     <h2 class="species">

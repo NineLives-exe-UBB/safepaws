@@ -135,4 +135,18 @@ describe('AnnouncementCard', () => {
       `/announcements/${announcement.id}`,
     );
   });
+
+  it('should mark a resolved announcement', async () => {
+    const compiled = await render({ ...announcement, status: 'RESOLVED' });
+
+    expect(compiled.querySelector('.resolved-badge')?.textContent?.trim()).toBe('Resolved');
+    expect(compiled.querySelector('.card')?.classList).toContain('resolved');
+  });
+
+  it('should not mark an active announcement as resolved', async () => {
+    const compiled = await render(announcement);
+
+    expect(compiled.querySelector('.resolved-badge')).toBeNull();
+    expect(compiled.querySelector('.card')?.classList).not.toContain('resolved');
+  });
 });
