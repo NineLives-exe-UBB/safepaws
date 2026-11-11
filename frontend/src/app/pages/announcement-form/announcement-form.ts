@@ -146,6 +146,10 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   });
 
   protected onLocationSelected(location: Coordinates): void {
+    if (this.submitting()) {
+      return;
+    }
+    
     this.selectedLocation.set(location);
 
     this.form.controls.latitude.setValue(location.latitude);

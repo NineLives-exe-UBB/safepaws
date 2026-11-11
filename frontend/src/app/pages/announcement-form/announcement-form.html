@@ -38,7 +38,7 @@
     </fieldset>
 
     <!-- Animal information -->
-    <fieldset>
+    <fieldset [disabled]="submitting()">
       <legend>Animal information</legend>
 
       <div class="form-grid">
@@ -148,7 +148,7 @@
     </fieldset>
 
     <!-- Date and location -->
-    <fieldset>
+    <fieldset [disabled]="submitting()">
       <legend>Date and location</legend>
 
       <div class="form-grid">
@@ -254,7 +254,7 @@
     </fieldset>
 
     <!-- Contact information -->
-    <fieldset>
+    <fieldset [disabled]="submitting()">
       <legend>Contact information</legend>
 
       <div class="form-grid">
@@ -313,7 +313,7 @@
     </fieldset>
 
     <!-- Animal photos -->
-    <fieldset>
+    <fieldset [disabled]="submitting()">
       <legend>Animal photos</legend>
 
       <p class="field-hint">

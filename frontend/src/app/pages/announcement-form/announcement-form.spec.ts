@@ -178,6 +178,21 @@ describe('AnnouncementForm', () => {
     expect(component['selectedLocation']()).toEqual(location);
   });
 
+
+  it('should lock every section and the map while submitting', () => {
+    component['submitting'].set(true);
+    fixture.detectChanges();
+
+    const fieldsets: HTMLFieldSetElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('fieldset'),
+    );
+    expect(fieldsets.length).toBeGreaterThan(0);
+    expect(fieldsets.every((fieldset) => fieldset.disabled)).toBe(true);
+
+    component['onLocationSelected']({ latitude: 46.7712, longitude: 23.6236 });
+    expect(component['selectedLocation']()).toBeNull();
+  });
+
   it('should create a marker for the selected location', () => {
     component['onLocationSelected']({
       latitude: 46.7712,
