@@ -6,8 +6,8 @@
   margin-bottom: 24px;
   padding: 16px;
   border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .field {
@@ -19,40 +19,40 @@
 label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #555555;
+  color: var(--color-text-muted);
 }
 
 select,
 input {
   padding: 8px;
-  border: 1px solid #c4cdcd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font: inherit;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
 }
 
 select:disabled {
-  background-color: #eef1f1;
-  color: #8a9595;
+  background-color: var(--color-background);
+  color: var(--color-text-subtle);
 }
 
 .clear-button {
   padding: 8px 14px;
-  border: 1px solid #2f5d62;
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   background-color: transparent;
-  color: #2f5d62;
+  color: var(--color-primary);
   font: inherit;
   cursor: pointer;
 }
 
 .clear-button:hover {
-  background-color: #e4efef;
+  background-color: var(--color-primary-light);
 }
 
 .location-message {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 0.9rem;
-  color: #555555;
+  color: var(--color-text-muted);
 }
