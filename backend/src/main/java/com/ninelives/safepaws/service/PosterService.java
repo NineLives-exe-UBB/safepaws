@@ -39,6 +39,7 @@ public class PosterService {
     private static final String FONT_RESOURCE_PATH = "/fonts/DejaVuSans-Bold.ttf";
     private static final int MAX_MARKS_LENGTH = 140;
     private static final int MAX_FIELD_LENGTH = 70;
+    private static final float QR_SIZE_PT = 120f;
 
 
     private final AnnouncementRepository announcementRepository;
@@ -250,7 +251,7 @@ public class PosterService {
     }
 
     private void addContactAndQrFooter(Document document, Announcement announcement, byte[] qrCodeBytes, BaseFont baseFont) {
-        PdfPTable footerTable = new PdfPTable(new float[]{2.5f, 1.1f});
+        PdfPTable footerTable = new PdfPTable(new float[]{2.2f, 1.4f});
         footerTable.setWidthPercentage(100);
 
         Font headerFont = createFont(baseFont, 16f, Color.WHITE);
@@ -298,13 +299,13 @@ public class PosterService {
         boxCell.setBorderColor(new Color(180, 180, 180));
         boxCell.setBorderWidth(1f);
         boxCell.setBackgroundColor(Color.WHITE);
-        boxCell.setFixedHeight(84f);
+        boxCell.setFixedHeight(QR_SIZE_PT + 8f);
 
         boolean qrAdded = false;
         if (qrCodeBytes != null && qrCodeBytes.length > 0) {
             try {
                 Image qrImage = Image.getInstance(qrCodeBytes);
-                qrImage.scaleToFit(76f, 76f);
+                qrImage.scaleToFit(QR_SIZE_PT, QR_SIZE_PT);
                 qrImage.setAlignment(Element.ALIGN_CENTER);
                 boxCell.addElement(qrImage);
                 qrAdded = true;
