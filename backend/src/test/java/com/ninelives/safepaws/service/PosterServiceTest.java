@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.mockito.Spy;
 
 @ExtendWith(MockitoExtension.class)
 class PosterServiceTest {
@@ -38,11 +39,17 @@ class PosterServiceTest {
     @Mock
     private AnnouncementRepository announcementRepository;
 
+
     @Mock
     private PhotoRepository photoRepository;
 
+    @Spy
+    private QrCodeService qrCodeService =
+            new QrCodeService("http://localhost:4200");
+
     @InjectMocks
     private PosterService posterService;
+
 
     private static Announcement storedAnnouncement(Long id, AnnouncementType type, Species species, String petName) {
         Announcement announcement = new Announcement();
@@ -99,6 +106,7 @@ class PosterServiceTest {
                     .contains("Mănăștur, Cluj-Napoca")
                     .contains("Ion Radu - 0740123456")
                     .contains("Scan for updates")
+                    .doesNotContain("QR CODE")
                     .doesNotContain("No photo available")
                     .doesNotContain("RESOLVED");
         }
