@@ -182,6 +182,17 @@ describe('AnnouncementService', () => {
     expect(result).toEqual(announcement);
   });
 
+  it('should update the status of an announcement', () => {
+    const resolved: Announcement = { ...announcement, status: 'RESOLVED' };
+
+    service.updateStatus(15, 'RESOLVED').subscribe((result) => expect(result).toEqual(resolved));
+
+    const req = httpController.expectOne(`${announcementsUrl}/15/status`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ status: 'RESOLVED' });
+    req.flush(resolved);
+  });
+
   it('should build the photo url from the backend url', () => {
     expect(service.photoUrl({ id: 3, url: '/photos/3', isMain: true })).toBe(
       `${environment.apiUrl}/photos/3`,
