@@ -1,13 +1,20 @@
 # Database Design & Schema
 
 ## 1. Overview & Technology Stack
-SafePaws uses **PostgreSQL 17**, containerized via Docker Compose. Schema migrations and seed data are managed automatically on backend startup using **Flyway** from `backend/src/main/resources/db/migration`.
+SafePaws uses **PostgreSQL 17**, containerized via Docker Compose. Schema migrations and seed data are managed automatically on backend startup using **Flyway**. SQL migrations are in `backend/src/main/resources/db/migration`, and Java migrations are in `backend/src/main/java/db/migration`. Both share one version sequence.
 
 ### Migration Ledger
 | Migration | Description |
 |---|---|
 | `V1__create_tables.sql` | Initializes the core `announcement` and `photo` tables with strict constraints, indexes, and foreign keys. |
-| `V2__test_data.sql` | Seeds 14 realistic test announcements in Cluj-Napoca (including 2 with attached binary photos: Mitzi and Rex). |
+| `V2__test_data.sql` | Seeds 14 fictional test announcements in and around Cluj-Napoca, with 2 photos (Mitzi, photo id 1, and Rex, photo id 2). |
+| `V3__search_support.sql` | Enables the `unaccent` extension (diacritic-insensitive search), adds indexes on `type`, `species` and `status`, gives every V2 announcement coordinates, changes every area to the "Neighborhood, City" format, and adds 8 announcements in other cities (22 in total). |
+| `V4__Seed_demo_photos.java` | Java migration that loads 23 demo photos from `backend/src/main/resources/db/demo-photos/` (CC0 images from Wikimedia Commons, sources in `SOURCES.md` there), so every announcement has a main photo (25 photos in total). |
+| `V5__complete_demo_data.sql` | Completes the demo announcements (breed, color, distinctive marks) so each description matches its photo. |
+
+Test announcements are matched across migrations by their fictional placeholder phone numbers (`0700000001`–`0700000022`), not by ID. The dates of the V3 announcements are relative to when the migration runs, so they are always recent.
+
+On a fresh database: 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates) and 25 photos. Announcements 9, 13 and 21 have 2 photos each.
 
 ---
 
@@ -40,7 +47,7 @@ Stores lost and found pet reports.
 | `event_date` | `TIMESTAMP` | Yes | — | Date/time the pet was lost or found. |
 | `latitude` | `DOUBLE PRECISION`| No | Range: `[-90, 90]` | Coordinate latitude (set together with longitude). |
 | `longitude` | `DOUBLE PRECISION`| No | Range: `[-180, 180]` | Coordinate longitude (set together with latitude). |
-| `area` | `VARCHAR(150)` | Yes | — | Neighborhood/area (e.g., "Mănăștur, Cluj-Napoca"). |
+| `area` | `VARCHAR(150)` | Yes | — | "Neighborhood, City" (e.g., "Mănăștur, Cluj-Napoca"). |
 | `contact_name` | `VARCHAR(100)` | Yes | — | Name of contact person. |
 | `contact_phone` | `VARCHAR(20)` | Yes | Stored as text | Phone number (preserves leading `0` / `+40`). |
 | `status` | `VARCHAR(10)` | Yes | `CHECK (status IN ('ACTIVE', 'RESOLVED'))`, Default: `'ACTIVE'` | Current status of the report. |
@@ -62,17 +69,28 @@ Stores binary image data attached to announcements.
 | `is_main` | `BOOLEAN` | Yes | Default: `false` | Primary photo flag (at most one per announcement via unique index). |
 | `uploaded_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | Upload timestamp. |
 
+### Indexes & Extensions
+| Name | Definition | Added in | Purpose |
+|---|---|---|---|
+| `idx_announcement_created_at` | `announcement (created_at DESC)` | V1 | Index on creation time (the list is ordered by `event_date`, not by `created_at`). |
+| `idx_announcement_type` | `announcement (type)` | V3 | List filter. |
+| `idx_announcement_species` | `announcement (species)` | V3 | List filter. |
+| `idx_announcement_status` | `announcement (status)` | V3 | List filter (the list returns only `ACTIVE` by default). |
+| `idx_photo_announcement_id` | `photo (announcement_id)` | V1 | Loading the photos of announcements. |
+| `uq_photo_main_per_announcement` | `UNIQUE photo (announcement_id) WHERE is_main` | V1 | At most one main photo per announcement. |
+| extension `unaccent` | `CREATE EXTENSION IF NOT EXISTS unaccent` | V3 | Case- and diacritic-insensitive text filters (`color`, `breed`, `area`). `unaccent` is not `IMMUTABLE`, so it is not indexed. |
+
 ---
 
 ## 4. Architectural & Schema Decisions
 
-- **Demo 1 Scope (No Users / Locations Tables):** Because authentication is deferred to Milestone 2, reporter contact information (`contact_name`, `contact_phone`) is stored directly on the announcement. Coordinates (`latitude`, `longitude`) and descriptive `area` are also embedded directly on the record. Dedicated user and location entities can be introduced in subsequent migrations.
-- **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL to ensure portable development staging, straightforward container resets, and self-contained database migrations. Listing endpoints (`GET /announcements`) return a summary projection omitting image bytes; individual photos are retrieved via `GET /photos/{id}`.
-- **Optional Coordinates:** Geographic coordinates are optional in Demo 1 as the initial submission form lacks an interactive map picker; `area` remains strictly mandatory. If coordinates are provided, both latitude and longitude must be present together (`ck_announcement_coordinates`).
+- **No Users / Locations Tables:** There is no authentication, so the reporter's contact information (`contact_name`, `contact_phone`) is stored directly on the announcement. The location (`area`, `latitude`, `longitude`) is also stored as columns on the announcement.
+- **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL (see ADR 007 in `decisions.md`). Listing endpoints (`GET /announcements`) load only photo metadata, never the image bytes; individual photos are retrieved via `GET /photos/{id}`.
+- **Optional Coordinates:** In the database and the API, coordinates are optional and `area` is mandatory. If coordinates are provided, both latitude and longitude must be present together (`ck_announcement_coordinates`). The frontend form requires the user to pick a location on the map, but announcements created directly through the API can have no coordinates; they are left out of location searches and the map.
 - **Conventions & Immutability:** 
   - Database schema uses strict `snake_case` (`contact_phone`, `pet_name`), mapping directly to `camelCase` in Java DTOs/Entities (`contactPhone`, `petName`).
   - Fixed domain attributes (`type`, `species`, `status`) use uppercase `VARCHAR` with SQL `CHECK` constraints to map cleanly to Spring Boot Java Enums.
-  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via incremental scripts (`V3__...`).
+  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via a new migration; the next version is `V6`. SQL and Java migrations share version numbers, and the CI migration guard only checks SQL files, so check Java migrations by hand.
 
 ---
 

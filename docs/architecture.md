@@ -7,7 +7,7 @@ SafePaws is a collaborative web-based platform designed to assist pet owners and
 
 ## 2. High-Level Architecture
 The system follows a decoupled client-server multi-tier architecture:
-- **Client Tier:** Angular Single Page Application (SPA) communicating via RESTful JSON over HTTP/HTTPS.
+- **Client Tier:** Angular 22 Single Page Application (SPA) communicating via RESTful JSON over HTTP. Maps use Leaflet with OpenStreetMap tiles, loaded by the browser directly from OpenStreetMap.
 - **Application Tier:** Spring Boot REST API handling business logic, validation, transaction management, and OpenAPI documentation.
 - **Persistence Tier:** PostgreSQL 17 database containerized via Docker Compose, managed via Spring Data JPA, Hibernate, and Flyway.
 
@@ -20,7 +20,7 @@ The diagram below illustrates the end-to-end communication flow across all syste
 ```mermaid
 flowchart TD
     subgraph ClientTier["Client Tier (Browser)"]
-        UI["Angular SPA\n(Components, Services, Reactive Forms)"]
+        UI["Angular SPA\n(Components, Services, Reactive Forms, Leaflet map)"]
     end
 
     subgraph AppTier["Application Tier (Spring Boot 4.1)"]
@@ -49,32 +49,37 @@ flowchart TD
 
 ## 4. End-to-End Data Flow Scenarios
 
-### Scenario 1: Listing Announcements
+### Scenario 1: Listing and Filtering Announcements
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant Angular as Angular Client
+    participant Angular as Angular Client (AnnouncementSearch)
     participant Controller as AnnouncementController
     participant Service as AnnouncementService
-    participant Repo as AnnouncementRepository
+    participant Repo as Repositories
     participant DB as PostgreSQL 17
 
-    User->>Angular: Navigates to Announcement Feed
-    Angular->>Controller: GET /announcements
-    Controller->>Service: findAll()
-    Service->>Repo: findAllByOrderByCreatedAtDescIdDesc()
-    Repo->>DB: SELECT id, type, species, pet_name, area, event_date, status FROM announcement ORDER BY created_at DESC, id DESC
+    User->>Angular: Opens /announcements or /map (filters read from the URL)
+    Angular->>Controller: GET /announcements?species=CAT&area=manastur
+    Controller->>Service: findAll(AnnouncementFilter)
+    Service->>Service: validate() (400 with fieldErrors if invalid)
+    Service->>Repo: findAll(AnnouncementSpecifications.matching(filter), sort)
+    Repo->>DB: SELECT ... FROM announcement WHERE status = 'ACTIVE' AND species = 'CAT' AND unaccent(lower(area)) LIKE ... ORDER BY event_date DESC, id DESC
     DB-->>Repo: Announcement records
+    Service->>Service: If lat/lng sent: haversine distance, keep those within radiusKm, sort by distance for sort=closest
     Service->>Repo: findMetadataByAnnouncementIds(ids)
-    Repo->>DB: SELECT id, announcement_id, is_main FROM photo WHERE announcement_id IN (...)
+    Repo->>DB: SELECT id, announcement_id, content_type, ... FROM photo WHERE announcement_id IN (...) (no image bytes)
     DB-->>Repo: Photo metadata rows
-    Service-->>Controller: List<AnnouncementSummaryResponse> (summary projection)
+    Service-->>Controller: List<AnnouncementSummaryResponse>
     Controller-->>Angular: 200 OK (JSON array without image bytes)
-    Angular-->>User: Renders announcement cards with metadata & cover photo URLs
+    Angular-->>User: Renders cards (list page) or pins (map page)
 ```
 
-*Key Characteristic:* Heavy raw image bytes (`BYTEA`) and lengthy details (`breed`, `color`, `distinctiveMarks`, coordinates, contact details) are omitted from `GET /announcements`. Images are loaded on demand via `/photos/{id}`.
+*Key Characteristics:*
+- Without query parameters the backend returns only `ACTIVE` announcements, newest `eventDate` first. Filters, distance and sorting are all done by the backend; the pages show the results in the order received.
+- Raw image bytes (`BYTEA`), longer details (`breed`, `color`, `distinctiveMarks`) and contact details are omitted from `GET /announcements`. Images are loaded on demand via `/photos/{id}`.
+- The list page and the map page each provide their own `AnnouncementSearch` instance, which reads the filters from the URL, asks the browser for the location when a radius or "Closest first" needs it, and calls the backend.
 
 ---
 
@@ -89,7 +94,7 @@ sequenceDiagram
     participant Service as Domain Services
     participant DB as PostgreSQL 17
 
-    User->>Angular: Fills announcement form & selects photos
+    User->>Angular: Fills announcement form, picks the location on the map & selects photos
     Angular->>Controller: POST /announcements (JSON payload)
     Controller->>Service: create(requestDto)
     Service->>DB: INSERT INTO announcement (...) VALUES (...)
@@ -106,7 +111,7 @@ sequenceDiagram
         PhotoController-->>Angular: 201 Created [{"id": 3, "url": "/photos/3", "isMain": true}]
     end
 
-    Angular-->>User: Displays confirmation and navigates to announcement view
+    Angular-->>User: Displays a success message and navigates to the announcements list
 ```
 
 ---
@@ -117,29 +122,35 @@ The project structure cleanly separates client, server, database migrations, and
 
 ```text
 safepaws/
-├── backend/                              # Spring Boot (Java 21)
-│   ├── src/main/java/.../safepaws/
-│   │   ├── controller/                   # REST Endpoints (AnnouncementController, PhotoController)
-│   │   ├── service/                      # Business & application logic (AnnouncementService, PhotoService)
-│   │   ├── repository/                   # Spring Data JPA database access & projections
-│   │   ├── model/                        # JPA Entities (Announcement, Photo, Enums)
-│   │   ├── dto/                          # API Request/Response Transfer Objects
-│   │   ├── exception/                    # Global exception handling & custom errors
-│   │   └── config/                       # Configuration beans (CorsConfig, etc.)
+├── .github/workflows/ci.yml              # CI: tests + coverage, secret scan, migration guard
+├── backend/                              # Spring Boot 4.1 (Java 21)
+│   ├── src/main/java/
+│   │   ├── com/ninelives/safepaws/
+│   │   │   ├── controller/               # REST endpoints (AnnouncementController, PhotoController)
+│   │   │   ├── service/                  # Business logic (AnnouncementService, PhotoService, PosterService)
+│   │   │   ├── repository/               # Spring Data JPA repositories, AnnouncementSpecifications (filters), PhotoMetadata
+│   │   │   ├── model/                    # JPA entities (Announcement, Photo) and enums
+│   │   │   ├── dto/                      # Request/response records, AnnouncementFilter, ErrorResponse
+│   │   │   ├── exception/                # GlobalExceptionHandler and custom exceptions
+│   │   │   └── config/                   # CorsConfig
+│   │   └── db/migration/                 # Java Flyway migrations (V4__Seed_demo_photos)
 │   ├── src/main/resources/
-│   │   ├── application.properties        # Application configuration settings & .env import
-│   │   └── db/migration/                 # Flyway SQL versioned migrations (V1, V2)
-│   └── src/test/                         # Tests mirroring src/main structure (JUnit 5, Mockito, Testcontainers)
+│   │   ├── application.properties        # Application configuration & .env import
+│   │   ├── db/migration/                 # SQL Flyway migrations (V1, V2, V3, V5)
+│   │   ├── db/demo-photos/               # Demo images loaded by V4 (sources in SOURCES.md)
+│   │   └── fonts/                        # DejaVu Sans Bold, used by the PDF poster (Romanian diacritics)
+│   └── src/test/                         # Tests mirroring src/main (JUnit 5, Mockito, Testcontainers)
 ├── frontend/                             # Angular 22 SPA
 │   └── src/
 │       ├── app/
-│       │   ├── pages/                    # Views/pages (AnnouncementList, AnnouncementForm)
-│       │   ├── components/               # Reusable UI elements (AnnouncementCard, Header)
-│       │   ├── services/                 # HTTP services calling the backend
-│       │   └── models/                   # TypeScript interfaces (Announcement, Photo)
+│       │   ├── pages/                    # announcement-list, announcement-form, map-page
+│       │   ├── components/               # header, announcement-card, announcement-popup, filter-bar, map
+│       │   ├── services/                 # AnnouncementService (HTTP), LocationService (browser location), AnnouncementSearch
+│       │   ├── models/                   # Types: Announcement, Photo, filters, MapPin, Coordinates
+│       │   └── shared/                   # Leaflet icon helper
 │       └── environments/                 # Backend API base URL configuration
 ├── docs/                                 # Project documentation
-├── docker-compose.yml                    # Starts PostgreSQL 17 database
+├── docker-compose.yml                    # Starts the PostgreSQL 17 database
 └── README.md                             # Project overview
 ```
 
@@ -159,12 +170,11 @@ safepaws/
 ### CI/CD Automation (GitHub Actions)
 Continuous integration is configured under `.github/workflows/ci.yml` and triggers on pushes and PRs to `main`:
 1. **Backend Verification:** Uses Temurin JDK 21, executes `./mvnw verify` with Testcontainers starting a real PostgreSQL container, and checks that JaCoCo instruction coverage is >= 70%.
-2. **Frontend Verification:** Uses Node 22, installs dependencies via `npm ci`, runs tests with Vitest (`npm run test:coverage`), checks statement/branch/function coverage >= 70%, and performs a production build (`npm run build`).
+2. **Frontend Verification:** Uses Node 22, installs dependencies via `npm ci`, runs tests with Vitest (`npm run test:coverage`), checks statement/branch/function/line coverage >= 70%, and performs a production build (`npm run build`).
 3. **Secret Scan:** Scans commit diffs with Gitleaks (v8.21.2) to prevent accidental credential commits.
 4. **Migration Guard:** Validates that Flyway migrations on `main` are immutable, version numbers are unique, and new migrations contain no destructive DDL unless explicitly marked `[destructive]` in the PR title.
 
 ---
 
-## 7. Security & Authentication
-- **Milestone 1 (Demo 1):** Unauthenticated open submission with contact details stored directly on announcement records.
-- **Milestone 2 (Target):** Stateless token-based authentication using Spring Security and JWT; role-based authorization for administrative vs. regular user capabilities.
+## 7. Authentication & Authorization
+There is currently no authentication or authorization. All endpoints are public: anyone can create announcements, upload photos and read every announcement, including the contact details returned by `GET /announcements/{id}`. The reporter's contact details are stored directly on the announcement.

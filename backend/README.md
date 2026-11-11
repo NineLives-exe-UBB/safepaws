@@ -32,10 +32,10 @@ Navigate to the `backend/` directory and start the application using the Maven w
 # Mac/Linux
 ./mvnw spring-boot:run
 ```
-Flyway will automatically run the SQL migrations on startup and seed the test announcements. The API runs on `http://localhost:8080`.
+Flyway will automatically run the migrations on startup (SQL in `src/main/resources/db/migration`, Java in `src/main/java/db/migration`) and seed the test announcements and demo photos. The API runs on `http://localhost:8080`.
 
 ## Testing & Code Coverage
-Tests run against a real PostgreSQL instance using Testcontainers. To run the test suite and verify the 70% JaCoCo coverage threshold:
+The repository and migration tests run against a real PostgreSQL instance started by Testcontainers, so Docker must be running. To run the test suite and verify the 70% JaCoCo coverage threshold:
 ```bash
 # Windows
 .\mvnw.cmd clean verify

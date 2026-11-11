@@ -1,7 +1,38 @@
 # Usage & Setup Guide
 
-> [!NOTE]
-> **End-User Usage Guide:** An interactive user guide covering end-user journeys (how to post a lost/found announcement, navigate the interactive pet feed, and download printable posters, accompanied by UI screenshots) will be added once the frontend form component is finalized. The instructions below describe local developer environment setup, execution, and testing.
+This guide has two parts: how to use the app (section 0), and how to set it up and test it locally (sections 1 to 3).
+
+## 0. Using SafePaws
+
+Open `http://localhost:4200` (see section 2 to start it). The header has three links: **Announcements**, **Map** and **Post announcement**. Anyone can use every page; there are no accounts.
+
+### Browse announcements (`/announcements`)
+- Each card shows the main photo (or `No photo`), a LOST or FOUND label, the species, the pet name when there is one, the area and the date.
+- By default you see only active announcements, newest event first.
+- **Download poster** on a card downloads a printable PDF poster for that announcement.
+
+### Filter and sort
+The filter bar above the cards narrows the list:
+- **Type**, **Species** and **Status** dropdowns. Status is either Active (the default) or Resolved.
+- **Color**, **Breed** and **Area** text fields. They match part of the text and ignore upper/lower case and diacritics, so `manastur` finds `Mănăștur`. The list updates shortly after you stop typing.
+- **Radius** (within 1, 5, 10, 25, 50 or 100 km) and **Sort by** (Newest first, Oldest first, Closest first). For a radius or Closest first, the browser asks for your location, and each card then shows how far away it is (`1.2 km away`). If you refuse the location, these two options are disabled.
+- The filters are kept in the address, so you can reload the page or share a filtered list. **Clear filters** appears when a filter is active and removes them. If nothing matches, the page says `No announcements match your filters`.
+
+### Map (`/map`)
+- A pin for each announcement that has a location: red for lost, green for found.
+- If you allow your location, the map starts around you; otherwise it zooms so that all the pins fit.
+- Click a pin to see the photo, the name (or species), the area and the date.
+- The filter bar works like the one on the list, and the same filters give the same announcements. Announcements without a location are counted in a note above the map.
+
+### Post an announcement (`/announcements/new`)
+1. Choose **Lost** or **Found**, and the **Species** (required).
+2. Optionally add the pet name, breed, color and distinctive marks.
+3. Enter the **date and time** (not in the future) and the **area**, then click the map to **pinpoint the location** (all required). If you allow your location, the map starts around you.
+4. Enter **your name** and **phone number** (7–15 digits, optionally starting with `+`).
+5. Optionally choose photos (JPG or PNG, max 5 MB each). The first one becomes the main photo; **Remove** takes a photo out.
+6. Click **Submit announcement**. After the success message you are taken back to the list. If the announcement was created but the photos failed, fix or remove the photos and submit again: only the photos are sent again.
+
+---
 
 ## 1. Prerequisites
 - **Java:** JDK 21 (Required by `pom.xml` and CI)
