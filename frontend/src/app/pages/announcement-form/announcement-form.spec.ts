@@ -1,4 +1,3 @@
-
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -10,6 +9,8 @@ import { Photo } from '../../models/photo.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { LocationService } from '../../services/location.service';
 import { AnnouncementForm } from './announcement-form';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { Mock } from 'vitest';
 
 describe('AnnouncementForm', () => {
   let fixture: ComponentFixture<AnnouncementForm>;
@@ -49,15 +50,11 @@ describe('AnnouncementForm', () => {
   });
 
   it('should show the page title', () => {
-    expect(compiled.querySelector('h1')?.textContent).toContain(
-      'Post an announcement',
-    );
+    expect(compiled.querySelector('h1')?.textContent).toContain('Post an announcement');
   });
 
   it('should have LOST selected by default', () => {
-    const lostRadio = compiled.querySelector(
-      'input[value="LOST"]',
-    ) as HTMLInputElement;
+    const lostRadio = compiled.querySelector('input[value="LOST"]') as HTMLInputElement;
 
     expect(lostRadio.checked).toBe(true);
   });
@@ -72,9 +69,7 @@ describe('AnnouncementForm', () => {
   });
 
   it('should include an optional pet name field', () => {
-    const petName = compiled.querySelector(
-      '#petName',
-    ) as HTMLInputElement;
+    const petName = compiled.querySelector('#petName') as HTMLInputElement;
 
     expect(petName).toBeTruthy();
     expect(petName.required).toBe(false);
@@ -111,6 +106,20 @@ describe('AnnouncementForm', () => {
     expect(color.valid).toBe(true);
   });
 
+  it('should accept the same text as the backend in the optional fields', () => {
+    const controls = component['form'].controls;
+
+    controls.petName.setValue('Max 2');
+    controls.breed.setValue('Mix (50/50)');
+    controls.color.setValue('Black & white, 2 white paws');
+    controls.contactName.setValue("Ana-Maria O'Brien 2");
+
+    expect(controls.petName.valid).toBe(true);
+    expect(controls.breed.valid).toBe(true);
+    expect(controls.color.valid).toBe(true);
+    expect(controls.contactName.valid).toBe(true);
+  });
+
   it('should reject an event date in the future', () => {
     const eventDate = component['form'].controls.eventDate;
 
@@ -121,6 +130,13 @@ describe('AnnouncementForm', () => {
     eventDate.setValue('2026-10-30T18:00');
 
     expect(eventDate.valid).toBe(true);
+  });
+
+  it('should not offer future dates in the date picker', () => {
+    const input = compiled.querySelector('#eventDate') as HTMLInputElement;
+
+    expect(input.max).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(new Date(input.max).getTime()).toBeLessThanOrEqual(Date.now());
   });
 
   it('should reject blank required text', () => {
@@ -140,9 +156,7 @@ describe('AnnouncementForm', () => {
   it('should reject a pet name longer than 50 characters', () => {
     component['form'].controls.petName.setValue('A'.repeat(51));
 
-    expect(
-      component['form'].controls.petName.hasError('maxlength'),
-    ).toBe(true);
+    expect(component['form'].controls.petName.hasError('maxlength')).toBe(true);
   });
 
   it('should reject invalid phone numbers', () => {
@@ -178,13 +192,27 @@ describe('AnnouncementForm', () => {
     expect(component['selectedLocation']()).toEqual(location);
   });
 
+  it('should lock every section and the map while submitting', () => {
+    component['submitting'].set(true);
+    fixture.detectChanges();
+
+    const fieldsets: HTMLFieldSetElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('fieldset'),
+    );
+    expect(fieldsets.length).toBeGreaterThan(0);
+    expect(fieldsets.every((fieldset) => fieldset.disabled)).toBe(true);
+
+    component['onLocationSelected']({ latitude: 46.7712, longitude: 23.6236 });
+    expect(component['selectedLocation']()).toBeNull();
+  });
+
   it('should create a marker for the selected location', () => {
     component['onLocationSelected']({
       latitude: 46.7712,
       longitude: 23.6236,
     });
 
-    expect(component['locationPins']).toEqual([
+    expect(component['locationPins']()).toEqual([
       {
         latitude: 46.7712,
         longitude: 23.6236,
@@ -213,49 +241,22 @@ describe('AnnouncementForm', () => {
     newFixture.destroy();
   });
 
-  it('should reset the form and selected location when switching announcement type', () => {
+  it('should keep the filled-in details when switching announcement type', () => {
     const controls = component['form'].controls;
-
     controls.species.setValue('CAT');
     controls.petName.setValue('Luna');
-    controls.breed.setValue('European');
-    controls.color.setValue('Grey');
-    controls.contactName.setValue('Ana');
     controls.contactPhone.setValue('0712345678');
-
-    component['onLocationSelected']({
-      latitude: 46.7712,
-      longitude: 23.6236,
-    });
-
-    controls.species.markAsTouched();
-
-    component['selectedFiles'].set([
-      new File(['photo'], 'cat.png', { type: 'image/png' }),
-    ]);
-
-    component['errorMessage'].set('Previous error');
-    component['successMessage'].set('Previous success');
+    component['onLocationSelected']({ latitude: 46.7712, longitude: 23.6236 });
+    component['selectedFiles'].set([new File(['photo'], 'cat.png', { type: 'image/png' })]);
 
     controls.type.setValue('FOUND');
-    component['onTypeChange']();
 
-    expect(controls.type.value).toBe('FOUND');
-    expect(controls.species.value).toBe('');
-    expect(controls.petName.value).toBe('');
-    expect(controls.breed.value).toBe('');
-    expect(controls.color.value).toBe('');
-    expect(controls.contactName.value).toBe('');
-    expect(controls.contactPhone.value).toBe('');
-
-    expect(controls.latitude.value).toBeNull();
-    expect(controls.longitude.value).toBeNull();
-
-    expect(controls.species.touched).toBe(false);
-    expect(component['selectedLocation']()).toBeNull();
-    expect(component['selectedFiles']()).toHaveLength(0);
-    expect(component['errorMessage']()).toBe('');
-    expect(component['successMessage']()).toBe('');
+    expect(controls.species.value).toBe('CAT');
+    expect(controls.petName.value).toBe('Luna');
+    expect(controls.contactPhone.value).toBe('0712345678');
+    expect(component['selectedLocation']()).toEqual({ latitude: 46.7712, longitude: 23.6236 });
+    expect(component['selectedFiles']()).toHaveLength(1);
+    expect(component['locationPins']()[0].type).toBe('FOUND');
   });
 
   it('should remove a selected photo and its preview URL', () => {
@@ -287,16 +288,95 @@ describe('AnnouncementForm', () => {
       new File(['photo2'], 'cat2.png', { type: 'image/png' }),
     ]);
 
-    component['previewUrls'].set([
-      'blob:first',
-      'blob:second',
-    ]);
+    component['previewUrls'].set(['blob:first', 'blob:second']);
 
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.main-photo-label')?.textContent).toContain(
-      'Main photo',
-    );
+    expect(compiled.querySelector('.main-photo-label')?.textContent).toContain('Main photo');
+  });
+
+  describe('choosing photos', () => {
+    let createUrl: Mock<(file: Blob | MediaSource) => string>;
+    const originalCreateObjectURL = URL.createObjectURL;
+
+    // jsdom has no URL.createObjectURL, so the previews get fake URLs
+    beforeEach(() => {
+      let next = 0;
+      createUrl = vi.fn((_file: Blob | MediaSource) => `blob:preview-${next++}`);
+      URL.createObjectURL = createUrl;
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = originalCreateObjectURL;
+    });
+
+    const image = (name: string, type = 'image/jpeg', size = 1000): File => {
+      const file = new File(['photo'], name, { type, lastModified: 1 });
+      Object.defineProperty(file, 'size', { value: size });
+      return file;
+    };
+
+    const choose = (...files: File[]): HTMLInputElement => {
+      const input = { files, value: 'C:\\fakepath\\photo.jpg' } as unknown as HTMLInputElement;
+      component['onFilesSelected']({ target: input } as unknown as Event);
+      return input;
+    };
+
+    it('should add JPG and PNG photos with a preview for each', () => {
+      choose(image('cat.jpg'), image('cat.png', 'image/png'));
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['cat.jpg', 'cat.png']);
+      expect(component['previewUrls']()).toEqual(['blob:preview-0', 'blob:preview-1']);
+      expect(component['errorMessage']()).toBe('');
+    });
+
+    it('should reject files that are not JPG or PNG', () => {
+      choose(image('notes.pdf', 'application/pdf'), image('cat.gif', 'image/gif'));
+
+      expect(component['selectedFiles']()).toHaveLength(0);
+      expect(component['errorMessage']()).toContain(
+        'notes.pdf: only JPG and PNG images are allowed.',
+      );
+      expect(component['errorMessage']()).toContain(
+        'cat.gif: only JPG and PNG images are allowed.',
+      );
+    });
+
+    it('should reject photos larger than 5 MB', () => {
+      choose(
+        image('big.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1),
+        image('ok.jpg', 'image/jpeg', 5 * 1024 * 1024),
+      );
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual(['ok.jpg']);
+      expect(component['errorMessage']()).toContain('big.jpg: the maximum file size is 5 MB.');
+    });
+
+    it('should not add the same photo twice', () => {
+      const photo = image('cat.jpg');
+
+      choose(photo);
+      choose(photo);
+
+      expect(component['selectedFiles']()).toHaveLength(1);
+      expect(createUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('should keep the photos already chosen when more are added', () => {
+      choose(image('first.jpg'));
+      choose(image('second.jpg'));
+
+      expect(component['selectedFiles']().map((file) => file.name)).toEqual([
+        'first.jpg',
+        'second.jpg',
+      ]);
+    });
+
+    it('should empty the file input, so the same photo can be chosen again after removing it', () => {
+      const input = choose(image('cat.jpg'));
+
+      expect(input.value).toBe('');
+    });
   });
 
   describe('submitting', () => {
@@ -370,14 +450,11 @@ describe('AnnouncementForm', () => {
       component['onSubmit']();
 
       expect(uploads).toEqual([15]);
-      expect(component['successMessage']()).toContain(
-        'uploaded successfully',
-      );
+      expect(component['successMessage']()).toContain('uploaded successfully');
     });
 
     it('should show an error when the announcement cannot be created', () => {
-      TestBed.inject(AnnouncementService).create = () =>
-        throwError(() => new Error('failed'));
+      TestBed.inject(AnnouncementService).create = () => throwError(() => new Error('failed'));
 
       component['onSubmit']();
 
@@ -385,20 +462,64 @@ describe('AnnouncementForm', () => {
       expect(component['submitting']()).toBe(false);
     });
 
+    it('should show the backend validation errors next to their fields', () => {
+      TestBed.inject(AnnouncementService).create = () =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: {
+                fieldErrors: [
+                  { field: 'contactPhone', message: 'Contact phone must be a valid phone number' },
+                  {
+                    field: 'coordinates',
+                    message: 'Latitude and longitude must be provided together',
+                  },
+                ],
+              },
+            }),
+        );
+
+      component['onSubmit']();
+      fixture.detectChanges();
+
+      expect(component['serverError']('contactPhone')).toBe(
+        'Contact phone must be a valid phone number',
+      );
+      expect(component['serverError']('latitude')).toBe(
+        'Latitude and longitude must be provided together',
+      );
+      expect(compiled.textContent).toContain('Contact phone must be a valid phone number');
+      expect(component['errorMessage']()).toContain('check the highlighted fields');
+    });
+
+    it('should clear a backend error when the field is changed', () => {
+      TestBed.inject(AnnouncementService).create = () =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { fieldErrors: [{ field: 'area', message: 'Area is required' }] },
+            }),
+        );
+
+      component['onSubmit']();
+      component['form'].controls.area.setValue('Mărăști, Cluj-Napoca');
+
+      expect(component['serverError']('area')).toBeNull();
+    });
+
     it('should not create a second announcement when retrying a failed photo upload', () => {
       const service = TestBed.inject(AnnouncementService);
       const workingUpload = service.uploadPhotos;
 
-      service.uploadPhotos = () =>
-        throwError(() => new Error('failed'));
+      service.uploadPhotos = () => throwError(() => new Error('failed'));
 
       component['selectedFiles'].set([photo]);
 
       component['onSubmit']();
 
-      expect(component['errorMessage']()).toContain(
-        'could not be uploaded',
-      );
+      expect(component['errorMessage']()).toContain('could not be uploaded');
 
       service.uploadPhotos = workingUpload;
 
