@@ -10,17 +10,19 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 |---|---|---|---|---|
 | `POST` | `/announcements` | Creates a new announcement | Antonia | Announcement form |
 | `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Antonia | List page, map page |
-| `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Antonia | Not used by a page yet |
+| `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Antonia | Details page |
+| `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Patrick | `Mark as resolved` / `Mark as active` on the details page |
 | `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Patrick | Announcement form |
-| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Announcement cards, map popups |
-| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | `Download poster` on each card |
+| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Announcement cards, map popups, details page |
+| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | `Download poster` on each card and on the details page |
 
-There is no authentication: all endpoints are public.
+There is no authentication: all endpoints are public, so anyone can also change the status of an announcement. User accounts are planned for DEMO 2.
 
 ---
 
 ## 2. General Conventions
-- **Base URL:** `http://localhost:8080` (all endpoints documented below are relative to this root).
+- **Base URL:** `http://localhost:8080` (all endpoints documented below are relative to this root). The frontend calls the backend on the same host it was opened from, so from a phone on the same Wi-Fi it is `http://<laptop IP>:8080`.
+- **CORS:** only the frontend addresses in `CORS_ALLOWED_ORIGINS` (`.env`, comma-separated, default `http://localhost:4200`) may call the API from a browser.
 - **Interactive Documentation:**
   - Swagger UI: `http://localhost:8080/swagger-ui.html`
   - OpenAPI 3 Specification (JSON): `http://localhost:8080/v3/api-docs`
@@ -30,7 +32,7 @@ There is no authentication: all endpoints are public.
   - Announcement Type: `LOST`, `FOUND`
   - Status: `ACTIVE`, `RESOLVED`
   - Species: `CAT`, `DOG`, `OTHER`
-- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements` response, and printed on the poster. They are not part of `GET /announcements`.
+- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses, and printed on the poster. They are not part of `GET /announcements`.
 
 ---
 
@@ -71,8 +73,8 @@ Creates a new lost or found announcement.
 | `eventDate` | `string` | Yes | ISO 8601 datetime; cannot be in the future. |
 | `latitude` | `number` | No | Range: `[-90.0, 90.0]`; must be provided together with `longitude`. |
 | `longitude` | `number` | No | Range: `[-180.0, 180.0]`; must be provided together with `latitude`. |
-| `area` | `string` | Yes | Neighborhood/city description (max 150 chars). |
-| `contactName` | `string` | Yes | Max 100 characters. |
+| `area` | `string` | Yes | "Neighborhood, City", for example `Mănăștur, Cluj-Napoca`. Not blank, max 150 characters. |
+| `contactName` | `string` | Yes | Not blank, max 100 characters. |
 | `contactPhone` | `string` | Yes | Valid phone string (max 20 chars, regex: `^(\+?[0-9]{7,15})?$`). |
 
 ##### Response (`201 Created`)
@@ -215,6 +217,29 @@ Returns a single announcement by its unique identifier, including full details, 
 
 ---
 
+#### `PATCH /announcements/{id}/status`
+Changes the status of an announcement: `RESOLVED` when the pet is back home, `ACTIVE` to show it again in the default list. Sending the status it already has is not an error.
+
+##### Request Body (`application/json`)
+```json
+{
+  "status": "RESOLVED"
+}
+```
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `status` | `string` | Yes | Must be `ACTIVE` or `RESOLVED`. |
+
+##### Response (`200 OK`)
+The whole updated announcement, in the same format as `GET /announcements/{id}`, with the new `status`.
+
+##### Error Responses
+- `400 Bad Request`: `status` is missing (`status: Status is required`) or has another value (`status: Invalid value 'DONE', allowed values: ACTIVE, RESOLVED`).
+- `404 Not Found`: When no announcement exists with the requested ID.
+
+---
+
 ### 3.2 Photos & Media
 
 #### `POST /announcements/{id}/photos`
@@ -263,7 +288,7 @@ Uploads one or more binary photos and attaches them to the specified announcemen
 Retrieves the raw binary image stream stored in PostgreSQL (`BYTEA`).
 
 ##### Response (`200 OK`)
-- **Headers:** `Content-Type: image/jpeg` or `image/png`
+- **Headers:** `Content-Type: image/jpeg` or `image/png`, and `Cache-Control: max-age=86400`, so the browser keeps a photo for one day instead of downloading it again (a photo never changes once uploaded).
 - **Body:** Raw binary byte stream. Can be used directly in HTML templates: `<img src="http://localhost:8080/photos/{id}">` or `<img src="/photos/{id}">`.
 
 ##### Error Responses
@@ -274,11 +299,16 @@ Retrieves the raw binary image stream stored in PostgreSQL (`BYTEA`).
 ### 3.3 Poster Generation
 
 #### `GET /announcements/{id}/poster`
-Generates and downloads a printable missing/found pet poster as a PDF document.
+Generates and downloads a printable lost/found pet poster as a one-page A4 PDF.
+
+The poster shows the type (`LOST` / `FOUND`, plus `RESOLVED` when resolved) as large badges, a question as the title ("Have you seen Luna?", "Is this your cat?"), the area, the main photo (grey when resolved, a placeholder when there is none), the filled-in details, the contact and a QR code. The QR code opens the announcement's details page, at the address in `FRONTEND_URL` (`.env`, default `http://localhost:4200`).
 
 ##### Response (`200 OK`)
 - **Headers:** `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="announcement-{id}-poster.pdf"`
 - **Body:** Binary PDF byte stream downloaded directly by the browser.
+
+##### Error Responses
+- `404 Not Found`: When no announcement exists with the requested ID.
 
 ---
 
@@ -316,7 +346,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 
 | Status Code | Reason Phrase (`error`) | Exception / Trigger | Message (`message`) | `fieldErrors` Payload |
 |---|---|---|---|---|
-| `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`), sorted alphabetically by field name |
+| `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`, `status: "Status is required"`), sorted alphabetically by field name |
 | `400 Bad Request` | `Bad Request` | Invalid enum value (`HttpMessageNotReadableException`) | `Some fields are invalid` | `[{"field": "<fieldName>", "message": "Invalid value '<val>', allowed values: <ALLOWED_VALUES>"}]` |
 | `400 Bad Request` | `Bad Request` | Malformed JSON request body (`HttpMessageNotReadableException`) | `Malformed request body` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Path or query parameter type mismatch (`MethodArgumentTypeMismatchException`, e.g. `/announcements/abc` or `?species=cat`) | `Some fields are invalid` | `[{"field": "id", "message": "Invalid value 'abc'"}]` (for enums followed by `, allowed values: ...`) |
