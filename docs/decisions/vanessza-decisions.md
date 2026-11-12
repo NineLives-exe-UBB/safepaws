@@ -111,7 +111,7 @@ Decisions and team messages for the cards "Announcement details page", "CSS vari
 
 > The details page uses your `PATCH /announcements/{id}/status` for "Mark as resolved" and "Mark as active", and shows the announcement your endpoint returns.
 
-## Documentation to update
+## Documentation updated
 
 - `architecture.md`: the colors are CSS variables in `frontend/src/styles.css`, named by role, and components use them with `var(--name)`, never hex codes. The frontend tree should list `pages/announcement-details` and `shared/date-format.ts`.
 - `usage-guide.md`:
