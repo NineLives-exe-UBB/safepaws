@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { AnnouncementSummary } from '../../models/announcement.model';
 import { AnnouncementCard } from './announcement-card';
+import { provideRouter } from '@angular/router';
 
 describe('AnnouncementCard', () => {
   const announcement: AnnouncementSummary = {
@@ -33,7 +34,7 @@ describe('AnnouncementCard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AnnouncementCard],
-      providers: [provideHttpClient()],
+      providers: [provideHttpClient(), provideRouter([])],
     }).compileComponents();
   });
 
@@ -125,5 +126,13 @@ describe('AnnouncementCard', () => {
 
     expect(button?.textContent).toContain('Download poster');
     expect(button?.getAttribute('href')).toBe(`${environment.apiUrl}/announcements/15/poster`);
+  });
+
+  it('should link to the details page of the announcement', async () => {
+    const compiled = await render(announcement);
+
+    expect(compiled.querySelector('.card-link')?.getAttribute('href')).toBe(
+      `/announcements/${announcement.id}`,
+    );
   });
 });

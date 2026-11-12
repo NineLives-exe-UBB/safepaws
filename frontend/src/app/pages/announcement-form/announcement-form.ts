@@ -16,6 +16,9 @@ import { MapView } from '../../components/map/map';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 
+/** Long enough to read the success message before the details page opens. */
+const REDIRECT_DELAY_MS = 1500;
+
 @Component({
   imports: [ReactiveFormsModule, RouterLink, MapView],
   selector: 'app-announcement-form',
@@ -41,7 +44,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   protected readonly maxEventDate = this.toDateTimeInputValue(new Date());
 
   private redirectTimeout?: ReturnType<typeof setTimeout>;
-  private createdAnnouncementId?: number;
+  protected createdAnnouncementId?: number;
 
   private readonly notInFutureValidator: ValidatorFn = (
     control: AbstractControl,
@@ -180,14 +183,14 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     this.previewUrls.set([]);
   }
 
-  private redirectToAnnouncements(): void {
+  private redirectToDetails(announcementId: number): void {
     if (this.redirectTimeout) {
       clearTimeout(this.redirectTimeout);
     }
 
     this.redirectTimeout = setTimeout(() => {
-      this.router.navigate(['/announcements']);
-    }, 700);
+      this.router.navigate(['/announcements', announcementId]);
+    }, REDIRECT_DELAY_MS);
   }
 
   ngOnDestroy(): void {
@@ -257,7 +260,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
       this.successMessage.set('Your announcement was created successfully!');
 
-      this.redirectToAnnouncements();
+      this.redirectToDetails(announcementId);
       return;
     }
 
@@ -267,7 +270,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
 
         this.successMessage.set('Your announcement and photos were uploaded successfully!');
 
-        this.redirectToAnnouncements();
+        this.redirectToDetails(announcementId);
       },
 
       error: () => {

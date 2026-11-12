@@ -1,0 +1,117 @@
+<a class="back-link" routerLink="/announcements">← Back to announcements</a>
+
+@switch (state()) {
+  @case ('loading') {
+    <p class="message">Loading announcement...</p>
+  }
+  @case ('not-found') {
+    <div class="message">
+      <h1>Announcement not found</h1>
+      <p>It may have been removed, or the link is not correct.</p>
+      <a class="button" routerLink="/announcements">See all announcements</a>
+    </div>
+  }
+  @case ('error') {
+    <p class="message error">Could not load the announcement. Please try again later.</p>
+  }
+  @case ('loaded') {
+    @if (announcement(); as announcement) {
+      <article class="details" [class.resolved]="announcement.status === 'RESOLVED'">
+        <section class="gallery">
+          <div class="main-photo">
+            @if (selectedPhotoUrl(); as photoUrl) {
+              <img [src]="photoUrl" [alt]="heading() + ' photo'" />
+            } @else {
+              <span class="no-photo">No photo</span>
+            }
+            <span
+              class="label"
+              [class.lost]="announcement.type === 'LOST'"
+              [class.found]="announcement.type === 'FOUND'"
+            >
+              {{ announcement.type }}
+            </span>
+          </div>
+
+          @if (photoUrls().length > 1) {
+            <div class="thumbnails">
+              @for (url of photoUrls(); track url; let index = $index) {
+                <button
+                  type="button"
+                  class="thumbnail"
+                  [class.selected]="index === selectedPhotoIndex()"
+                  [attr.aria-label]="'Show photo ' + (index + 1)"
+                  [attr.aria-pressed]="index === selectedPhotoIndex()"
+                  (click)="selectPhoto(index)"
+                >
+                  <img [src]="url" alt="" />
+                </button>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="info">
+          <div class="title-row">
+            <h1>{{ heading() }}</h1>
+            @if (announcement.status === 'RESOLVED') {
+              <span class="resolved-badge">Resolved</span>
+            }
+          </div>
+          <p class="subtitle">{{ subtitle() }}</p>
+
+          <dl class="facts">
+            @if (announcement.breed) {
+              <dt>Breed</dt>
+              <dd>{{ announcement.breed }}</dd>
+            }
+            @if (announcement.color) {
+              <dt>Color</dt>
+              <dd>{{ announcement.color }}</dd>
+            }
+            @if (announcement.distinctiveMarks) {
+              <dt>Distinctive marks</dt>
+              <dd>{{ announcement.distinctiveMarks }}</dd>
+            }
+            <dt>{{ announcement.type === 'LOST' ? 'Lost on' : 'Found on' }}</dt>
+            <dd>{{ announcement.eventDate | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dt>Area</dt>
+            <dd>{{ announcement.area }}</dd>
+            <dt>Posted on</dt>
+            <dd>{{ announcement.createdAt | date: 'dd MMM yyyy, HH:mm' }}</dd>
+          </dl>
+
+          <div class="contact">
+            <h2>Contact</h2>
+            <p>{{ announcement.contactName }}</p>
+            <a class="phone" [href]="'tel:' + announcement.contactPhone">
+              {{ announcement.contactPhone }}
+            </a>
+          </div>
+
+          <div class="actions">
+            <a class="button" [href]="posterUrl()" download>Download poster</a>
+            <button
+              type="button"
+              class="button secondary"
+              [disabled]="updatingStatus()"
+              (click)="toggleStatus()"
+            >
+              {{ announcement.status === 'ACTIVE' ? 'Mark as resolved' : 'Mark as active' }}
+            </button>
+          </div>
+          @if (statusError()) {
+            <p class="status-error">Could not update the status. Please try again.</p>
+          }
+        </section>
+
+        @if (pins().length > 0) {
+          <section class="location">
+            <h2>Location</h2>
+            <app-map [center]="pins()[0]" [zoom]="15" [pins]="pins()" />
+          </section>
+        }
+      </article>
+    }
+  }
+}

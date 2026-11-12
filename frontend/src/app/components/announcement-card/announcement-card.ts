@@ -2,9 +2,10 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { AnnouncementSummary, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   selector: 'app-announcement-card',
   styleUrl: './announcement-card.css',
   templateUrl: './announcement-card.html',

@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   Announcement,
   AnnouncementRequest,
+  AnnouncementStatus,
   AnnouncementSummary,
 } from '../models/announcement.model';
 import {
@@ -50,6 +51,10 @@ export class AnnouncementService {
 
   create(announcement: AnnouncementRequest): Observable<Announcement> {
     return this.http.post<Announcement>(this.announcementsUrl, announcement);
+  }
+
+  updateStatus(id: number, status: AnnouncementStatus): Observable<Announcement> {
+    return this.http.patch<Announcement>(`${this.announcementsUrl}/${id}/status`, { status });
   }
 
   /** The photo marked as main, or the first one; null when there are no photos. */

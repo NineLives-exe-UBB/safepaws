@@ -342,7 +342,7 @@
     @if (successMessage()) {
       <div class="message success" role="status">
         {{ successMessage() }}
-        <a routerLink="/announcements">View announcements</a>
+        <a [routerLink]="['/announcements', createdAnnouncementId]">View announcement</a>
       </div>
     }
 

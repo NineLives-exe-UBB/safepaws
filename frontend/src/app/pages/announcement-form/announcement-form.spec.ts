@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { Announcement, AnnouncementRequest } from '../../models/announcement.model';
@@ -527,6 +527,30 @@ describe('AnnouncementForm', () => {
 
       expect(sentAnnouncements).toHaveLength(1);
       expect(uploads).toEqual([15]);
+    });
+
+    it('should open the new announcement after it was created', () => {
+      vi.useFakeTimers();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+      try {
+        component['onSubmit']();
+        fixture.detectChanges();
+
+        expect(compiled.querySelector('.message.success a')?.getAttribute('href')).toBe(
+          '/announcements/15',
+        );
+        expect(navigate).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(1499);
+        expect(navigate).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(1);
+
+        expect(navigate).toHaveBeenCalledWith(['/announcements', 15]);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
