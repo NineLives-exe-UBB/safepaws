@@ -50,7 +50,7 @@ Stores lost and found pet reports.
 | `area` | `VARCHAR(150)` | Yes | — | "Neighborhood, City" (e.g., "Mănăștur, Cluj-Napoca"). |
 | `contact_name` | `VARCHAR(100)` | Yes | — | Name of contact person. |
 | `contact_phone` | `VARCHAR(20)` | Yes | Stored as text | Phone number (preserves leading `0` / `+40`). |
-| `status` | `VARCHAR(10)` | Yes | `CHECK (status IN ('ACTIVE', 'RESOLVED'))`, Default: `'ACTIVE'` | Current status of the report. |
+| `status` | `VARCHAR(10)` | Yes | `CHECK (status IN ('ACTIVE', 'RESOLVED'))`, Default: `'ACTIVE'` | Current status of the report. Changed with `PATCH /announcements/{id}/status` ("Mark as resolved" / "Mark as active" on the details page). |
 | `created_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | Record creation timestamp. |
 
 ---
@@ -84,7 +84,8 @@ Stores binary image data attached to announcements.
 
 ## 4. Architectural & Schema Decisions
 
-- **No Users / Locations Tables:** There is no authentication, so the reporter's contact information (`contact_name`, `contact_phone`) is stored directly on the announcement. The location (`area`, `latitude`, `longitude`) is also stored as columns on the announcement.
+- **No Users / Locations Tables:** There is no authentication in DEMO 1 (see ADR 010 in `decisions.md`), so the reporter's contact information (`contact_name`, `contact_phone`) is stored directly on the announcement. The location (`area`, `latitude`, `longitude`) is also stored as columns on the announcement.
+- **Planned for DEMO 2:** user accounts, messages between users and "I saw it here" sightings will need new tables (users, the link between an announcement and its author, messages, sightings), added in new migrations starting from `V6`.
 - **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL (see ADR 007 in `decisions.md`). Listing endpoints (`GET /announcements`) load only photo metadata, never the image bytes; individual photos are retrieved via `GET /photos/{id}`.
 - **Optional Coordinates:** In the database and the API, coordinates are optional and `area` is mandatory. If coordinates are provided, both latitude and longitude must be present together (`ck_announcement_coordinates`). The frontend form requires the user to pick a location on the map, but announcements created directly through the API can have no coordinates; they are left out of location searches and the map.
 - **Conventions & Immutability:** 
@@ -131,5 +132,5 @@ For GUI clients (IntelliJ Database Tool, DBeaver, pgAdmin) or direct connections
 | Task | Command | Description |
 |---|---|---|
 | **Stop Database (Retain Data)** | `docker compose down` | Stops containers while preserving database volume data. |
-| **Reset Database (Wipe & Re-seed)** | `docker compose down -v` | Wipes the volume data; Flyway recreates tables and seeds data on the next backend boot. |
+| **Reset Database (Wipe & Re-seed)** | `docker compose down -v` | Wipes the volume data; Flyway recreates tables and seeds data on the next backend boot. Do this on the demo laptop shortly before a demo, so the demo dates are recent and anything added by hand is removed. |
 | **Port Conflict Resolution** | Set `DB_PORT=5433` in `.env` | Use when local PostgreSQL is already occupying port `5432`. |

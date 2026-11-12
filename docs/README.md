@@ -10,4 +10,4 @@ This folder contains the documentation for SafePaws:
 - [`decisions.md`](decisions.md) – important decisions and the reasons behind them
 - [`meetings.md`](meetings.md) – notes from team and mentor meetings
 - [`testing.md`](testing.md) – automated tests, manual test scenarios and how to report bugs
-- [`decisions/`](decisions/) – per-person decision notes and messages for the team (database, frontend)
+- [`decisions/`](decisions/) – per-person decision notes and messages for the team (database, frontend, backend, poster)

@@ -39,7 +39,7 @@ This document tracks team syncs, sprint planning sessions, and mentor check-ins 
 - **IDE Standardization:** Confirmed development environments:
   - **IntelliJ IDEA** for Java / Spring Boot backend.
   - **Visual Studio Code** for Angular frontend.
-- **Database Architecture:** Agreed on PostgreSQL structure (Users, Announcements, Photos, Locations) containerized via Docker.
+- **Database Architecture:** Agreed on PostgreSQL structure (Users, Announcements, Photos, Locations) containerized via Docker. *(Built for DEMO 1: the `announcement` and `photo` tables, with the location as coordinates and an area on the announcement. Users come with the accounts in DEMO 2.)*
 - **Quality Gate:** Established a minimum automated test coverage threshold of **70%** across pull requests.
 
 #### 2. Development Deliverables (First Half of DEMO 1)
@@ -82,7 +82,22 @@ This document tracks team syncs, sprint planning sessions, and mentor check-ins 
   - Prioritize frontend announcement form completion and photo upload component integration for the upcoming Demo 1 milestone.
   - Keep documentation updated in lockstep with feature PRs.
 - **Action Items:**
-  - [ ] Complete frontend announcement creation form (@Victor)
-  - [ ] Integrate photo upload component in frontend (@Luca)
-  - [ ] Add end-user usage guide with screenshots once form is merged (@Tudor)
-  - [ ] Execute manual test scenarios for announcement creation and edge cases (@Jessica)
+  - [x] Complete frontend announcement creation form (@Victor)
+  - [x] Integrate photo upload component in frontend (@Luca)
+  - [x] Add end-user usage guide once form is merged (@Tudor) *(screenshots still to add)*
+  - [x] Execute manual test scenarios for announcement creation and edge cases (@Jessica) *(run on 11 Nov, see `testing.md`)*
+
+---
+
+### [2026-11-18] - Mentor Check-in (planned)
+- **Attendees:** NineLives.exe Team, Course Mentor
+- **Objective / Agenda:**
+  - Results of DEMO 1 (13 Nov) and the feedback received.
+  - Plan for DEMO 2 (12 Dec): user accounts, notifications for new announcements nearby, messaging without a public phone number, and "I saw it here" sightings shown on the map as a trail.
+  - What is implemented by 18 Nov: user accounts first, because the other DEMO 2 features depend on them.
+- **State before the meeting (12 Nov):**
+  - DEMO 1 is complete on `main`: announcement list with filters and distance, map page, announcement form with photos, details page, resolved status, poster with QR code.
+  - Backend 127 tests (97.0% instruction coverage), frontend 214 tests (92.2% statement coverage).
+- **Key Discussion Points:** *(to fill in after the meeting)*
+- **Decisions Made:** *(to fill in after the meeting)*
+- **Action Items:** *(to fill in after the meeting)*

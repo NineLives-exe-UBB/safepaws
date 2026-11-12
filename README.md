@@ -6,9 +6,20 @@ SafePaws is a collaborative web platform designed to help communities report, tr
 
 ---
 
+## ✨ Features (DEMO 1)
+
+- **Browse announcements:** lost and found pets as cards, with filters (type, species, status, color, breed, area) and distance from you ("Closest first", radius).
+- **Map:** every announcement as a pin, red for lost and green for found.
+- **Post an announcement:** details, photos and the place picked on the map.
+- **Announcement page:** photo gallery, details, the contact with a tap-to-call number, the location on the map, and "Mark as resolved" when the pet is back home.
+- **Printable poster:** a one-page PDF with the photo, the details and a QR code that opens the announcement online.
+- **Works on phones:** the pages adapt to small screens, and the app can be opened from a phone on the same Wi-Fi.
+
+---
+
 ## 🛠️ Tech Stack
 
-- **Backend:** Java 21, Spring Boot 4.1 (Spring Web, Spring Data JPA, Bean Validation), SpringDoc OpenAPI (Swagger UI), OpenPDF (posters)
+- **Backend:** Java 21, Spring Boot 4.1 (Spring Web, Spring Data JPA, Bean Validation), SpringDoc OpenAPI (Swagger UI), OpenPDF (posters), ZXing (QR codes)
 - **Frontend:** Angular 22, TypeScript, HTML, CSS, Leaflet with OpenStreetMap tiles (maps)
 - **Database & Migrations:** PostgreSQL 17, Flyway
 - **Docker:** Docker Compose runs the local PostgreSQL database; Testcontainers starts a PostgreSQL container for the backend tests
@@ -39,7 +50,7 @@ SafePaws is a collaborative web platform designed to help communities report, tr
    npm install
    npm start
    ```
-   *(Access the app at `http://localhost:4200`). For full setup details, see the [Usage & Setup Guide](docs/usage-guide.md).*
+   *(Access the app at `http://localhost:4200`). For full setup details, opening the app from a phone, and resetting the data before a demo, see the [Usage & Setup Guide](docs/usage-guide.md).*
 
 ---
 
@@ -48,13 +59,14 @@ SafePaws is a collaborative web platform designed to help communities report, tr
 All design records, specifications, and project management files are organized in the [`docs/`](./docs) directory:
 
 - [Team Workflow & Guidelines](./docs/workflow.md) — Git branching, PR rules, commit conventions, and clean code standards.
-- [Architecture Decisions (ADRs)](./docs/decisions.md) — Tech stack choices, testing thresholds, photo storage, search, and maps.
+- [Architecture Decisions (ADRs)](./docs/decisions.md) — Tech stack choices, testing thresholds, photo storage, search, maps, no accounts in DEMO 1, posters, styling, and configuration.
 - [System Architecture](./docs/architecture.md) — High-level architecture, data flows, module organization, and the CI pipeline.
 - [Database Design](./docs/database.md) — Tables, relationships, indexes, and Flyway migrations.
 - [API Specification](./docs/api.md) — REST endpoints, request/response models, and standard error formats.
 - [Testing & QA](./docs/testing.md) — Automated tests, coverage thresholds (70%+), manual test scenarios, and bug reporting.
 - [Usage & Setup Guide](./docs/usage-guide.md) — Using the app, local environment setup, and running the tests.
 - [Meeting Notes](./docs/meetings.md) — Team standups and mentor review records.
+- [Team Decisions](./docs/decisions/) — Each member's decisions and messages for the team.
 
 ---
 

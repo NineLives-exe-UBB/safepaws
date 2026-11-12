@@ -8,7 +8,7 @@ SafePaws is a collaborative web-based platform designed to assist pet owners and
 ## 2. High-Level Architecture
 The system follows a decoupled client-server multi-tier architecture:
 - **Client Tier:** Angular 22 Single Page Application (SPA) communicating via RESTful JSON over HTTP. Maps use Leaflet with OpenStreetMap tiles, loaded by the browser directly from OpenStreetMap.
-- **Application Tier:** Spring Boot REST API handling business logic, validation, transaction management, and OpenAPI documentation.
+- **Application Tier:** Spring Boot REST API handling business logic, validation, transaction management, OpenAPI documentation, and the printable PDF posters with a QR code (OpenPDF and ZXing).
 - **Persistence Tier:** PostgreSQL 17 database containerized via Docker Compose, managed via Spring Data JPA, Hibernate, and Flyway.
 
 ---
@@ -27,7 +27,7 @@ flowchart TD
         Controller["REST Controllers\n(Request Validation & HTTP Mapping)"]
         OpenAPI["SpringDoc OpenAPI\n(/swagger-ui.html & /v3/api-docs)"]
         Cors["CorsConfig\n(CORS Registry & Location Header)"]
-        Service["Service Layer\n(Domain Business Logic & Transactions)"]
+        Service["Service Layer\n(Domain Business Logic & Transactions,\nPDF poster & QR code)"]
         Repo["Data Access Layer\n(Spring Data JPA / Hibernate Repositories)"]
         Hikari["HikariCP\n(JDBC Connection Pool)"]
     end
@@ -111,8 +111,67 @@ sequenceDiagram
         PhotoController-->>Angular: 201 Created [{"id": 3, "url": "/photos/3", "isMain": true}]
     end
 
-    Angular-->>User: Displays a success message and navigates to the announcements list
+    Angular-->>User: Displays a success message, then opens the new announcement's details page (/announcements/15)
 ```
+
+---
+
+### Scenario 3: Viewing an Announcement and Marking It as Resolved
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Angular as Angular Client (details page)
+    participant Controller as AnnouncementController
+    participant Service as AnnouncementService
+    participant DB as PostgreSQL 17
+
+    User->>Angular: Clicks a card, "View details" on a map pin, or scans a poster QR code
+    Angular->>Controller: GET /announcements/15
+    Controller->>Service: findById(15)
+    Service->>DB: SELECT announcement + photo metadata
+    Controller-->>Angular: 200 OK (AnnouncementResponse) or 404
+    Angular-->>User: Gallery, details, contact (tel: link), map pin, Download poster
+
+    User->>Angular: Clicks "Mark as resolved"
+    Angular->>Controller: PATCH /announcements/15/status {"status": "RESOLVED"}
+    Controller->>Service: updateStatus(15, RESOLVED)
+    Service->>DB: UPDATE announcement SET status = 'RESOLVED'
+    Controller-->>Angular: 200 OK (updated AnnouncementResponse)
+    Angular-->>User: "Resolved" badge and grey photo, the announcement leaves the default list
+```
+
+*Key Characteristics:*
+- The page shows the announcement returned by the backend, so the "Resolved" badge only appears once the change is saved. The button is disabled while the request is running.
+- An id that is not a positive whole number shows "Announcement not found" without calling the backend.
+
+---
+
+### Scenario 4: Downloading a Poster
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Angular as Angular Client
+    participant Controller as AnnouncementController
+    participant Poster as PosterService
+    participant Qr as QrCodeService
+    participant DB as PostgreSQL 17
+
+    User->>Angular: Clicks "Download poster" (card or details page)
+    Angular->>Controller: GET /announcements/15/poster
+    Controller->>Poster: generatePoster(15)
+    Poster->>DB: Announcement + main photo bytes
+    Poster->>Qr: generateQrCode(15)
+    Qr-->>Poster: PNG of FRONTEND_URL/announcements/15
+    Poster-->>Controller: One-page A4 PDF (OpenPDF)
+    Controller-->>Angular: 200 OK (application/pdf, attachment)
+    Angular-->>User: Browser downloads announcement-15-poster.pdf
+```
+
+*Key Characteristics:*
+- The poster is generated on every request, so it always shows the current status (a resolved announcement gets a `RESOLVED` badge and a grey photo).
+- The QR code points to `FRONTEND_URL` from `.env`, so it can be scanned from a phone only when that is the laptop's IP (see `usage-guide.md`).
 
 ---
 
@@ -127,7 +186,7 @@ safepaws/
 │   ├── src/main/java/
 │   │   ├── com/ninelives/safepaws/
 │   │   │   ├── controller/               # REST endpoints (AnnouncementController, PhotoController)
-│   │   │   ├── service/                  # Business logic (AnnouncementService, PhotoService, PosterService)
+│   │   │   ├── service/                  # Business logic (AnnouncementService, PhotoService, PosterService, QrCodeService)
 │   │   │   ├── repository/               # Spring Data JPA repositories, AnnouncementSpecifications (filters), PhotoMetadata
 │   │   │   ├── model/                    # JPA entities (Announcement, Photo) and enums
 │   │   │   ├── dto/                      # Request/response records, AnnouncementFilter, ErrorResponse
@@ -138,17 +197,18 @@ safepaws/
 │   │   ├── application.properties        # Application configuration & .env import
 │   │   ├── db/migration/                 # SQL Flyway migrations (V1, V2, V3, V5)
 │   │   ├── db/demo-photos/               # Demo images loaded by V4 (sources in SOURCES.md)
-│   │   └── fonts/                        # DejaVu Sans Bold, used by the PDF poster (Romanian diacritics)
+│   │   └── fonts/                        # DejaVu Sans and DejaVu Sans Bold, used by the PDF poster (Romanian diacritics)
 │   └── src/test/                         # Tests mirroring src/main (JUnit 5, Mockito, Testcontainers)
 ├── frontend/                             # Angular 22 SPA
 │   └── src/
 │       ├── app/
-│       │   ├── pages/                    # announcement-list, announcement-form, map-page
+│       │   ├── pages/                    # announcement-list, announcement-form, announcement-details, map-page
 │       │   ├── components/               # header, announcement-card, announcement-popup, filter-bar, map
 │       │   ├── services/                 # AnnouncementService (HTTP), LocationService (browser location), AnnouncementSearch
-│       │   ├── models/                   # Types: Announcement, Photo, filters, MapPin, Coordinates
-│       │   └── shared/                   # Leaflet icon helper
-│       └── environments/                 # Backend API base URL configuration
+│       │   ├── models/                   # Types: Announcement, Photo, filters and labels, MapPin, Coordinates
+│       │   └── shared/                   # Leaflet icon helper, DATE_FORMAT (one date format for the app)
+│       ├── environments/                 # Backend API base URL (same host the page was opened from, port 8080)
+│       └── styles.css                    # Global styles and the CSS variables (colors, shadows, corners)
 ├── docs/                                 # Project documentation
 ├── docker-compose.yml                    # Starts the PostgreSQL 17 database
 └── README.md                             # Project overview
@@ -157,6 +217,15 @@ safepaws/
 ---
 
 ## 6. Infrastructure & Quality Pipeline
+
+### Frontend Styling
+- Every color, shadow and corner radius is a CSS variable in `frontend/src/styles.css`, named by its role (`--color-primary`, `--color-text-muted`, `--color-error`, `--radius-control`...). Components use them with `var(--name)`, never hex codes (ADR 012 in `decisions.md`).
+- Dates are shown with `DATE_FORMAT` (`shared/date-format.ts`), and types and species with `TYPE_LABELS` and `SPECIES_LABELS`.
+- Below 600px wide the layout switches to one column (header tabs on one row, filters in two columns).
+
+### Configuration & Phone Access
+- Values that differ between machines come from `.env` (ADR 013): the database settings, `CORS_ALLOWED_ORIGINS` and `FRONTEND_URL` (the address in the poster QR code).
+- The frontend calls the backend on port 8080 of the host it was opened from, so the app also works from a phone on the same Wi-Fi when opened at the laptop's IP.
 
 ### Cross-Origin Resource Sharing (CORS)
 - Handled by `CorsConfig` allowing origins configured via `CORS_ALLOWED_ORIGINS` (defaulting to `http://localhost:4200`).
@@ -177,4 +246,4 @@ Continuous integration is configured under `.github/workflows/ci.yml` and trigge
 ---
 
 ## 7. Authentication & Authorization
-There is currently no authentication or authorization. All endpoints are public: anyone can create announcements, upload photos and read every announcement, including the contact details returned by `GET /announcements/{id}`. The reporter's contact details are stored directly on the announcement.
+There is currently no authentication or authorization (ADR 010 in `decisions.md`). All endpoints are public: anyone can create announcements, upload photos, mark any announcement as resolved or active, and read every announcement, including the contact details returned by `GET /announcements/{id}`. The reporter's contact details are stored directly on the announcement. User accounts are planned for DEMO 2.

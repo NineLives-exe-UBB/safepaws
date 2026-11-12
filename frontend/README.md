@@ -2,7 +2,7 @@
 
 This folder contains the frontend of SafePaws, built with Angular.
 
-It handles the user interface: posting announcements, viewing them in a list and on the map, and generating printable posters.
+It handles the user interface: posting announcements, viewing them in a list, on the map and on their own page, marking them as resolved, and downloading the printable posters that the backend generates.
 
 ## How to run
 
@@ -27,17 +27,28 @@ It handles the user interface: posting announcements, viewing them in a list and
 
 3. Open http://localhost:4200 in the browser.
 
-The list needs the backend running on `http://localhost:8080` (see `backend/README.md`: copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). It comes with test announcements, so the list is not empty. Without the backend, the list page shows "Could not load the announcements."
+The pages need the backend running on port 8080 (see `backend/README.md`: copy `.env.example` to `.env`, run `docker compose up -d`, then `./mvnw spring-boot:run` in `backend/`). It comes with test announcements, so the list is not empty. Without the backend, the list page shows "Could not load the announcements. Please try again later."
 
-The backend URL is set in one place, in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`).
+The backend URL is set in `src/environments/environment.ts` (and `environment.development.ts` for `npm start`): port 8080 on the same host the page was opened from, so `http://localhost:8080` on the laptop.
+
+### Opening the app from a phone
+
+Start the development server so other devices on the same Wi-Fi can reach it:
+
+```bash
+npm start -- --host 0.0.0.0
+```
+
+Then open `http://<laptop IP>:4200` on the phone. The backend also needs the laptop IP in `.env` (`CORS_ALLOWED_ORIGINS` and `FRONTEND_URL`); the steps are in `docs/usage-guide.md`. Browsers only give the location on HTTPS or `localhost`, so "Closest first" and the radius filter only work on the laptop.
 
 ### Pages
 
-| Route                | Page                                 |
-| -------------------- | ------------------------------------ |
-| `/announcements`     | List of announcements                |
-| `/announcements/new` | Form for posting a pet               |
-| `/map`               | Map with a pin for each announcement |
+| Route                | Page                                                      |
+| -------------------- | --------------------------------------------------------- |
+| `/announcements`     | List of announcements (`/` and unknown addresses go here) |
+| `/announcements/new` | Form for posting a pet                                    |
+| `/announcements/:id` | Details of one announcement                               |
+| `/map`               | Map with a pin for each announcement                      |
 
 ### Tests and coverage
 
@@ -55,6 +66,15 @@ npm run build
 ```
 
 The result is in `dist/frontend`.
+
+## Details page
+
+`/announcements/:id` shows one announcement. It opens from a card in the list (the whole card is clickable), from "View details" on a map pin, from the QR code on a poster, and after posting the form.
+
+- **Gallery:** the main photo first, shown whole (portrait and landscape photos are not cropped), and the other photos as thumbnails.
+- **Details:** only the fields that are filled in, the contact with a `tel:` link, a small map with the pin, and "Download poster".
+- **Status:** "Mark as resolved" and "Mark as active" call `PATCH /announcements/{id}/status` and show the announcement that the backend returns.
+- **Not found:** an id that is not a positive whole number, or a 404 from the backend, shows "Announcement not found" with a link back to the list.
 
 ## Map page
 
@@ -88,13 +108,23 @@ The list page has a filter bar (`<app-filter-bar>`, in `components/filter-bar`) 
 ```
 src/
 ├── app/
-│   ├── pages/        pages (list, form, map)
+│   ├── pages/        pages (list, form, details, map)
 │   ├── components/   reusable pieces (header, announcement card, map popup, filter bar, map)
 │   ├── services/     calls to the backend, browser location, AnnouncementSearch
-│   ├── models/       data types (Announcement, Photo, filters, MapPin, Coordinates)
-│   └── shared/       Leaflet icon helper
-└── environments/     backend URL
+│   ├── models/       data types and labels (Announcement, Photo, filters, MapPin, Coordinates)
+│   └── shared/       Leaflet icon helper, DATE_FORMAT
+├── environments/     backend URL
+└── styles.css        global styles and the CSS variables
 ```
+
+## Conventions
+
+- **Colors, shadows and corners:** only the CSS variables from `src/styles.css` (`var(--color-primary)`, `var(--color-text-muted)`, `var(--radius-control)`...), never hex codes. A new color is first added there as a variable, named by its role.
+- **Dates:** the `date` pipe with `DATE_FORMAT` from `shared/date-format.ts` ("30 Oct 2026, 18:00").
+- **Types and species:** `TYPE_LABELS` and `SPECIES_LABELS` ("Lost", "Cat"), never the raw `LOST` or `CAT`.
+- **Wording:** "lost pet" for LOST, "found animal" for FOUND, "animal" when a text is about both, and a full stop at the end of every message.
+- **Formatting:** Prettier (`.prettierrc`). Before a pull request: `npm run test:coverage`, `npm run build` (no warnings) and `npx prettier --check src`.
+- **Phone screens:** below 600px every page has a one-column layout; check new pages in DevTools with a phone size.
 
 ## Map component
 
@@ -117,4 +147,4 @@ imports: [MapView];
 | `popup`              | A `<ng-template let-pin>` shown in a popup when a pin is clicked. `pin.id` finds what it stands for.  |
 | `(locationSelected)` | Emits `{ latitude, longitude }` (6 decimals) where the user clicked.                                  |
 
-The map does not add a pin by itself when it is clicked. The page decides: for the form, put the clicked location in `pins` and in the latitude and longitude fields. The pin colors are the `--color-lost` and `--color-found` variables in `src/styles.css`. The map is 400px high by default, set another `height` on `app-map` to change it.
+The map does not add a pin by itself when it is clicked. The page decides: for the form, put the clicked location in `pins` and in the latitude and longitude fields. The pin colors are the `--color-lost` and `--color-found` variables in `src/styles.css`. The map is 450px high by default (380px and 320px on smaller screens), set another `height` on `app-map` to change it.
