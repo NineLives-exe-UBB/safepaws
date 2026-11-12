@@ -29,7 +29,7 @@
     @if (distanceText(); as distance) {
       <p class="distance">{{ distance }}</p>
     }
-        <p class="date">{{ announcement().eventDate | date: dateFormat }}</p>
+    <p class="date">{{ announcement().eventDate | date: dateFormat }}</p>
     <a class="poster-button" [href]="posterUrl()" download>Download poster</a>
   </div>
 </article>

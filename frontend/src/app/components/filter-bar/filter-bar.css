@@ -56,3 +56,24 @@ select:disabled {
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
+
+@media (max-width: 600px) {
+  .filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 12px;
+  }
+
+  .field {
+    min-width: 0;
+  }
+
+  select,
+  input {
+    min-width: 0;
+  }
+
+  .clear-button {
+    grid-column: 1 / -1;
+  }
+}
