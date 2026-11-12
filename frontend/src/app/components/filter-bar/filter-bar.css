@@ -5,7 +5,7 @@
   align-items: end;
   margin-bottom: 24px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -26,7 +26,7 @@ select,
 input {
   padding: 8px;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   font: inherit;
   background-color: var(--color-surface);
 }
@@ -39,11 +39,12 @@ select:disabled {
 .clear-button {
   padding: 8px 14px;
   border: 1px solid var(--color-primary);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background-color: transparent;
   color: var(--color-primary);
   font: inherit;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .clear-button:hover {

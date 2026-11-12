@@ -6,7 +6,7 @@ app-map {
 .message,
 .note {
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
 }
 
