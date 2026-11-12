@@ -160,11 +160,11 @@
             (form.controls.area.hasError('required') || form.controls.area.hasError('pattern')) &&
             form.controls.area.touched
           ) {
-            <small class="field-error">Location is required.</small>
+            <small class="field-error">Area is required.</small>
           }
 
           @if (form.controls.area.hasError('maxlength')) {
-            <small class="field-error">Location cannot exceed 150 characters.</small>
+            <small class="field-error">Area cannot exceed 150 characters.</small>
           }
 
           @if (serverError('area'); as message) {
