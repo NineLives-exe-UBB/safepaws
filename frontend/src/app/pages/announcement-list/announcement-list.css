@@ -6,7 +6,7 @@
 
 .message {
   padding: 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
   text-align: center;
 }

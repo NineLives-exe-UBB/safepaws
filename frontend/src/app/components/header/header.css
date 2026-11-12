@@ -33,3 +33,24 @@
 .nav a.active {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
+@media (max-width: 600px) {
+  .header {
+    padding: 10px 16px;
+  }
+
+  .nav {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .nav a {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+}

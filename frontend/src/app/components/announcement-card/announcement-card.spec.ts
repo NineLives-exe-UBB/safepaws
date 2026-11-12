@@ -78,19 +78,19 @@ describe('AnnouncementCard', () => {
     expect(nullDistance.querySelector('.distance')).toBeNull();
   });
 
-  it('should show the LOST label', async () => {
+  it('should show the readable LOST label', async () => {
     const compiled = await render(announcement);
     const label = compiled.querySelector('.label');
 
-    expect(label?.textContent).toContain('LOST');
+    expect(label?.textContent?.trim()).toBe('Lost');
     expect(label?.classList).toContain('lost');
   });
 
-  it('should show the FOUND label', async () => {
+  it('should show the readable FOUND label', async () => {
     const compiled = await render({ ...announcement, type: 'FOUND' });
     const label = compiled.querySelector('.label');
 
-    expect(label?.textContent).toContain('FOUND');
+    expect(label?.textContent?.trim()).toBe('Found');
     expect(label?.classList).toContain('found');
   });
 
@@ -134,5 +134,19 @@ describe('AnnouncementCard', () => {
     expect(compiled.querySelector('.card-link')?.getAttribute('href')).toBe(
       `/announcements/${announcement.id}`,
     );
+  });
+
+  it('should mark a resolved announcement', async () => {
+    const compiled = await render({ ...announcement, status: 'RESOLVED' });
+
+    expect(compiled.querySelector('.resolved-badge')?.textContent?.trim()).toBe('Resolved');
+    expect(compiled.querySelector('.card')?.classList).toContain('resolved');
+  });
+
+  it('should not mark an active announcement as resolved', async () => {
+    const compiled = await render(announcement);
+
+    expect(compiled.querySelector('.resolved-badge')).toBeNull();
+    expect(compiled.querySelector('.card')?.classList).not.toContain('resolved');
   });
 });

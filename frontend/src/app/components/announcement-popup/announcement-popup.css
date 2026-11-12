@@ -27,10 +27,11 @@
   align-self: flex-start;
   margin-top: 6px;
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background-color: var(--color-primary);
   color: var(--color-on-primary);
   text-decoration: none;
+  font-weight: 600;
 }
 
 .details-link:hover {

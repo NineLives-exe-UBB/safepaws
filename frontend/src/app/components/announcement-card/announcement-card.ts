@@ -3,6 +3,8 @@ import { Component, computed, inject, input } from '@angular/core';
 import { AnnouncementSummary, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { RouterLink } from '@angular/router';
+import { TYPE_LABELS } from '../../models/announcement-filters.model';
+import { DATE_FORMAT } from '../../shared/date-format';
 
 @Component({
   imports: [DatePipe, RouterLink],
@@ -15,11 +17,14 @@ export class AnnouncementCard {
 
   readonly announcement = input.required<AnnouncementSummary>();
 
+  protected readonly dateFormat = DATE_FORMAT;
+
   protected readonly mainPhotoUrl = computed(() =>
     this.announcementService.mainPhotoUrl(this.announcement().photos),
   );
 
   protected readonly speciesLabel = computed(() => SPECIES_LABELS[this.announcement().species]);
+  protected readonly typeLabel = computed(() => TYPE_LABELS[this.announcement().type]);
 
   protected readonly distanceText = computed(() => {
     const distanceKm = this.announcement().distanceKm;

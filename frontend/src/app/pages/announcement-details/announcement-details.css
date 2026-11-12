@@ -12,7 +12,7 @@
 
 .message {
   padding: 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
   text-align: center;
 }
@@ -31,7 +31,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   padding: 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -43,7 +43,7 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background-color: var(--color-surface-muted);
 }
 
@@ -70,6 +70,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-on-primary);
+  text-transform: uppercase;
 }
 
 .label.lost {
@@ -183,7 +184,7 @@
 .button {
   padding: 10px 16px;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background-color: var(--color-primary);
   color: var(--color-on-primary);
   font: inherit;

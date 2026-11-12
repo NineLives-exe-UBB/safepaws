@@ -95,15 +95,16 @@ class PosterServiceTest {
             String text = new PdfTextExtractor(reader).getTextFromPage(1);
             assertThat(text)
                     .contains("LOST")
-                    .contains("Oscar")
-                    .contains("Dog")
+                    .contains("Have you seen Oscar?")
+                    .contains("Lost dog")
                     .doesNotContain("DOG")
                     .contains("Golden Retriever")
                     .contains("Golden")
                     .contains("Red nylon collar with bell")
-                    .contains("2026-11-01 09:15")
+                    .contains("LOST ON")
+                    .contains("01 Nov 2026, 09:15")
                     .contains("Mănăștur, Cluj-Napoca")
-                    .contains("IF SEEN, PLEASE CONTACT:")
+                    .contains("If you see Oscar, please call")
                     .contains("Ion Radu")
                     .contains("0740123456")
                     .doesNotContain("Ion Radu - ")
@@ -132,17 +133,19 @@ class PosterServiceTest {
             assertThat(reader.getNumberOfPages()).isEqualTo(1);
             String text = new PdfTextExtractor(reader).getTextFromPage(1);
             assertThat(text)
-                    .contains("IS THIS YOUR PET? CONTACT:")
-                    .doesNotContain("IF SEEN")
-                    .contains("Cat")
+                    .contains("FOUND")
+                    .contains("Is this your cat?")
+                    .contains("Found cat")
+                    .contains("FOUND ON")
+                    .contains("Recognize this cat? Please call")
+                    .doesNotContain("If you see")
                     .doesNotContain("CAT")
                     .contains("No photo available")
                     .contains("Florești, Cluj")
                     .contains("0740123456")
                     .contains("Scan for updates")
-                    .doesNotContain("NAME:")
-                    .doesNotContain("BREED:")
-                    .doesNotContain("MARKS:")
+                    .doesNotContain("BREED")
+                    .doesNotContain("DISTINCTIVE MARKS")
                     .doesNotContain("N/A")
                     .doesNotContain("Unknown / Mixed")
                     .doesNotContain("None specified");
@@ -168,8 +171,57 @@ class PosterServiceTest {
             assertThat(text)
                     .contains("LOST")
                     .contains("RESOLVED")
+                    .contains("Rex is back home!")
                     .contains("Bartolomeu, Brașov")
                     .contains("...");
+        }
+    }
+
+    @Test
+    void generatePosterUsesTheSpeciesWhenThePetHasNoName() throws Exception {
+        Announcement lostDog = storedAnnouncement(4L, AnnouncementType.LOST, Species.DOG, null);
+        Announcement foundOther = storedAnnouncement(5L, AnnouncementType.FOUND, Species.OTHER, null);
+
+        when(announcementRepository.findById(4L)).thenReturn(Optional.of(lostDog));
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(foundOther));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(4L))).thenReturn(List.of());
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(5L))).thenReturn(List.of());
+
+        try (PdfReader reader = new PdfReader(posterService.generatePoster(4L))) {
+            assertThat(new PdfTextExtractor(reader).getTextFromPage(1))
+                    .contains("Have you seen this dog?")
+                    .contains("If you see this dog, please call");
+        }
+        try (PdfReader reader = new PdfReader(posterService.generatePoster(5L))) {
+            assertThat(new PdfTextExtractor(reader).getTextFromPage(1))
+                    .contains("Is this your animal?")
+                    .contains("Found animal");
+        }
+    }
+
+    @Test
+    void generatePosterShowsAResolvedFoundAnimalAsBackWithItsFamily() throws Exception {
+        Announcement announcement = storedAnnouncement(6L, AnnouncementType.FOUND, Species.CAT, null);
+        announcement.setStatus(AnnouncementStatus.RESOLVED);
+
+        BufferedImage img = new BufferedImage(40, 60, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream imgOut = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", imgOut);
+        Photo photoEntity = mock(Photo.class);
+        when(photoEntity.getData()).thenReturn(imgOut.toByteArray());
+        PhotoMetadata metadata = new PhotoMetadata(11L, 6L, "image/png", 500L, "cat.png", true, CREATED_AT);
+
+        when(announcementRepository.findById(6L)).thenReturn(Optional.of(announcement));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(6L))).thenReturn(List.of(metadata));
+        when(photoRepository.findById(11L)).thenReturn(Optional.of(photoEntity));
+
+        try (PdfReader reader = new PdfReader(posterService.generatePoster(6L))) {
+            assertThat(reader.getNumberOfPages()).isEqualTo(1);
+            assertThat(new PdfTextExtractor(reader).getTextFromPage(1))
+                    .contains("FOUND")
+                    .contains("RESOLVED")
+                    .contains("Back with its family!")
+                    .doesNotContain("No photo available");
         }
     }
 
