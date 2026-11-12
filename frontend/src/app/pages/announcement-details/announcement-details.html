@@ -74,11 +74,11 @@
               <dd>{{ announcement.distinctiveMarks }}</dd>
             }
             <dt>{{ announcement.type === 'LOST' ? 'Lost on' : 'Found on' }}</dt>
-            <dd>{{ announcement.eventDate | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dd>{{ announcement.eventDate | date: dateFormat }}</dd>
             <dt>Area</dt>
             <dd>{{ announcement.area }}</dd>
             <dt>Posted on</dt>
-            <dd>{{ announcement.createdAt | date: 'dd MMM yyyy, HH:mm' }}</dd>
+            <dd>{{ announcement.createdAt | date: dateFormat }}</dd>
           </dl>
 
           <div class="contact">

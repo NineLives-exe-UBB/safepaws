@@ -8,6 +8,7 @@ import { DatePipe } from '@angular/common';
 import { TYPE_LABELS } from '../../models/announcement-filters.model';
 import { MapView } from '../../components/map/map';
 import { MapPin } from '../../models/map.model';
+import { DATE_FORMAT } from '../../shared/date-format';
 
 type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 
@@ -20,6 +21,8 @@ type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 export class AnnouncementDetails {
   private readonly announcementService = inject(AnnouncementService);
   private readonly title = inject(Title);
+
+  protected readonly dateFormat = DATE_FORMAT;
 
   protected readonly state = signal<PageState>('loading');
   protected readonly announcement = signal<Announcement | null>(null);

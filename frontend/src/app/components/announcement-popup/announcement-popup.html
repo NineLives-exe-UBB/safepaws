@@ -4,6 +4,6 @@
   }
   <h3 class="title">{{ title() }}</h3>
   <p class="area">{{ announcement().area }}</p>
-  <p class="date">{{ announcement().eventDate | date: 'dd MMM yyyy, HH:mm' }}</p>
+  <p class="date">{{ announcement().eventDate | date: dateFormat }}</p>
   <a class="details-link" [routerLink]="['/announcements', announcement().id]">View details</a>
 </article>

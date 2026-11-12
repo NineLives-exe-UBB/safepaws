@@ -4,6 +4,7 @@ import { AnnouncementSummary, SPECIES_LABELS } from '../../models/announcement.m
 import { AnnouncementService } from '../../services/announcement.service';
 import { RouterLink } from '@angular/router';
 import { TYPE_LABELS } from '../../models/announcement-filters.model';
+import { DATE_FORMAT } from '../../shared/date-format';
 
 @Component({
   imports: [DatePipe, RouterLink],
@@ -15,6 +16,8 @@ export class AnnouncementCard {
   private readonly announcementService = inject(AnnouncementService);
 
   readonly announcement = input.required<AnnouncementSummary>();
+
+  protected readonly dateFormat = DATE_FORMAT;
 
   protected readonly mainPhotoUrl = computed(() =>
     this.announcementService.mainPhotoUrl(this.announcement().photos),
