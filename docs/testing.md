@@ -6,14 +6,14 @@ How SafePaws is tested: automated tests, manual test scenarios and how to report
 
 Both parts fail the build when coverage is under 70%.
 
-| Part | Command | What it needs | Last run (11 Nov) |
+| Part | Command | What it needs | Last run (12 Nov) |
 |---|---|---|---|
-| backend | `cd backend && ./mvnw clean verify` | Docker running (the repository and migration tests start a PostgreSQL with Testcontainers) | 115 tests, 97.1% instructions |
-| frontend | `cd frontend && npm run test:coverage` | `npm ci` after every pull that changes `package-lock.json` | 170 tests, 88.2% statements |
+| backend | `cd backend && ./mvnw clean verify` | Docker running (the repository and migration tests start a PostgreSQL with Testcontainers) | 127 tests, 97.0% instructions (87% branches) |
+| frontend | `cd frontend && npm run test:coverage` | `npm ci` after every pull that changes `package-lock.json` | 214 tests, 92.2% statements (95.1% lines) |
 
 The test counts are the numbers the runners report, including each case of a parameterized test. Coverage reports: `backend/target/site/jacoco/index.html` and `frontend/coverage/index.html`.
 
-The backend threshold is in `pom.xml` (JaCoCo instruction coverage, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`: statements, branches, functions and lines) and applies to the total, not per file. The form page is the weakest file (73.6% statements, 69.7% branches, 65.7% functions), so new form code without tests can pull the total down quickly.
+The backend threshold is in `pom.xml` (JaCoCo instruction coverage, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`: statements, branches, functions and lines) and applies to the total, not per file. The form page is still the weakest (81.4% statements, 81.3% branches, 88.6% functions), so new form code without tests can pull the total down quickly.
 
 All CI jobs (backend tests, frontend tests and production build, secret scan, Flyway migration guard) run on every pull request through GitHub Actions (`.github/workflows/ci.yml`) and are required before merging into `main`.
 
@@ -21,7 +21,7 @@ Where the tests live:
 
 - backend: `backend/src/test/java/.../safepaws/`, same tree as `main`. Frameworks: JUnit 5, Mockito, Spring Boot Test, Testcontainers.
   - `controller/`: `@WebMvcTest` slice tests (status codes, JSON, validation, query parameters) with the services mocked.
-  - `service/`: unit tests with mocked repositories (announcements, filters and distances, photos, poster).
+  - `service/`: unit tests with mocked repositories (announcements, filters and distances, status, photos, QR code, poster).
   - `dto/`: plain unit tests for the `GET /announcements` filter rules (`AnnouncementFilterTest`).
   - `repository/`: `@DataJpaTest` tests against a real PostgreSQL started by Testcontainers: the repository, the filter specifications (`AnnouncementSpecificationsTest`) and the migrations (`SearchSupportMigrationTest`, `DemoDataMigrationTest`, `DemoPhotosMigrationTest`). The demo data tests fail if a migration adds an incomplete announcement or one without exactly one main photo.
 - frontend: a `*.spec.ts` next to each component, page, service and the filters model, run with Vitest (jsdom, no browser needed).
@@ -33,13 +33,13 @@ Where the tests live:
 3. API is at `http://localhost:8080`, Swagger UI at `http://localhost:8080/swagger-ui.html`
 4. frontend: `cd frontend && npm start`, then open `http://localhost:4200`
 
-The frontend connects directly to the backend at `http://localhost:8080`. If port 8080 is taken, start the backend with `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8099` for API testing only; UI testing needs the backend on 8080.
+The frontend calls the backend on port 8080 of the host it was opened from (`http://localhost:8080` on the laptop). To test from a phone, follow "Opening the app from a phone" in `usage-guide.md`. If port 8080 is taken, start the backend with `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8099` for API testing only; UI testing needs the backend on 8080.
 
 Test data comes from the Flyway migrations (`V2` to `V5`, see `database.md`): 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates) in 8 cities (Cluj-Napoca and nearby, Brașov, Timișoara, Iași, Sibiu, Oradea), and 25 photos. Every announcement has exactly one main photo; Mitzi and Rex keep photo ids 1 and 2, and announcements 9, 13 and 21 have 2 photos each (gallery). `Iosefin, Timisoara` and `Tatarasi, Iasi` are written without diacritics on purpose, for the search. The dates of the announcements added in `V3` depend on when the migration ran, so scenarios don't use exact dates. To test an announcement without photos or without coordinates, create one through the API. To reset the data: `docker compose down -v`, then start again.
 
 ## 3. Test scenarios
 
-Status: **ready** = can be run now, **blocked** = feature not on `main` yet; the scenario is written so it can run as soon as it lands. The owner is who to review the scenario with.
+Status: **ready** = can be run now, **blocked** = feature not on `main` yet; the scenario is written so it can run as soon as it lands. The owner is who to review the scenario with. Since 12 Nov every scenario is ready.
 
 Field rules for an announcement (from `AnnouncementRequest`):
 required `type`, `species`, `eventDate`, `area`, `contactName`, `contactPhone`; `species` is `CAT`, `DOG` or `OTHER`; `eventDate` not in the future; `contactPhone` 7 to 15 digits with optional `+`; `latitude` and `longitude` both or none; max lengths: petName 50, breed 100, color 100, distinctiveMarks 500, area 150, contactName 100, contactPhone 20. The form additionally requires the location.
@@ -87,32 +87,36 @@ Page `/announcements` (`/` redirects there), endpoints `GET /announcements`, `GE
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| C1 | list with data | open `/announcements` on a fresh database | 18 cards (only ACTIVE by default), newest event date first, so the order matches the date on each card; each card shows the main photo, LOST or FOUND label, species, pet name when there is one, area, date, `Download poster`; a card without photos (create one through the API) shows `No photo` | ready |
+| C1 | list with data | open `/announcements` on a fresh database | 18 cards (only ACTIVE by default), newest event date first, so the order matches the date on each card; each card shows the main photo, LOST or FOUND label, species, pet name when there is one, area, date (`30 Oct 2026, 18:00`), `Download poster`; a card without photos (create one through the API) shows `No photo` | ready |
 | C2 | empty list | `DELETE FROM announcement` in psql, reload | API returns `[]`, page shows `There are no announcements yet.` (reset data afterwards) | ready |
 | C3 | backend down | stop the backend, reload | page shows `Could not load the announcements. Please try again later.` | ready |
 | C4 | one announcement | `GET /announcements/1` | `200`, all fields of Mitzi, `status: ACTIVE` | ready |
 | C5 | unknown id | `GET /announcements/99999` | `404`, `message: Announcement not found with id: 99999` | ready |
 | C6 | non numeric id | `GET /announcements/abc` | `400`, field error on `id` | ready |
 | C7 | nav | click `Post announcement`, `Map`, `Announcements` and `SafePaws` in the header | goes to the form, the map page, the list and the list; the current link is highlighted | ready |
-| C8 | new post shows up | post an announcement through the form, go back to the list | the new card is there without a manual reload, at the right place for its event date | ready |
+| C8 | new post shows up | post an announcement through the form, then open the list | the new card is there, at the right place for its event date | ready |
+| C9 | resolved cards | choose `Resolved` in the status dropdown | each card has a grey `RESOLVED` badge, a grey photo and a muted background | ready |
+| C10 | open a card | click anywhere on a card except `Download poster` | the details page of that announcement opens; `Download poster` only downloads | ready |
+| C11 | keyboard | in Chrome, press Tab through the list | the whole card is outlined, Enter opens the details page, the next Tab goes to `Download poster` | ready |
 
 ### D. Poster
 
-Endpoint `GET /announcements/{id}/poster` (file `announcement-{id}-poster.pdf`), button `Download poster` on each card. Owner: Alexandru.
+Endpoint `GET /announcements/{id}/poster` (file `announcement-{id}-poster.pdf`), button `Download poster` on each card and on the details page. Owners: Alexandru (poster), Patrick (QR code), Vanessza (redesign).
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
 | D1 | download | click `Download poster` on Mitzi | a PDF downloads, `Content-Type: application/pdf`, opens without errors, one A4 page | ready |
-| D2 | content | open the PDF | LOST or FOUND banner, main photo, name, species as text (`Cat`, not `CAT`), breed, color, marks, date, area, contact name and phone, QR box with `Scan for updates` | ready |
+| D2 | content | open the PDF | large `LOST` (red) or `FOUND` (green) badge, the title `Have you seen Mitzi?`, `Lost cat · <area>`, a large photo with rounded corners, `BREED`, `COLOR`, `LOST ON`, `AREA`, `DISTINCTIVE MARKS` with their values, a contact card with `If you see Mitzi, please call`, the name and the phone, and the QR code with `Scan for updates` | ready |
 | D3 | no photo | create an announcement through the API (it has no photos), download its poster | still generates, grey `No photo available` box instead of a gap | ready |
-| D4 | missing fields | poster for an announcement with only the required fields, and for a FOUND one without a name | no `Name`, `Breed`, `Color` rows, no `null` or `N/A` anywhere | ready |
-| D5 | long text | `distinctiveMarks` with 450 characters | everything stays on one A4 page, the text does not overflow its row | ready |
-| D6 | resolved | poster for a RESOLVED announcement (e.g. Luna) | clear `RESOLVED` mark under the banner | ready |
+| D4 | missing fields | poster for an announcement with only the required fields, and for a FOUND one without a name | no `BREED`, `COLOR` or `DISTINCTIVE MARKS` for empty fields, no `null` or `N/A` anywhere; the FOUND one says `Is this your cat?` and `Recognize this cat? Please call` | ready |
+| D5 | long text | `distinctiveMarks` with 450 characters | everything stays on one A4 page, the text is cut with `...` and does not overflow | ready |
+| D6 | resolved | poster for a RESOLVED announcement (e.g. Luna) | grey `RESOLVED` badge next to the type, the title `Luna is back home!` (FOUND: `Back with its family!`), grey photo | ready |
 | D7 | diacritics | posters for Mănăștur, Florești and Brașov announcements | `ă`, `ș`, `ț` print correctly, no boxes or `?` | ready |
 | D8 | photo shapes | posters for announcements with portrait and landscape photos (demo photos are 500 or 960 px wide) | the photo fits the page without being stretched and prints clearly | ready |
 | D9 | unknown id | `GET /announcements/99999/poster` | `404` in the standard error format | ready |
-| D10 | QR on poster | open a poster | a real QR code instead of the `QR CODE` placeholder | blocked (Patrick, QR) |
-| D11 | QR scan | print the poster, scan from 2 to 3 meters with a phone on the same Wi-Fi | opens the announcement page for that id | blocked (Patrick, QR; Vanessza, details page) |
+| D10 | QR on poster | open a poster | a real QR code instead of the `QR CODE` placeholder | ready |
+| D11 | QR scan | set `FRONTEND_URL` to the laptop IP (see `usage-guide.md`), print the poster, scan from 2 to 3 meters with a phone on the same Wi-Fi | opens the details page of that announcement | ready |
+| D12 | date and layout | open any poster | the date is in the app format (`30 Oct 2026, 18:00`), the badge, the title and the area line are equally spaced, the contact card is at the bottom of the page | ready |
 
 ### E. Filters
 
@@ -128,7 +132,7 @@ Endpoint `GET /announcements/{id}/poster` (file `announcement-{id}-poster.pdf`),
 | E6 | invalid value | `type=lost`, `species=HAMSTER`, `status=DELETED` | `400` with the allowed values (enum values are case sensitive) | ready |
 | E7 | filter bar | pick Type, Species, Status in the bar | list updates, URL gets the parameters | ready |
 | E8 | reload and share | reload or open a filtered URL, e.g. `/announcements?species=CAT&color=grey` | the same filters are selected and applied | ready |
-| E9 | no match | filter until nothing matches | `No announcements match your filters`, with a `Clear filters` button that removes the filters and the URL parameters | ready |
+| E9 | no match | filter until nothing matches | `No announcements match your filters.`, with a `Clear filters` button that removes the filters and the URL parameters | ready |
 
 ### F. Text search
 
@@ -186,7 +190,7 @@ Page `/map`. Owner: Luca.
 | H8 | no results | filters with no results | no pins, a clear message, no error | ready |
 | H9 | no coordinates | create an announcement through the API without coordinates, open `/map` | no pin for it, the note `1 announcement has no location and is not on the map.` | ready |
 | H10 | backend down | stop the backend, open `/map` | error message, no crash | ready |
-| H11 | details link | click `View details` in a popup | opens the announcement details page | blocked (Vanessza, details page; today it goes back to the list) |
+| H11 | details link | click `View details` in a popup | opens the announcement details page | ready |
 
 ### I. Form, photo upload and location picker
 
@@ -194,21 +198,21 @@ Page `/announcements/new`. Owner: Victor.
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| I1 | happy path | fill every field, pick the location on the map, add 2 photos, submit | `Your announcement and photos were uploaded successfully!`, the card is in the list with its main photo, the pin is on the map | ready |
-| I2 | without photos | same as I1 without photos | `Your announcement was created successfully!` with a `View announcements` link | ready |
-| I3 | missing required | submit with area empty and no location picked | `Location is required.` and `Please select a location on the map before submitting.`, an error next to each empty field, nothing sent | ready |
+| I1 | happy path | fill every field, pick the location on the map, add 2 photos, submit | `Your announcement and photos were uploaded successfully!`, then its details page opens with both photos; the card is in the list with its main photo, the pin is on the map | ready |
+| I2 | without photos | same as I1 without photos | `Your announcement was created successfully!` with a `View announcement` link | ready |
+| I3 | missing required | submit with area empty and no location picked | `Area is required.` and `Please select a location on the map before submitting.`, an error next to each empty field, nothing sent | ready |
 | I4 | invalid values | date and time in the future, phone `12ab` | `Date and time cannot be in the future.`, `Enter a valid phone number (7–15 digits, optionally starting with +).`, nothing sent | ready |
-| I5 | location picker | click on the map, then click somewhere else | `Selected location` updates, one pin only | ready |
+| I5 | location picker | click on the map, then click somewhere else | `Selected coordinates` updates, one pin only, red for Lost and green for Found | ready |
 | I6 | location allowed | allow location | map centered on the user | ready |
 | I7 | location refused | block location | map centered on Romania, picking still works | ready |
 | I8 | date picker | open the date picker | future dates cannot be picked | ready |
 | I9 | photos | pick one, then several photos | previews shown, the first is labeled `Main photo`, `Remove` takes a photo out; after submit the first is the main one | ready |
 | I10 | wrong file | pick a `.pdf` or a 6 MB photo | clear error; if the announcement was created, `Your announcement was created, but the photos could not be uploaded` | ready |
 | I11 | special characters | color `Black & white`, breed `2 white paws`, name `Max 2` | accepted, like the backend (A13) | ready |
-| I12 | switch type | fill some fields, switch Lost to Found | values are kept | ready |
+| I12 | switch type | fill some fields, pick a location, switch `Lost pet` to `Found animal` | values are kept, the pin turns green | ready |
 | I13 | disabled while sending | submit with large photos, try to edit during `Submitting...` | whole form disabled | ready |
 | I14 | backend field errors | submit something only the backend rejects | each error shown next to its field | ready |
-| I15 | redirect | submit a valid announcement | goes to the new announcement's page | blocked (Vanessza, details page) |
+| I15 | redirect | submit a valid announcement | the success message shows, and after about 1.5 s the new announcement's details page opens | ready |
 
 ### J. Announcement details page
 
@@ -216,14 +220,16 @@ Page `/announcements/:id`. Owner: Vanessza.
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| J1 | open from list | click a card (anywhere on it) | details page, title has the pet name or species | blocked |
-| J2 | gallery | open announcement 9, 13 or 21 | main photo large, the other as a clickable thumbnail | blocked |
-| J3 | details | open Mitzi | readable labels (`Cat`, `Lost`), empty fields hidden, no `null` | blocked |
-| J4 | contact | tap the phone on a phone | `tel:` link starts a call | blocked |
-| J5 | map | open any announcement | small map with its pin | blocked |
-| J6 | poster | click `Download poster` | same PDF as D1 | blocked |
-| J7 | not found | open `/announcements/99999` | friendly page with a link back to the list | blocked |
-| J8 | resolved badge | open a RESOLVED announcement | `RESOLVED` badge | blocked |
+| J1 | open from list | click a card (anywhere on it) | details page, the tab title is the pet name or the species (`Mitzi \| SafePaws`) | ready |
+| J2 | gallery | open announcement 9, 13 or 21 | main photo large and whole (not cropped or stretched), the other as a clickable thumbnail; clicking it changes the large photo | ready |
+| J3 | details | open Mitzi | `Lost cat` under the name, readable labels (`Breed`, `Lost on`, `Area`, `Posted on`), dates as `30 Oct 2026, 18:00`, empty fields hidden, no `null` | ready |
+| J4 | contact | tap the phone on a phone | `tel:` link starts a call | ready |
+| J5 | map | open any announcement | small map with its pin; no map for an announcement without coordinates | ready |
+| J6 | poster | click `Download poster` | same PDF as D1 | ready |
+| J7 | not found | open `/announcements/99999` and `/announcements/abc` | `Announcement not found`, with a link back to the list | ready |
+| J8 | resolved badge | open a RESOLVED announcement | `Resolved` badge next to the name, grey photo | ready |
+| J9 | backend down | stop the backend, open an announcement | `Could not load the announcement. Please try again later.`, no crash | ready |
+| J10 | back | click `← Back to announcements` | the list opens | ready |
 
 ### K. Resolved status
 
@@ -231,12 +237,27 @@ Endpoint `PATCH /announcements/{id}/status`, body `{ "status": "RESOLVED" }` or 
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| K1 | resolve | `PATCH` with `RESOLVED` | `200`; `GET /announcements/{id}` shows `RESOLVED`; it leaves the default list and the map | blocked |
-| K2 | back to active | `PATCH` with `ACTIVE` | back in the default list | blocked |
-| K3 | unknown id | `PATCH /announcements/99999/status` | `404`, standard format | blocked |
-| K4 | invalid status | body `{ "status": "DONE" }` or `{}` | `400`, standard format | blocked |
-| K5 | button | `Mark as resolved` on the details page, then `Mark as active` | badge and list update | blocked |
-| K6 | poster after resolve | resolve, download the poster | `RESOLVED` mark (D6) | blocked |
+| K1 | resolve | `PATCH` with `RESOLVED` | `200`, the whole announcement with `status: RESOLVED`; `GET /announcements/{id}` shows `RESOLVED`; it leaves the default list and the map | ready |
+| K2 | back to active | `PATCH` with `ACTIVE` | back in the default list | ready |
+| K3 | unknown id | `PATCH /announcements/99999/status` | `404`, standard format | ready |
+| K4 | invalid status | body `{ "status": "DONE" }` or `{}` | `400`, standard format, `Invalid value 'DONE', allowed values: ACTIVE, RESOLVED` or `Status is required` | ready |
+| K5 | button | `Mark as resolved` on the details page, then `Mark as active` | the badge and the grey photo appear and disappear, the button text changes, a reload keeps the status | ready |
+| K6 | poster after resolve | resolve, download the poster | `RESOLVED` badge (D6) | ready |
+| K7 | save fails | stop the backend, press `Mark as resolved` | `Could not update the status. Please try again.`, the status does not change, the button works again | ready |
+| K8 | double click | double-click `Mark as resolved` | one request only (DevTools, Network), the button is disabled while saving | ready |
+
+### L. Phone screens and consistency
+
+Every page in Chrome DevTools with the iPhone SE size, and on a real phone (see `usage-guide.md`). Owner: Vanessza.
+
+| ID | Scenario | Steps | Expected | Status |
+|---|---|---|---|---|
+| L1 | no side scrolling | open the list, the map, the form and a details page | nothing can be dragged left or right | ready |
+| L2 | header | open any page | the three links fit on one row as tabs, the current one is highlighted | ready |
+| L3 | filters | open the list | the filters are in two columns, `Clear filters` is full width | ready |
+| L4 | form and details | open the form and a details page | one column, buttons full width | ready |
+| L5 | same date everywhere | compare a card, its map popup, its details page and its poster | the same date, `30 Oct 2026, 18:00` | ready |
+| L6 | readable labels | check cards, details pages and posters | `Lost`, `Found`, `Cat`, never `LOST` written in the page text or `CAT` | ready |
 
 ## 4. Last run
 
@@ -254,15 +275,21 @@ Run on 11 Nov 2026 on `main` (`6ab521e`), fresh database (all 5 migrations appli
 Findings from this run:
 
 - D5: long distinctive marks are cut after about 150 characters, in the middle of a word (`text th...`), although a quarter of the page is still empty. The poster stays on one page, but part of the description is lost.
-- D10: the QR box prints the placeholder text `QR CODE` until Patrick's QR service is on `main`. Do not show a printed poster in the demo before that.
+- D10: the QR box prints the placeholder text `QR CODE` until Patrick's QR service is on `main`. Do not show a printed poster in the demo before that. (Fixed: the QR code is on `main` since 12 Nov.)
 - G2, E6: `sort=NEWEST` and `type=lost` are rejected. This is intended (the values are case sensitive), while the search parameters ignore case, so the frontend must always send lowercase `sort` and uppercase enums.
-- I11: the form only accepts letters in pet name, breed and color, so it rejects `Black & white`, `2 white paws` and `Max 2`, which the backend accepts (Victor's form fixes card).
+- I11: the form only accepts letters in pet name, breed and color, so it rejects `Black & white`, `2 white paws` and `Max 2`, which the backend accepts (Victor's form fixes card). (Fixed on `main` since 12 Nov.)
+
+Since the 11 Nov run, the details page, the status button, the QR code, the poster redesign and the form fixes are on `main`, so D10, D11, H11, I11, I15, J and K are no longer blocked, and C9 to C11, D12 and L are new. They still need a manual run.
+
+On 12 Nov both automated suites passed on `main`: backend 127 tests, 97.0% instructions and 87% branches (every package at least 78%, the controllers being the lowest); frontend 214 tests, 92.2% statements and 95.1% lines.
 
 ## 5. Known issues
 
-- `contactName` and `contactPhone` are returned by `GET /announcements/{id}` (and in the `POST /announcements` response) to anyone, because there is no authentication. They are not in the list response.
-- `View details` in a map popup links to `/announcements/:id`, which has no page yet, so it goes back to the list.
-- The poster has no QR code yet (`PosterService` passes no QR image), so D10 and D11 stay blocked.
+- `contactName` and `contactPhone` are returned by `GET /announcements/{id}` (and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses) to anyone, because there is no authentication. They are not in the list response. Messaging without a public phone number is planned for DEMO 2.
+- Anyone can mark any announcement as resolved or active, because there are no accounts yet (DEMO 2).
+- `grey` does not find `Gray` (F7): they are different words, not an accent difference.
+- On the poster, distinctive marks longer than 140 characters are cut, sometimes in the middle of a word (D5). The full text is on the details page, which the QR code opens.
+- On a phone over `http://<laptop IP>`, the browser does not give the location, so the radius filter and `Closest first` are disabled (G12 to G14 only run on the laptop).
 
 ## 6. Reporting bugs
 
