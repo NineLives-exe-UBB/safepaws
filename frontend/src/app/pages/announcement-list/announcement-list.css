@@ -7,10 +7,10 @@
 .message {
   padding: 24px;
   border-radius: 8px;
-  background-color: #ffffff;
+  background-color: var(--color-surface);
   text-align: center;
 }
 
 .message.error {
-  color: #c0392b;
+  color: var(--color-error);
 }

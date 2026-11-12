@@ -19,7 +19,7 @@ app-map {
   width: 100%;
   height: 100%;
   font-family: inherit;
-  background-color: #e8e8e8;
+  background-color: var(--color-surface-muted);
 }
 
 /* Custom announcement markers */

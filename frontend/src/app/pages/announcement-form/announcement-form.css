@@ -12,7 +12,7 @@
 }
 
 .form-heading p {
-  color: #555555;
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
@@ -22,8 +22,8 @@
   gap: 20px;
   padding: 28px;
   border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 fieldset {
@@ -32,7 +32,7 @@ fieldset {
   gap: 16px;
   margin: 0;
   padding: 20px;
-  border: 1px solid #dce3e3;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -40,7 +40,7 @@ legend {
   padding: 0 8px;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #2f5d62;
+  color: var(--color-primary);
 }
 
 .form-grid {
@@ -71,18 +71,18 @@ legend {
   box-sizing: border-box;
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid #cbd5d5;
+  border: 1px solid var(--color-border);
   border-radius: 5px;
   font: inherit;
-  color: #222222;
-  background-color: #ffffff;
+  color: var(--color-text);
+  background-color: var(--color-surface);
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #2f5d62;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(47, 93, 98, 0.12);
 }
 
@@ -101,37 +101,37 @@ legend {
   align-items: center;
   gap: 8px;
   padding: 12px 18px;
-  border: 1px solid #cbd5d5;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .type-option:has(input:checked) {
-  border-color: #2f5d62;
-  background-color: #eef5f4;
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
 }
 
 .type-option input {
-  accent-color: #2f5d62;
+  accent-color: var(--color-primary);
 }
 
 .field-hint {
   margin: 0;
-  color: #6b7777;
+  color: var(--color-text-subtle);
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
 .field-error {
-  color: #c0392b;
+  color: var(--color-error);
   font-size: 0.85rem;
 }
 
 .upload-area {
   padding: 20px;
-  border: 2px dashed #b7c8c8;
+  border: 2px dashed var(--color-border);
   border-radius: 8px;
-  background-color: #f7f9f9;
+  background-color: var(--color-background);
 }
 
 .upload-label {
@@ -140,12 +140,12 @@ legend {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #2f5d62;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .upload-label small {
-  color: #6b7777;
+  color: var(--color-text-subtle);
   font-weight: 400;
 }
 
@@ -156,8 +156,8 @@ legend {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background-color: #2f5d62;
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 1.5rem;
 }
 
@@ -181,13 +181,13 @@ legend {
   padding: 5px 10px;
   border: none;
   border-radius: 4px;
-  background-color: #fcebea;
-  color: #c0392b;
+  background-color: var(--color-error-light);
+  color: var(--color-error);
   cursor: pointer;
 }
 
 .remove-button:hover {
-  background-color: #f5d5d2;
+  background-color: var(--color-error-light-hover);
 }
 
 .message {
@@ -199,18 +199,18 @@ legend {
 }
 
 .message.success {
-  color: #256b43;
-  background-color: #eaf5ee;
+  color: var(--color-success);
+  background-color: var(--color-success-light);
 }
 
 .message.success a {
-  color: #256b43;
+  color: var(--color-success);
   font-weight: 600;
 }
 
 .message.error {
-  color: #c0392b;
-  background-color: #fcebea;
+  color: var(--color-error);
+  background-color: var(--color-error-light);
 }
 
 .form-actions {
@@ -222,15 +222,15 @@ legend {
   padding: 12px 22px;
   border: none;
   border-radius: 5px;
-  background-color: #2f5d62;
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: #244a4e;
+  background-color: var(--color-primary-dark);
 }
 
 .submit-button:disabled {
@@ -240,7 +240,7 @@ legend {
 
 .required-note {
   margin: 0;
-  color: #6b7777;
+  color: var(--color-text-subtle);
   font-size: 0.85rem;
 }
 
@@ -255,9 +255,9 @@ legend {
   position: relative;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background-color: #fff;
+  background-color: var(--color-surface);
 }
 
 .main-photo-label {
@@ -265,8 +265,8 @@ legend {
   margin: 8px 8px 0;
   padding: 5px 9px;
   border-radius: 4px;
-  background-color: #2f5d62;
-  color: #fff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -306,7 +306,7 @@ legend {
 
 .selected-location {
   margin: 0;
-  color: #2f5d62;
+  color: var(--color-primary);
   font-size: 0.9rem;
   font-weight: 600;
 }

@@ -20,7 +20,7 @@
 .area,
 .date {
   margin: 0;
-  color: #555555;
+  color: var(--color-text-muted);
 }
 
 .details-link {
@@ -28,11 +28,11 @@
   margin-top: 6px;
   padding: 6px 12px;
   border-radius: 4px;
-  background-color: #2f5d62;
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   text-decoration: none;
 }
 
 .details-link:hover {
-  background-color: #244a4e;
+  background-color: var(--color-primary-dark);
 }

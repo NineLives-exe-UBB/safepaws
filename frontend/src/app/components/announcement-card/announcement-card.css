@@ -4,17 +4,17 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
   transition: box-shadow 0.15s;
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .card:has(.card-link:focus-visible) {
-  outline: 2px solid #2f5d62;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -34,7 +34,7 @@
 .photo {
   position: relative;
   height: 200px;
-  background-color: #e4e9e9;
+  background-color: var(--color-surface-muted);
 }
 
 .photo img {
@@ -48,7 +48,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7777;
+  color: var(--color-text-subtle);
 }
 
 .label {
@@ -59,7 +59,7 @@
   border-radius: 4px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 .label.lost {
@@ -91,7 +91,7 @@
 .date,
 .distance {
   margin: 0;
-  color: #555555;
+  color: var(--color-text-muted);
 }
 
 .poster-button {
@@ -101,11 +101,11 @@
   margin-top: 12px;
   padding: 8px 14px;
   border-radius: 4px;
-  background-color: #2f5d62;
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   text-decoration: none;
 }
 
 .poster-button:hover {
-  background-color: #244a4e;
+  background-color: var(--color-primary-dark);
 }

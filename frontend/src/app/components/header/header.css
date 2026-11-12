@@ -5,8 +5,8 @@
   gap: 8px 16px;
   justify-content: space-between;
   padding: 12px 24px;
-  background-color: #2f5d62;
-  color: #ffffff;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .brand {

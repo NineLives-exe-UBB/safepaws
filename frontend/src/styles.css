@@ -1,6 +1,35 @@
 :root {
+  /* Brand */
+  --color-primary: #2f5d62;
+  --color-primary-dark: #244a4e;
+  --color-primary-light: #eef5f4;
+  --color-on-primary: #ffffff;
+
+  /* Announcement types */
   --color-lost: #c0392b;
   --color-found: #2e8b57;
+
+  /* Text */
+  --color-text: #222222;
+  --color-text-muted: #555555;
+  --color-text-subtle: #6b7777;
+
+  /* Surfaces and borders */
+  --color-background: #f7f9f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #e4e9e9;
+  --color-border: #cbd5d5;
+
+  /* Messages */
+  --color-error: #c0392b;
+  --color-error-light: #fcebea;
+  --color-error-light-hover: #f5d5d2;
+  --color-success: #256b43;
+  --color-success-light: #eaf5ee;
+
+  /* Shadows */
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.12);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 body {
@@ -11,6 +40,6 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
-  color: #222222;
-  background-color: #f7f9f9;
+  color: var(--color-text);
+  background-color: var(--color-background);
 }
