@@ -127,3 +127,16 @@ This document records the architectural, technological, and procedural decisions
   - Everything that differs between machines is read from `.env` (ignored by Git, with a template in `.env.example`): the database settings, `CORS_ALLOWED_ORIGINS` (the frontend addresses allowed to call the API) and `FRONTEND_URL` (the address in the poster QR code). Both default to `http://localhost:4200`.
   - The frontend calls the backend on port 8080 of the host it was opened from (`window.location.hostname`), so the same build works from `localhost` and from the laptop IP.
 - **Consequences:** Opening the app from a phone only needs the laptop IP in `.env` and `npm start -- --host 0.0.0.0` (see `usage-guide.md`). Browsers only give the location on HTTPS or `localhost`, so the distance filters only work on the laptop.
+
+
+---
+
+## ADR 014: User Accounts — Login with JWT
+- **Status:** Accepted
+- **Context:** DEMO 2 adds user accounts (ADR 010 ends here): only the author of an announcement may edit it or change its status, and the next features (messages, notifications, sightings) need to know who the user is. The frontend (Angular) and the backend (Spring Boot) run on different ports and are also opened from a phone, so the login has to work across origins.
+- **Decision:**
+  - Users log in with email and password and receive a **JWT**, signed with HS256 using the secret from `JWT_SECRET` (`.env`). The frontend sends it in the `Authorization: Bearer <token>` header. The token is valid for **24 hours**; there is no refresh token, so after it expires the user logs in again.
+  - Passwords are stored only as BCrypt hashes. A password needs **at least 8 characters, one uppercase letter, one digit and one special character**, and at most 72 characters (the BCrypt limit).
+  - Reading stays public: the list, the map, the details page, photos and posters work without an account. Registering and logging in are public too. Posting, editing, uploading photos and changing the status need a token, and only the owner of an announcement may change it.
+  - Every announcement belongs to a user. The existing announcements are given to three demo accounts (`V6`), and after that the owner is required (`V8`).
+- **Consequences:** The server keeps no sessions, so restarting the backend does not log anyone out. A token cannot be revoked before it expires: logging out only deletes it from the browser. Changing `JWT_SECRET` logs everyone out. The contact name and phone stay on the announcement for now; messages without a public phone number come later in DEMO 2. The endpoints and errors are listed in `decisions/vanessza-decisions.md`.
