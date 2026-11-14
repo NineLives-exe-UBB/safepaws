@@ -121,3 +121,116 @@ Decisions and team messages for the cards "Announcement details page", "CSS vari
 - `testing.md`: the numbers and scenarios in the message for Jessica.
 - `frontend/README.md`: Node 22.22.3+ or 24.15.0+, and remove the mentions of the map and of `shared/`.
 - `backend/README.md`: `FRONTEND_URL` and `CORS_ALLOWED_ORIGINS`.
+
+---
+
+## DEMO 2: user accounts
+
+Decisions and team messages for the cards until 18.11. The reasons are in ADR 014 (`decisions.md`).
+
+### Endpoints
+
+All requests and responses use JSON. Errors use the usual `ErrorResponse` format (see `api.md`), and messages have no full stop at the end, like the rest of the API.
+
+**`POST /auth/register`** (public) – Antonia
+
+```json
+{ "email": "ana@safepaws.dev", "password": "SafePaws1!", "displayName": "Ana Pop" }
+```
+
+- `201 Created` → the new user (never the password):
+  ```json
+  { "id": 1, "email": "ana@safepaws.dev", "displayName": "Ana Pop" }
+  ```
+- `400` with `fieldErrors`:
+  - `email`: "Email is required", "Email must be a valid email address", "Email must be at most 255 characters"
+  - `password`: "Password is required", "Password must have at least 8 characters, one uppercase letter, one digit and one special character", "Password must be at most 72 characters"
+  - `displayName`: "Display name is required", "Display name must be at most 50 characters"
+- `409 Conflict` → "Email is already registered"
+- The email is trimmed and saved in lowercase. A special character is anything that is not a letter or a digit.
+- Registering does not log the user in: the frontend calls `/auth/login` right after.
+
+**`POST /auth/login`** (public) – Alexandru
+
+```json
+{ "email": "ana@safepaws.dev", "password": "SafePaws1!" }
+```
+
+- `200 OK`:
+  ```json
+  {
+    "token": "<JWT>",,
+    "expiresAt": "2026-11-16T14:30:00",
+    "user": { "id": 1, "email": "ana@safepaws.dev", "displayName": "Ana Pop" }
+  }
+  ```
+- `401 Unauthorized` → "Invalid email or password" (the same message for an unknown email and for a wrong password, so nobody can find out which emails have an account)
+
+**`GET /auth/me`** (logged in) – Alexandru
+
+- `200 OK` → the user, same shape as `user` above
+- `401 Unauthorized` → "Authentication is required"
+
+**`PUT /announcements/{id}`** (owner only) – Antonia
+
+- The body is the same as for `POST /announcements`, with the same validations. Every field is replaced.
+- The status and the photos do not change here: the status has its own endpoint, and photos are added with `POST /announcements/{id}/photos`.
+- `200 OK` → the announcement, same shape as `GET /announcements/{id}`
+
+### Who can do what
+
+| Endpoint | Without an account | Another user | Owner |
+|---|---|---|---|
+| `GET /announcements`, `GET /announcements/{id}`, photos, posters | ✅ | ✅ | ✅ |
+| `POST /announcements` | 401 | ✅ (becomes the owner) | – |
+| `PUT /announcements/{id}` | 401 | 403 | ✅ |
+| `PATCH /announcements/{id}/status` | 401 | 403 | ✅ |
+| `POST /announcements/{id}/photos` | 401 | 403 | ✅ |
+
+- **401** → "Authentication is required" (no token, or the token is invalid or expired)
+- **403** → "You can only change your own announcements"
+- The checks run in this order: 401, then 400 (validation), then 404, then 403.
+- On public endpoints an invalid or expired token is ignored: the request works as if there were no token, so the list never breaks.
+- `GET /announcements/{id}` and the responses of `POST`, `PUT` and `PATCH` include `"ownerId": 1`. The list (`GET /announcements`) does not need it.
+
+### Token
+
+- Header: `Authorization: Bearer <token>`
+- HS256, signed with `JWT_SECRET` from `.env`, valid for 24 hours. The token holds the user id.
+- `CORS_ALLOWED_ORIGINS` must allow the `Authorization` header.
+
+### Demo accounts (V6, Matei)
+
+| Email | Display name | Password |
+|---|---|---|
+| `ana@safepaws.dev` | Ana Pop | `SafePaws1!` |
+| `mihai@safepaws.dev` | Mihai Rus | `SafePaws1!` |
+| `elena@safepaws.dev` | Elena Moldovan | `SafePaws1!` |
+
+The existing announcements are shared between these three accounts.
+
+### Messages
+
+**Everyone**
+
+> The cards until 18.11 are on Trello, and the contract is above. Please use exactly these endpoints, field names and messages, so the frontend and the backend fit together on the first try. Every PR needs one approval from someone other than its author.
+>
+> Order: Matei (V6, V7) → Antonia (PR 1) → Alexandru → Patrick → Antonia (PR 2) and Matei (V8). Luca and Victor can start right away from the contract. When your PR is merged, write it in the chat, because someone is waiting for it.
+>
+> Only Matei writes migrations: V6 and V7 now, V8 after Patrick.
+
+**Antonia and Alexandru**
+
+> The password hashing (`PasswordEncoder`, BCrypt) is defined once, by Alexandru in the security config. Antonia uses it for register, Alexandru for login. Antonia, please push the `User` entity and repository in a separate commit first, so Alexandru can start the login.
+
+**Patrick and Antonia**
+
+> Patrick writes the owner check once (for the status and the photos). Antonia reuses it for editing in her second PR.
+
+**Luca and Victor**
+
+> Luca, please open a small PR with only the `AuthService` first (it can return test data until the backend is ready), because Victor’s pages use it. Victor, “Mark as resolved” compares `ownerId` with the logged-in user’s `id`; until Patrick’s PR is merged, you can test it with a hand-written `ownerId`.
+
+**Tudor**
+
+> `JWT_SECRET` has to be in `.env.example` together with Alexandru’s PR, otherwise nobody’s backend starts after pulling. The request file is needed by Jessica for testing the editing.
