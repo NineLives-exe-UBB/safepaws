@@ -37,6 +37,16 @@ Decisions and team messages for the frontend cards "Announcements list", "Leafle
 - **Popup:** main photo, pet name (or the species when there is no name), area, date and a "View details" button to `/announcements/:id`. That route is an assumption until the details page exists, and until then the link goes back to the list.
 - **Loaded on demand:** the map page is a lazy route, so Leaflet is not part of the first download of the app (the initial bundle was over the 500 kB budget with it).
 
+### AuthService (`frontend/src/app/services/auth.service.ts`)
+
+- **Contract:** exactly the one in `vanessza-decisions.md` (DEMO 2): `POST /auth/register`, `POST /auth/login` and the token in `Authorization: Bearer <token>`. `GET /auth/me` is not used: the session is checked from the token, so no extra request is needed on every page load.
+- **Register logs in:** `register()` creates the account and then calls login with the same email and password, because the backend does not return a token when registering. A page only calls one method.
+- **Staying logged in:** the session (token, user, expiry) is kept in `localStorage` under `safepaws.session`. The token can be read by any script on the page, which is the usual price of not having a cookie; the backend cannot revoke it anyway (ADR 014), so logging out only forgets it in the browser.
+- **One interceptor for every request:** `authInterceptor` adds the token to every request to the backend and to nothing else (not to the map tiles). Pages never handle the token.
+- **Expiry:** the token is dropped at the time it expires, and also when the backend answers `401` to a request that carried the token. Both log the user out and send them to `/login?returnUrl=...`. A `401` on the login (wrong password) and a `403` do not log anyone out.
+- **The expiry is read from the token:** `expiresAt` in the login answer has no time zone, so a browser in another time zone would read it wrong. The `exp` inside the token is an exact moment, so that is used, and `expiresAt` only when the token cannot be read.
+- **Not part of the service:** the login and register pages, the header, the guard for `/announcements/new` and the "Mark as resolved" check of `ownerId`. These are Victor's.
+
 ## Messages
 
 ### Antonia
@@ -55,6 +65,18 @@ Decisions and team messages for the frontend cards "Announcements list", "Leafle
 > Run `npm install` after pulling, because Leaflet is a new dependency. Details are in `frontend/README.md`.
 >
 > The map has two more inputs now: `[fitToPins]="true"` zooms to fit all the pins when there is no `center`, and `[popup]` takes an `<ng-template let-pin>` that is shown when a pin is clicked (give the pins an `id` to find what they stand for). The map page uses both.
+
+### Victor
+
+> The `AuthService` is ready (frontend only, tests included). Usage is in `frontend/README.md`, "Accounts". In short: `auth.user()` and `auth.isLoggedIn()` are signals, `auth.login({ email, password })` and `auth.register({ email, password, displayName })` return an `Observable<User>` (register also logs in), and `auth.logout()` forgets the session. You never touch the token: an interceptor sends it with every request to the backend.
+>
+> When the token expires, or the backend answers `401` to a request that had it, the user is logged out and sent to `/login?returnUrl=<the page they were on>`. So your login page should read `returnUrl` and go there after a successful login (the default can be `/announcements`). Until the `/login` page exists, that redirect ends on the list, with `returnUrl` left in the address.
+>
+> Errors for your forms: a wrong login is an error with `status` 401 (`error.error.message` is "Invalid email or password"), register gives `400` with `error.error.fieldErrors` (the same shape as the announcement form) or `409` for an email that is already registered.
+
+### Alexandru
+
+> Two things I need from your login: (1) the token must have the standard `exp` claim (the moment it expires, in seconds since 1970), because the frontend reads the expiry from it; (2) `expiresAt` has no time zone, so the frontend only uses it when the token cannot be read. If your token has no `exp`, tell me and the frontend will use `expiresAt` as a local time. Also, the frontend sends `Authorization: Bearer <token>` with every request, including the public ones, and expects `401` with `Authentication is required` when a token is invalid on a protected endpoint.
 
 ### Vanessza
 
