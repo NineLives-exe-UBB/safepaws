@@ -67,6 +67,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getFieldErrors());
     }
 
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ErrorResponse> handleEmailTaken(EmailAlreadyRegisteredException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), List.of());
+    }
+
     @ExceptionHandler(AnnouncementNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(AnnouncementNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());

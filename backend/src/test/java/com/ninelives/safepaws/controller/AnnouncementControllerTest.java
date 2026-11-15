@@ -30,11 +30,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -412,6 +414,84 @@ class AnnouncementControllerTest {
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
                     .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(containsString("secret"))));
+        }
+    }
+
+    @Nested
+    class Update {
+
+        @Test
+        void validBodyReturns200WithTheUpdatedAnnouncement() throws Exception {
+            when(announcementService.update(any(), any())).thenReturn(response(13L));
+
+            mockMvc.perform(put("/announcements/13").contentType(MediaType.APPLICATION_JSON).content(VALID_REQUEST))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(13))
+                    .andExpect(jsonPath("$.petName").value("Oscar"));
+
+            ArgumentCaptor<AnnouncementRequest> captor = ArgumentCaptor.forClass(AnnouncementRequest.class);
+            verify(announcementService).update(eq(13L), captor.capture());
+            assertThat(captor.getValue().contactName()).isEqualTo("Ion Radu");
+            assertThat(captor.getValue().species()).isEqualTo(Species.DOG);
+        }
+
+        @Test
+        void missingRequiredFieldsReturn400LikeCreate() throws Exception {
+            mockMvc.perform(put("/announcements/13").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Some fields are invalid"))
+                    .andExpect(jsonPath("$.fieldErrors", hasSize(6)))
+                    .andExpect(jsonPath("$.fieldErrors[0].message").value("Area is required"))
+                    .andExpect(jsonPath("$.fieldErrors[1].message").value("Contact name is required"))
+                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Contact phone is required"))
+                    .andExpect(jsonPath("$.fieldErrors[3].message").value("Event date is required"))
+                    .andExpect(jsonPath("$.fieldErrors[4].message").value("Species is required"))
+                    .andExpect(jsonPath("$.fieldErrors[5].message").value("Type is required"));
+
+            verify(announcementService, never()).update(any(), any());
+        }
+
+        @Test
+        void sameRulesAsCreateForFutureDateAndHalfCoordinates() throws Exception {
+            String body = VALID_REQUEST
+                    .replace("2026-11-01T09:15:00", "2999-01-01T10:00:00")
+                    .replace("\"longitude\": 23.6236,", "");
+
+            mockMvc.perform(put("/announcements/13").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("coordinates"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message")
+                            .value("Latitude and longitude must be provided together"))
+                    .andExpect(jsonPath("$.fieldErrors[1].field").value("eventDate"))
+                    .andExpect(jsonPath("$.fieldErrors[1].message").value("Event date cannot be in the future"));
+        }
+
+        @Test
+        void invalidEnumReturns400() throws Exception {
+            mockMvc.perform(put("/announcements/13").contentType(MediaType.APPLICATION_JSON)
+                            .content(VALID_REQUEST.replace("\"DOG\"", "\"Dog\"")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("species"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message")
+                            .value("Invalid value 'Dog', allowed values: CAT, DOG, OTHER"));
+        }
+
+        @Test
+        void unknownIdReturns404() throws Exception {
+            when(announcementService.update(any(), any())).thenThrow(new AnnouncementNotFoundException(999L));
+
+            mockMvc.perform(put("/announcements/999").contentType(MediaType.APPLICATION_JSON).content(VALID_REQUEST))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Announcement not found with id: 999"));
+        }
+
+        @Test
+        void invalidBodyIsCheckedBeforeTheIdExists() throws Exception {
+            // the contract order is 400 before 404
+            mockMvc.perform(put("/announcements/999").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+
+            verify(announcementService, never()).update(any(), any());
         }
     }
 

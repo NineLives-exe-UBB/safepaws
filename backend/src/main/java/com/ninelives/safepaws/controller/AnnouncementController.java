@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -92,6 +93,15 @@ public class AnnouncementController {
     @GetMapping("/{id}")
     public AnnouncementResponse findById(@PathVariable Long id) {
         return announcementService.findById(id);
+    }
+
+    /**
+     * Replaces every field with the body; same body and validations as POST.
+     * The status and the photos are not changed here.
+     */
+    @PutMapping("/{id}")
+    public AnnouncementResponse update(@PathVariable Long id, @Valid @RequestBody AnnouncementRequest request) {
+        return announcementService.update(id, request);
     }
 
     @PatchMapping("/{id}/status")
