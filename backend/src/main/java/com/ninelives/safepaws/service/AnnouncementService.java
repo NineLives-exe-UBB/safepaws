@@ -137,8 +137,30 @@ public class AnnouncementService {
                 photoRepository.findMetadataByAnnouncementIds(List.of(id)));
     }
 
+    /**
+     * Replaces every field of the announcement with the request, like a new POST would set them.
+     * The status, the photos, the owner and createdAt stay as they are.
+     */
+    @Transactional
+    public AnnouncementResponse update(Long id, AnnouncementRequest request) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new AnnouncementNotFoundException(id));
+
+        copyFields(request, announcement);
+
+        Announcement saved = announcementRepository.save(announcement);
+        return toResponse(saved, photoRepository.findMetadataByAnnouncementIds(List.of(id)));
+    }
+
     private Announcement toEntity(AnnouncementRequest request) {
         Announcement announcement = new Announcement();
+        copyFields(request, announcement);
+        // status defaults to ACTIVE and createdAt is set on insert
+        return announcement;
+    }
+
+    /** Every field a user types in the form; shared by create and edit so they always match. */
+    private static void copyFields(AnnouncementRequest request, Announcement announcement) {
         announcement.setType(request.type());
         announcement.setSpecies(request.species());
         announcement.setPetName(request.petName());
@@ -151,8 +173,6 @@ public class AnnouncementService {
         announcement.setArea(request.area());
         announcement.setContactName(request.contactName());
         announcement.setContactPhone(request.contactPhone());
-        // status defaults to ACTIVE and createdAt is set on insert
-        return announcement;
     }
 
     private AnnouncementResponse toResponse(Announcement announcement, List<PhotoMetadata> photos) {

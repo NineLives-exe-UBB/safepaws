@@ -405,4 +405,62 @@ class AnnouncementServiceTest {
 
         verify(announcementRepository, never()).save(any(Announcement.class));
     }
+
+    private static AnnouncementRequest editedRequest() {
+        return new AnnouncementRequest(AnnouncementType.FOUND, Species.CAT, null, "European", "Black",
+                "White patch on the chest", LocalDateTime.of(2026, 10, 30, 8, 0), null, null,
+                "Gheorgheni, Cluj-Napoca", "Maria Pop", "+40721000111");
+    }
+
+    @Test
+    void updateReplacesEveryFieldOfTheForm() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+        when(announcementRepository.findById(13L)).thenReturn(Optional.of(announcement));
+        when(announcementRepository.save(announcement)).thenReturn(announcement);
+
+        AnnouncementResponse result = announcementService.update(13L, editedRequest());
+
+        assertThat(result.type()).isEqualTo(AnnouncementType.FOUND);
+        assertThat(result.species()).isEqualTo(Species.CAT);
+        // fields left out of the body are cleared, not kept: every field is replaced
+        assertThat(result.petName()).isNull();
+        assertThat(result.latitude()).isNull();
+        assertThat(result.longitude()).isNull();
+        assertThat(result.breed()).isEqualTo("European");
+        assertThat(result.color()).isEqualTo("Black");
+        assertThat(result.distinctiveMarks()).isEqualTo("White patch on the chest");
+        assertThat(result.eventDate()).isEqualTo(LocalDateTime.of(2026, 10, 30, 8, 0));
+        assertThat(result.area()).isEqualTo("Gheorgheni, Cluj-Napoca");
+        assertThat(result.contactName()).isEqualTo("Maria Pop");
+        assertThat(result.contactPhone()).isEqualTo("+40721000111");
+        verify(announcementRepository).save(announcement);
+    }
+
+    @Test
+    void updateKeepsTheIdStatusCreationTimeAndPhotos() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+        announcement.setStatus(AnnouncementStatus.RESOLVED);
+        when(announcementRepository.findById(13L)).thenReturn(Optional.of(announcement));
+        when(announcementRepository.save(announcement)).thenReturn(announcement);
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(13L))).thenReturn(List.of(
+                new PhotoMetadata(7L, 13L, "image/jpeg", 100L, "oscar.jpg", true, CREATED_AT)));
+
+        AnnouncementResponse result = announcementService.update(13L, editedRequest());
+
+        assertThat(result.id()).isEqualTo(13L);
+        assertThat(result.status()).isEqualTo(AnnouncementStatus.RESOLVED);
+        assertThat(result.createdAt()).isEqualTo(CREATED_AT);
+        assertThat(result.photos()).extracting(PhotoResponse::id).containsExactly(7L);
+    }
+
+    @Test
+    void updateThrowsWhenTheAnnouncementDoesNotExist() {
+        when(announcementRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> announcementService.update(999L, editedRequest()))
+                .isInstanceOf(AnnouncementNotFoundException.class)
+                .hasMessage("Announcement not found with id: 999");
+
+        verify(announcementRepository, never()).save(any(Announcement.class));
+    }
 }

@@ -11,10 +11,12 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 | `POST` | `/announcements` | Creates a new announcement | Antonia | Announcement form |
 | `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Antonia | List page, map page |
 | `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Antonia | Details page |
+| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Antonia | Edit page |
 | `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Patrick | `Mark as resolved` / `Mark as active` on the details page |
 | `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Patrick | Announcement form |
 | `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Announcement cards, map popups, details page |
 | `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | `Download poster` on each card and on the details page |
+| `POST` | `/auth/register` | Creates a user account | Antonia | Register page |
 
 There is no authentication: all endpoints are public, so anyone can also change the status of an announcement. User accounts are planned for DEMO 2.
 
@@ -217,6 +219,25 @@ Returns a single announcement by its unique identifier, including full details, 
 
 ---
 
+#### `PUT /announcements/{id}`
+Edits an announcement. Every field of the form is replaced with the body, so a field left out (for example `petName`) is cleared, not kept.
+
+The status, the photos, the owner and `createdAt` do not change here: the status has `PATCH /announcements/{id}/status`, and photos are added with `POST /announcements/{id}/photos`.
+
+> **Owner only (ADR 014), coming in a separate PR:** once the owner check is on main, editing needs a token and only the owner may edit. Without a token → `401 Unauthorized` (`Authentication is required`); another user → `403 Forbidden` (`You can only change your own announcements`). Until then, this endpoint is public like the rest of the API.
+
+##### Request Body (`application/json`)
+The same body and the same field constraints as `POST /announcements` (see `AnnouncementRequest` above).
+
+##### Response (`200 OK`)
+The whole updated announcement, in the same format as `GET /announcements/{id}`.
+
+##### Error Responses
+- `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked first, so an invalid body returns `400` even when the ID does not exist.
+- `404 Not Found`: When no announcement exists with the requested ID.
+
+---
+
 #### `PATCH /announcements/{id}/status`
 Changes the status of an announcement: `RESOLVED` when the pet is back home, `ACTIVE` to show it again in the default list. Sending the status it already has is not an error.
 
@@ -312,6 +333,49 @@ The poster shows the type (`LOST` / `FOUND`, plus `RESOLVED` when resolved) as l
 
 ---
 
+### 3.4 Accounts
+
+User accounts follow ADR 014 (`decisions.md`). The full DEMO 2 contract, including login and who may change what, is in `decisions/vanessza-decisions.md`.
+
+#### `POST /auth/register`
+Creates a user account. Public: no token is needed. Registering does not log the user in, so the frontend calls `POST /auth/login` right after.
+
+##### Request Body (`application/json`)
+```json
+{
+  "email": "ana.pop@example.com",
+  "password": "SafePaws1!",
+  "displayName": "Ana Pop"
+}
+```
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `email` | `string` | Yes | Valid email address, max 255 characters. Spaces at the start and end are removed and it is saved in lowercase, so `" Ana@Example.com "` becomes `ana@example.com`. |
+| `password` | `string` | Yes | At least 8 characters, with at least one uppercase letter, one digit and one special character (anything that is not a letter or a digit). At most 72 characters (counted in bytes, the BCrypt limit: a letter like `ă` counts as 2). |
+| `displayName` | `string` | Yes | Not blank, max 50 characters. Spaces at the start and end are removed. |
+
+The password is stored only as a BCrypt hash and is never returned by any endpoint.
+
+##### Response (`201 Created`)
+```json
+{
+  "id": 4,
+  "email": "ana.pop@example.com",
+  "displayName": "Ana Pop"
+}
+```
+
+##### Error Responses
+- `400 Bad Request`, with one `fieldErrors` entry per broken rule:
+  - `email`: `Email is required`, `Email must be a valid email address`, `Email must be at most 255 characters`
+  - `password`: `Password is required`, `Password must have at least 8 characters, one uppercase letter, one digit and one special character`, `Password must be at most 72 characters`
+  - `displayName`: `Display name is required`, `Display name must be at most 50 characters`
+  - A missing or blank field only gets its `... is required` message.
+- `409 Conflict`: `Email is already registered`, also when the same email was registered with different capital letters.
+
+---
+
 ## 4. Standard Error Response Format
 
 All API errors return a consistent JSON structure defined by `ErrorResponse`:
@@ -347,6 +411,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | Status Code | Reason Phrase (`error`) | Exception / Trigger | Message (`message`) | `fieldErrors` Payload |
 |---|---|---|---|---|
 | `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`, `status: "Status is required"`), sorted alphabetically by field name |
+| `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`, `status: "Status is required"`, `email: "Email must be a valid email address"`, `password: "Password must have at least 8 characters, one uppercase letter, one digit and one special character"`), sorted alphabetically by field name |
 | `400 Bad Request` | `Bad Request` | Invalid enum value (`HttpMessageNotReadableException`) | `Some fields are invalid` | `[{"field": "<fieldName>", "message": "Invalid value '<val>', allowed values: <ALLOWED_VALUES>"}]` |
 | `400 Bad Request` | `Bad Request` | Malformed JSON request body (`HttpMessageNotReadableException`) | `Malformed request body` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Path or query parameter type mismatch (`MethodArgumentTypeMismatchException`, e.g. `/announcements/abc` or `?species=cat`) | `Some fields are invalid` | `[{"field": "id", "message": "Invalid value 'abc'"}]` (for enums followed by `, allowed values: ...`) |
@@ -358,6 +423,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Corrupted image data / invalid magic bytes (`PhotoService`) | `Invalid image file` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Announcement ID not found (`AnnouncementNotFoundException`) | `Announcement not found with id: {id}` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Photo ID not found (`PhotoService`) | `Photo not found with id: {id}` | `[]` (empty) |
+| `409 Conflict` | `Conflict` | Email already has an account (`EmailAlreadyRegisteredException`) | `Email is already registered` | `[]` (empty) |
 | `413 Content Too Large` | `Content Too Large` | Uploaded file exceeds 5 MB (`PhotoService`) | `Maximum file size is 5 MB` | `[]` (empty) |
 | `415 Unsupported Media Type` | `Unsupported Media Type` | Incorrect media type (e.g. `text/plain` on `POST`) | Spring Web default detail message | `[]` (empty) |
 | `500 Internal Server Error` | `Internal Server Error` | Unexpected server runtime exception | `An unexpected error occurred` | `[]` (empty) |
