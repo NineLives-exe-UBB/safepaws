@@ -37,6 +37,7 @@ public class AnnouncementService {
         this.photoRepository = photoRepository;
     }
 
+
     @Transactional
     public AnnouncementResponse create(AnnouncementRequest request) {
         Announcement saved = announcementRepository.save(toEntity(request));

@@ -1,5 +1,7 @@
 package com.ninelives.safepaws.controller;
 
+import com.ninelives.safepaws.config.JwtAuthenticationFilter;
+import com.ninelives.safepaws.config.SecurityConfig;
 import com.ninelives.safepaws.dto.AnnouncementFilter;
 import com.ninelives.safepaws.dto.AnnouncementRequest;
 import com.ninelives.safepaws.dto.AnnouncementResponse;
@@ -11,15 +13,25 @@ import com.ninelives.safepaws.model.AnnouncementStatus;
 import com.ninelives.safepaws.model.AnnouncementType;
 import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.service.AnnouncementService;
+import com.ninelives.safepaws.service.JwtService;
 import com.ninelives.safepaws.service.PosterService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.Page;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.LocalDateTime;
@@ -43,7 +55,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AnnouncementController.class)
+@Import(TestSecurityConfig.class)
 class AnnouncementControllerTest {
+
+    private static final String VALID_ANNOUNCEMENT_JSON = """
+        {
+          "type": "LOST",
+          "species": "DOG",
+          "petName": "Oscar",
+          "breed": "Beagle",
+          "color": "Brown and white",
+          "distinctiveMarks": "Red collar",
+          "eventDate": "2026-10-30T18:00:00",
+          "latitude": 46.7712,
+          "longitude": 23.6236,
+          "area": "Centru, Cluj-Napoca",
+          "contactName": "Ana Pop",
+          "contactPhone": "0740123456"
+        }
+        """;
 
     private static final String VALID_REQUEST = """
             {
@@ -88,6 +118,28 @@ class AnnouncementControllerTest {
 
     private ResultActions postJson(String body) throws Exception {
         return mockMvc.perform(post("/announcements").contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void createAnnouncementWithoutTokenReturns401() throws Exception {
+        mockMvc.perform(post("/announcements")
+                        .header("Authorization", "")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Authentication is required"));
+    }
+
+    @Test
+    void getAnnouncementsWithInvalidTokenStillReturns200OK() throws Exception {
+        when(announcementService.findAll(any()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/announcements")
+                        .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isOk());
     }
 
     @Nested

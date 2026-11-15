@@ -28,6 +28,8 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+
+
     /**
      * One or more fields broke a validation rule of the request DTO.
      */
@@ -38,6 +40,19 @@ public class GlobalExceptionHandler {
                 .sorted(Comparator.comparing(ErrorResponse.FieldError::field))
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Some fields are invalid", fieldErrors);
+    }
+
+
+    @ExceptionHandler({InvalidCredentialsException.class, UnauthorizedException.class})
+    public ResponseEntity<ErrorResponse> handleUnauthorized(RuntimeException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                ex.getMessage(),
+                null,
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
     }
 
     /**
