@@ -103,6 +103,27 @@ The list page has a filter bar (`<app-filter-bar>`, in `components/filter-bar`) 
 - **Location:** the page asks the browser for the user's location (`LocationService`). If it is refused, the radius and "Closest first" are disabled, with a short message. The location is only sent to the backend when a radius or "Closest first" is chosen, because the backend then also filters by radius (10 km by default) and leaves out announcements without coordinates. "Closest first" without a radius asks for 100 km, the maximum. The distance on a card ("1.2 km away") is only known in those cases.
 - **Backend:** `AnnouncementService.getAll(filters, location)` sends `type`, `species`, `status`, `color`, `breed`, `area`, `lat`, `lng`, `radiusKm` and `sort` (`newest`, `oldest` or `closest`) as query parameters. The backend sorts, the page shows the announcements in the order it returns them.
 
+## Accounts
+
+`AuthService` (`services/auth.service.ts`) knows who is logged in. Inject it where you need the user:
+
+```ts
+private readonly auth = inject(AuthService);
+```
+
+| What             | How                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Who is logged in | `auth.user()` (`{ id, email, displayName }` or `null`) and `auth.isLoggedIn()` are signals, so templates and `computed` update by themselves.                                                                                  |
+| Log in           | `auth.login({ email, password })` returns an `Observable<User>`. A wrong email or password is an error with status `401`.                                                                                                      |
+| Register         | `auth.register({ email, password, displayName })` creates the account and logs in with it, because the backend does not log in after registering. Errors: `400` with `error.error.fieldErrors`, `409` when the email is taken. |
+| Log out          | `auth.logout()` forgets the session. It does not navigate: the caller decides where to go.                                                                                                                                     |
+| The token        | `auth.token()`. You do not need it: the interceptor adds `Authorization: Bearer <token>` to every request to the backend, and only to the backend.                                                                             |
+
+- **After a refresh:** the session is kept in `localStorage` (`safepaws.session`), so the user stays logged in. A stored session that has expired is dropped when the app starts.
+- **When the token expires:** after 24 hours, or when the backend answers `401` to a request that had the token, the user is logged out and sent to `/login?returnUrl=<the page they were on>`. A `401` on the login itself (wrong password) does not log anyone out, because no token was sent. A `403` (not your announcement) does not either.
+- **Pages:** a page that needs an account should check `auth.isLoggedIn()`. The `/login` and `/register` pages are not part of the service.
+- **In tests:** `fakeToken(expiresAtMs)` in `services/auth.testing.ts` makes a token that looks like the ones of the backend.
+
 ## Project structure
 
 ```
