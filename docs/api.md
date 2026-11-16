@@ -45,6 +45,9 @@ There is no authentication: all endpoints are public, so anyone can also change 
 #### `POST /announcements`
 Creates a new lost or found announcement.
 
+**Headers Required:**
+- `Authorization: Bearer <token>`
+
 ##### Request Body (`application/json`)
 ```json
 {
@@ -102,6 +105,10 @@ Creates a new lost or found announcement.
   "photos": []
 }
 ```
+**Error Responses:**
+- `401 Unauthorized` — `"Authentication is required"`
+- `403 Forbidden` — `"You can only change your own announcements"`
+
 
 ---
 
@@ -226,6 +233,9 @@ The status, the photos, the owner and `createdAt` do not change here: the status
 
 > **Owner only (ADR 014), coming in a separate PR:** once the owner check is on main, editing needs a token and only the owner may edit. Without a token → `401 Unauthorized` (`Authentication is required`); another user → `403 Forbidden` (`You can only change your own announcements`). Until then, this endpoint is public like the rest of the API.
 
+**Headers Required:**
+- `Authorization: Bearer <token>`
+
 ##### Request Body (`application/json`)
 The same body and the same field constraints as `POST /announcements` (see `AnnouncementRequest` above).
 
@@ -234,12 +244,16 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`.
 
 ##### Error Responses
 - `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked first, so an invalid body returns `400` even when the ID does not exist.
+- `401 Unauthorized` — `"Authentication is required"`
+- `403 Forbidden` — `"You can only change your own announcements"`
 - `404 Not Found`: When no announcement exists with the requested ID.
-
 ---
 
 #### `PATCH /announcements/{id}/status`
 Changes the status of an announcement: `RESOLVED` when the pet is back home, `ACTIVE` to show it again in the default list. Sending the status it already has is not an error.
+
+**Headers Required:**
+- `Authorization: Bearer <token>`
 
 ##### Request Body (`application/json`)
 ```json
@@ -257,6 +271,8 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 
 ##### Error Responses
 - `400 Bad Request`: `status` is missing (`status: Status is required`) or has another value (`status: Invalid value 'DONE', allowed values: ACTIVE, RESOLVED`).
+- `401 Unauthorized` — `"Authentication is required"`
+- `403 Forbidden` — `"You can only change your own announcements"`
 - `404 Not Found`: When no announcement exists with the requested ID.
 
 ---
@@ -265,6 +281,9 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 
 #### `POST /announcements/{id}/photos`
 Uploads one or more binary photos and attaches them to the specified announcement.
+
+**Headers Required:**
+- `Authorization: Bearer <token>`
 
 ##### Request Format
 - **Content-Type:** `multipart/form-data`
@@ -302,6 +321,10 @@ Uploads one or more binary photos and attaches them to the specified announcemen
   }
 ]
 ```
+
+**Error Responses:**
+- `401 Unauthorized` — `"Authentication is required"`
+- `403 Forbidden` — `"You can only change your own announcements"`
 
 ---
 
@@ -373,6 +396,53 @@ The password is stored only as a BCrypt hash and is never returned by any endpoi
   - `displayName`: `Display name is required`, `Display name must be at most 50 characters`
   - A missing or blank field only gets its `... is required` message.
 - `409 Conflict`: `Email is already registered`, also when the same email was registered with different capital letters.
+
+### `POST /auth/login`
+
+Logs in a user with email and password and returns a 24-hour JWT token.
+
+**Request Body:**
+```json
+{
+  "email": "ana@safepaws.dev",
+  "password": "SafePaws1!"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+  "token": "<JWT>",
+  "expiresAt": "2026-11-17T00:15:00",
+  "user": {
+    "id": 1,
+    "email": "ana@safepaws.dev",
+    "displayName": "Ana Pop"
+  }
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` — `"Invalid email or password"` (returned for both unknown email and wrong password)
+
+---
+
+### `GET /auth/me`
+
+Returns the currently authenticated user. Requires `Authorization: Bearer <token>`.
+
+**Response `200 OK`:**
+```json
+{
+  "id": 1,
+  "email": "ana@safepaws.dev",
+  "displayName": "Ana Pop"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` — `"Authentication is required"` (missing, invalid, or expired token)
+
 
 ---
 

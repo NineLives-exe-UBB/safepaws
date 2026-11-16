@@ -1,12 +1,17 @@
 package com.ninelives.safepaws.controller;
 
+import com.ninelives.safepaws.config.JwtAuthenticationFilter;
+import com.ninelives.safepaws.config.SecurityConfig;
 import com.ninelives.safepaws.dto.PhotoResponse;
 import com.ninelives.safepaws.exception.AnnouncementNotFoundException;
 import com.ninelives.safepaws.model.Photo;
+import com.ninelives.safepaws.service.JwtService;
 import com.ninelives.safepaws.service.PhotoService;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -31,7 +36,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 @WebMvcTest(PhotoController.class)
+@Import(TestSecurityConfig.class)
 class PhotoControllerTest {
 
     @Autowired

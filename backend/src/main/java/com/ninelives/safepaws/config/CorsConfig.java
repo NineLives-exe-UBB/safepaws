@@ -24,6 +24,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
+                .allowedHeaders("Content-Type", "Authorization")
                 // lets the frontend read the URL of a newly created announcement
                 .exposedHeaders("Location")
                 .maxAge(3600);
