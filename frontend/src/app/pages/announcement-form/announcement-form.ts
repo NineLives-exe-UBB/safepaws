@@ -15,6 +15,7 @@ import { LocationService } from '../../services/location.service';
 import { MapView } from '../../components/map/map';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from '../../services/auth.service';
 
 /** Long enough to read the success message before the details page opens. */
 const REDIRECT_DELAY_MS = 1500;
@@ -36,6 +37,8 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   protected readonly submitting = signal(false);
   protected readonly successMessage = signal('');
   protected readonly errorMessage = signal('');
+
+  private readonly authService = inject(AuthService);
 
   protected readonly mapCenter = signal<Coordinates | null>(null);
   protected readonly selectedLocation = signal<Coordinates | null>(null);
@@ -90,12 +93,18 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.locationService.getCurrentLocation().then((location) => {
-      if (location) {
-        this.mapCenter.set(location);
-      }
-    });
+  const displayName = this.authService.user()?.displayName;
+
+  if (displayName && !this.form.controls.contactName.value) {
+    this.form.controls.contactName.setValue(displayName);
   }
+
+  this.locationService.getCurrentLocation().then((location) => {
+    if (location) {
+      this.mapCenter.set(location);
+    }
+  });
+}
 
   protected readonly locationPins = computed<MapPin[]>(() => {
     const location = this.selectedLocation();

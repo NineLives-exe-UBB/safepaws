@@ -1,5 +1,12 @@
-import { Component } from '@angular/core';
-import { IsActiveMatchOptions, RouterLink, RouterLinkActive } from '@angular/router';
+
+import { Component, inject } from '@angular/core';
+import {
+  IsActiveMatchOptions,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   imports: [RouterLink, RouterLinkActive],
@@ -8,11 +15,18 @@ import { IsActiveMatchOptions, RouterLink, RouterLinkActive } from '@angular/rou
   templateUrl: './header.html',
 })
 export class Header {
-  /** The list stays highlighted when filters are in the URL, but not on /announcements/new. */
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
   protected readonly listLinkOptions: IsActiveMatchOptions = {
     paths: 'exact',
     queryParams: 'ignored',
     fragment: 'ignored',
     matrixParams: 'ignored',
   };
+
+  protected logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/announcements']);
+  }
 }
