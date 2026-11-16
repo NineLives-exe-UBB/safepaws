@@ -4,7 +4,29 @@ This guide has two parts: how to use the app (section 0), and how to set it up a
 
 ## 0. Using SafePaws
 
-Open `http://localhost:4200` (see section 2 to start it). The header has three links: **Announcements**, **Map** and **Post announcement**. Anyone can use every page; there are no accounts.
+Open `http://localhost:4200` (see section 2 to start it). The header has **Announcements** and **Map**, plus **Log in** and **Register** when you are not logged in. Once you are logged in it shows **Post announcement**, your display name and **Log out** instead.
+
+Reading is public: the list, the map, an announcement's page and the posters work without an account. Posting an announcement, adding photos and marking it resolved or active need you to be logged in. For a local demo you can use the demo accounts in the root `README.md` (for example `ana@safepaws.dev` / `SafePaws1!`).
+
+### Creating an account (`/register`)
+1. Click **Register** in the header (or **Create an account.** on the login page).
+2. Enter your **email address**, a **display name** (shown in the header) and a **password**. The password needs at least 8 characters, one uppercase letter, one digit and one special character (anything that is not a letter or a digit); the checklist under the field ticks each rule as you type. The maximum is 72 bytes, so about 72 characters without diacritics.
+3. Enter the password again in **Confirm password**. If they differ, the form says `Passwords do not match.`
+4. Click **Create account**. You are logged in straight away and taken back to the page you came from (or to the announcements list).
+- If the email already has an account (capital letters do not matter), the form says `This email address is already registered.`
+- Your email is saved in lowercase, without spaces at the ends. The display name must be at most 50 characters.
+
+### Logging in (`/login`)
+1. Click **Log in** in the header.
+2. Enter your **email address** and **password**, and click **Log in**.
+3. You are taken back to the page you came from (or to the announcements list). Your display name appears in the header.
+- A wrong email or password shows `Invalid email or password.` The message is the same for both, so it does not reveal which emails have an account.
+- You stay logged in for **24 hours**, also after closing the browser (the session is kept in the browser's local storage). After that you are sent to the login page and brought back to the page you were on once you log in again.
+- **Log out** in the header logs you out on this browser.
+
+### Your announcements
+- An announcement you post is yours.
+- *Planned, not on main yet (owner check, Patrick and Antonia):* only you can edit your announcement, mark it resolved or active and add photos to it; **Mark as resolved** / **Mark as active** is shown only to the owner, and an **Edit** page lets the owner change the details. Until then, any logged-in user can change the status of any announcement, and there is no edit page in the app (editing is only possible through the API, `PUT /announcements/{id}`).
 
 ### Browse announcements (`/announcements`)
 - Each card shows the main photo (or `No photo`), a LOST or FOUND label, the species, the pet name when there is one, the area and the date.
@@ -26,6 +48,8 @@ The filter bar above the cards narrows the list:
 - The filter bar works like the one on the list, and the same filters give the same announcements. Announcements without a location are counted in a note above the map.
 
 ### Post an announcement (`/announcements/new`)
+You need to be logged in: the **Post announcement** link only appears in the header after you log in.
+
 1. Choose **Lost pet** or **Found animal**, and the **Species** (required).
 2. Optionally add the pet name, breed, color and distinctive marks.
 3. Enter the **date and time** (not in the future) and the **area**, then click the map to **pinpoint the location** (all required). If you allow your location, the map starts around you.
@@ -39,7 +63,7 @@ The filter bar above the cards narrows the list:
 - **Contact:** the name and the phone number. On a phone, tap the number to call.
 - **Location:** a small map with the pin, when the announcement has one.
 - **Download poster:** the printable PDF poster.
-- **Mark as resolved:** when the pet is back home. The announcement gets a **Resolved** badge and a grey photo, and leaves the default list. **Mark as active** reverts it.
+- **Mark as resolved:** when the pet is back home (needs you to be logged in). The announcement gets a **Resolved** badge and a grey photo, and leaves the default list. **Mark as active** reverts it.
 - A link to an announcement that does not exist shows `Announcement not found`, with a link back to the list.
 
 ### The poster
@@ -96,7 +120,7 @@ PostgreSQL 17 runs containerized via Docker Compose.
    cd backend
    ```
 
-2. The application configuration (`src/main/resources/application.properties`) automatically imports database credentials from the root `.env` file (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`). Optional environment variables:
+2. The application configuration (`src/main/resources/application.properties`) automatically imports database credentials from the root `.env` file (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) and the login token secret `JWT_SECRET`. `JWT_SECRET` is required: without it the backend does not start. If your `.env` is older than the login feature, copy the `JWT_SECRET` line from `.env.example` (see `backend/README.md`). Optional environment variables:
    - `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed frontend origins (defaults to `http://localhost:4200`).
    - `FRONTEND_URL`: The frontend address used in the poster QR code (defaults to `http://localhost:4200`).
 
@@ -108,8 +132,11 @@ PostgreSQL 17 runs containerized via Docker Compose.
 
 4. **API & Documentation Endpoints:**
    - Base API URL: `http://localhost:8080`
-   - Swagger UI: `http://localhost:8080/swagger-ui.html`
+   - Swagger UI: `http://localhost:8080/swagger-ui.html` (public, no login needed)
    - OpenAPI 3 Spec (JSON): `http://localhost:8080/v3/api-docs`
+   - Ready-made requests with the demo accounts: `backend/auth.http`
+
+   > **Known issue:** Swagger UI and `/v3/api-docs` currently return `401`, because `SecurityConfig` does not permit `/swagger-ui/**` and `/v3/api-docs/**`.
 
 ---
 
