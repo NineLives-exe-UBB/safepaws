@@ -287,14 +287,14 @@ Pages `/register` and `/login`, endpoints `POST /auth/register`, `POST /auth/log
 
 ### N. Permissions and owners
 
-Endpoints that need a token: `POST /announcements`, `PUT /announcements/{id}`, `PATCH /announcements/{id}/status`, `POST /announcements/{id}/photos`. Errors: no token, invalid or expired token `401 Authentication is required`; another user `403 Only the owner can modify this announcement`. Checks run in the order 401, 400, 404, 403. Owners: Alexandru (API protection), Patrick (owner check, owner buttons), Matei (`V8`), Tudor (`auth.http`).
+Endpoints that need a token: `POST /announcements`, `PUT /announcements/{id}`, `PATCH /announcements/{id}/status`, `POST /announcements/{id}/photos`. Errors: no token, invalid or expired token `401 Authentication is required`; another user `403 You can only change your own announcements`. Checks run in the order 401, 400, 404, 403. Owners: Alexandru (API protection), Patrick (owner check, owner buttons), Matei (`V8`), Tudor (`auth.http`).
 
 | ID | Scenario | Steps | Expected | Status |
 |---|---|---|---|---|
 | N1 | post without an account (API) | `POST /announcements` with a valid body and no token; with `{}` and no token; with `Authorization: Bearer abc.def.ghi` | `401 Authentication is required` all three times, nothing saved | ready |
 | N2 | post with an account (API) | the same body with Ana's token | `201`, `ownerId: 1` in the response and in `GET /announcements/{id}` | ready |
 | N3 | post without an account (UI) | logged out, open `/announcements/new` | taken to `/login?returnUrl=%2Fannouncements%2Fnew`; after logging in the form opens | ready |
-| N4 | edit someone else's announcement | in `backend/auth.http` run "Log in as Mihai", then "Mihai tries to edit Ana's announcement 1" | `403 Only the owner can modify this announcement`, announcement 1 unchanged | ready |
+| N4 | edit someone else's announcement | in `backend/auth.http` run "Log in as Mihai", then "Mihai tries to edit Ana's announcement 1" | `403 You can only change your own announcements`, announcement 1 unchanged | ready |
 | N5 | edit, three ways | `PUT /announcements/1` with no token, with Mihai's token, with Ana's token | `401`, `403`, `200` | ready |
 | N6 | status, three ways | `PATCH /announcements/1/status` (`RESOLVED`) with no token, Mihai's, Elena's, Ana's token; then Ana sets `ACTIVE` | `401`, `403`, `403`, `200`, `200` | ready |
 | N7 | photos, three ways | upload a png to an announcement of Ana with no token, Mihai's token, Ana's token | `401`, `403`, `201` | ready |
@@ -304,6 +304,7 @@ Endpoints that need a token: `POST /announcements`, `PUT /announcements/{id}`, `
 | N11 | resolve someone else's (UI) | as Ana open one of Mihai's announcements | no status button; the API answers `403` (N6) | ready |
 | N12 | expired or invalid token (API) | send a token with `exp` in the past, or with a changed signature, to `GET /auth/me` and `PATCH /status`; send it to `GET /announcements` | `401` on the token endpoints; `200` on the public list (the token is ignored) | ready |
 | N13 | deleted or expired token (UI) | log in as Ana, open announcement 1, in DevTools change the `token` in `safepaws.session` (or delete the key), reload, click `Mark as active` / `Mark as resolved` | logged out, sent to `/login?returnUrl=...`; after logging in back on announcement 1 | ready |
+| N14 | Swagger without an account | logged out, open `http://localhost:8080/swagger-ui.html` and `http://localhost:8080/v3/api-docs` | Swagger UI loads and lists the endpoints; the JSON document opens; `POST /announcements` from Swagger without a token still answers `401` | ready |
 
 ## 4. Last run
 
@@ -318,14 +319,15 @@ Run on 17 Nov 2026 on `main` (`324315d`), fresh database (all 7 migration files 
 | N1, N2, N4 to N13 | all pass |
 | N3 | fail on `main` (fixed on branch `fix/auth-route-guards`) |
 | L7, L8 | pass, apart from the password rules finding below |
+| N14 | fail on `main` (fixed on branch `fix/auth-route-guards`) |
 
 Findings from this run:
 
 - N3: logged out, `/announcements/new` opens and the whole form can be filled in. On submit the backend answers `401` and the form shows `Could not create the announcement. Please check your information and try again.`, which does not say that you need to log in. The header hides the link, but the URL works.
 - M12: `/login` and `/register` show the form while logged in.
 - L7: on a phone the password rules are one paragraph, so a rule wraps in the middle (`One uppercase` / `letter.`), and a met rule only changes `•` to `✓`, without a color.
-- `api.md`, `architecture.md`, `usage-guide.md`, the root `README.md` and `backend/auth.http` still described the owner check as planned, with the message `You can only change your own announcements`; the real message is `Only the owner can modify this announcement`, and `auth.http` said Mihai's edit returns `200`.
-- The login and register specs do not check: the email trimmed before it is sent, the general error when the backend fails, the error cleared when the form is sent again, the button disabled while saving (one request on a double click), and the password rules ticking (`passwordRules` is executed by the render, so it shows as covered, but nothing asserts it). Victor's card, point 11.
+- The 403 message in the code was `Only the owner can modify this announcement`, while the contract (`vanessza-decisions.md`, `api.md`) and Matei's note in `matei-decisions.md` say `You can only change your own announcements`. `api.md`, `architecture.md`, `usage-guide.md`, the root `README.md` and `backend/auth.http` also still described the owner check as planned, and `auth.http` said Mihai's edit returns `200`. Fixed on branch `fix/auth-route-guards`: the code uses the contract's text and the docs describe the owner check as built.
+- The login and register specs did not check: the general error on login when the backend fails, the error cleared when the form is sent again, the button disabled while saving (one request on a double click), and the password rules ticking (`passwordRules` was executed by the render, so it showed as covered, but nothing asserted it). The email trim and the general error on register were already tested. Added on branch `fix/auth-route-guards` (6 tests).
 
 Earlier run:
 
@@ -355,7 +357,7 @@ On 12 Nov both automated suites passed on `main`: backend 127 tests, 97.0% instr
 
 - `contactName` and `contactPhone` are returned by `GET /announcements/{id}` (and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses) to anyone, because reading is public. They are not in the list response. Messaging without a public phone number is planned for DEMO 2.
 - A token cannot be revoked before it expires (24 hours): `Log out` only forgets it in the browser (see `api.md`).
-- Swagger UI and `/v3/api-docs` answer `401`, because `SecurityConfig` does not permit them; use `backend/auth.http` or curl.
+- Swagger UI and `/v3/api-docs` answer `401` on `main`, because `SecurityConfig` does not permit them; use `backend/auth.http` or curl. Fixed on branch `fix/auth-route-guards` (N14).
 - `grey` does not find `Gray` (F7): they are different words, not an accent difference.
 - On the poster, distinctive marks longer than 140 characters are cut, sometimes in the middle of a word (D5). The full text is on the details page, which the QR code opens.
 - On a phone over `http://<laptop IP>`, the browser does not give the location, so the radius filter and `Closest first` are disabled (G12 to G14 only run on the laptop).
