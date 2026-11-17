@@ -21,20 +21,27 @@ public class PhotoService {
 
     private static final long MAX_SIZE = 5 * 1024 * 1024;
 
+
     private final PhotoRepository photoRepository;
     private final AnnouncementRepository announcementRepository;
+    private final AnnouncementOwnershipService ownershipService;
 
     public PhotoService(PhotoRepository photoRepository,
-                        AnnouncementRepository announcementRepository) {
+                        AnnouncementRepository announcementRepository,
+                        AnnouncementOwnershipService ownershipService) {
         this.photoRepository = photoRepository;
         this.announcementRepository = announcementRepository;
+        this.ownershipService = ownershipService;
     }
+
 
     @Transactional
     public List<PhotoResponse> upload(Long announcementId, MultipartFile[] files) {
 
         Announcement announcement = announcementRepository.findById(announcementId)
                 .orElseThrow(() -> new AnnouncementNotFoundException(announcementId));
+
+        ownershipService.requireOwner(announcement);
 
         if (files == null || files.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No files provided");

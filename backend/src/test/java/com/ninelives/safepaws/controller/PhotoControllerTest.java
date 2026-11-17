@@ -199,4 +199,34 @@ class PhotoControllerTest {
 
         verify(photoService).getPhoto(999L);
     }
+
+
+    @Test
+    void unauthenticatedUserCannotUploadPhoto() throws Exception {
+        mockMvc.perform(multipart("/announcements/13/photos")
+                        .file(jpgFile())
+                        .header("Authorization", ""))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+
+        verifyNoInteractions(photoService);
+        }
+
+     @Test
+     void nonOwnerCannotUploadPhoto() throws Exception {
+        when(photoService.upload(eq(13L), any(MultipartFile[].class)))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Only the owner can modify this announcement"
+                ));
+
+        mockMvc.perform(multipart("/announcements/13/photos")
+                        .file(jpgFile()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message")
+                        .value("Only the owner can modify this announcement"));
+        }
+
 }

@@ -9,6 +9,7 @@ import java.util.List;
 
 public record AnnouncementResponse(
         Long id,
+        Long ownerId,
         AnnouncementType type,
         Species species,
         String petName,

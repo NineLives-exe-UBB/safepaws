@@ -28,19 +28,28 @@ public class AnnouncementService {
 
     private static final double EARTH_RADIUS_KM = 6371.0;
 
+
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
+    private final AnnouncementOwnershipService ownershipService;
 
     public AnnouncementService(AnnouncementRepository announcementRepository,
-                               PhotoRepository photoRepository) {
+                            PhotoRepository photoRepository,
+                            AnnouncementOwnershipService ownershipService) {
         this.announcementRepository = announcementRepository;
         this.photoRepository = photoRepository;
+        this.ownershipService = ownershipService;
     }
+
 
 
     @Transactional
     public AnnouncementResponse create(AnnouncementRequest request) {
-        Announcement saved = announcementRepository.save(toEntity(request));
+        Announcement announcement = toEntity(request);
+        announcement.setOwner(ownershipService.currentUser());
+
+        Announcement saved = announcementRepository.save(announcement);
+
         // photos are uploaded separately, after the announcement exists
         return toResponse(saved, List.of());
     }
@@ -130,6 +139,8 @@ public class AnnouncementService {
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new AnnouncementNotFoundException(id));
 
+        ownershipService.requireOwner(announcement);
+
         announcement.setStatus(status);
 
         Announcement saved = announcementRepository.save(announcement);
@@ -146,6 +157,8 @@ public class AnnouncementService {
     public AnnouncementResponse update(Long id, AnnouncementRequest request) {
         Announcement announcement = announcementRepository.findById(id)
                 .orElseThrow(() -> new AnnouncementNotFoundException(id));
+
+        ownershipService.requireOwner(announcement);
 
         copyFields(request, announcement);
 
@@ -179,6 +192,9 @@ public class AnnouncementService {
     private AnnouncementResponse toResponse(Announcement announcement, List<PhotoMetadata> photos) {
         return new AnnouncementResponse(
                 announcement.getId(),
+                announcement.getOwner() != null
+                    ? announcement.getOwner().getId()
+                    : null,
                 announcement.getType(),
                 announcement.getSpecies(),
                 announcement.getPetName(),

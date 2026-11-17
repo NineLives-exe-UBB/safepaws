@@ -15,6 +15,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class PhotoServiceTest {
@@ -47,11 +49,14 @@ class PhotoServiceTest {
     @Mock
     private PhotoRepository photoRepository;
 
-    @Mock
-    private AnnouncementRepository announcementRepository;
+   @Mock
+   private AnnouncementRepository announcementRepository;
 
-    @InjectMocks
-    private PhotoService photoService;
+   @Mock
+   private AnnouncementOwnershipService ownershipService;
+
+   @InjectMocks
+   private PhotoService photoService;
 
     private void announcementExists() {
         when(announcementRepository.findById(ANNOUNCEMENT_ID))
@@ -347,4 +352,28 @@ class PhotoServiceTest {
 
         verify(photoRepository).findById(999L);
     }
+
+
+    @Test
+    void uploadRejectedWhenUserIsNotOwner() {
+        announcementExists();
+
+        doThrow(new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only the owner can modify this announcement"
+        )).when(ownershipService).requireOwner(any(Announcement.class));
+
+        MockMultipartFile file = image("cat.jpg", "image/jpeg", JPEG);
+
+        assertThatThrownBy(() -> photoService.upload(
+                ANNOUNCEMENT_ID, new MultipartFile[]{file}
+        ))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode())
+                                .isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(photoRepository, never())
+                .saveAndFlush(any(Photo.class));
+    }
+
 }

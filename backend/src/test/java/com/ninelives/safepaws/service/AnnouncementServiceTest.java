@@ -14,6 +14,7 @@ import com.ninelives.safepaws.model.Species;
 import com.ninelives.safepaws.repository.AnnouncementRepository;
 import com.ninelives.safepaws.repository.PhotoMetadata;
 import com.ninelives.safepaws.repository.PhotoRepository;
+import com.ninelives.safepaws.model.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +25,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +39,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Service logic only: the repository is mocked, so no database is involved.
@@ -51,11 +56,16 @@ class AnnouncementServiceTest {
     @Mock
     private AnnouncementRepository announcementRepository;
 
-    @Mock
-    private PhotoRepository photoRepository;
 
-    @InjectMocks
-    private AnnouncementService announcementService;
+     @Mock
+     private PhotoRepository photoRepository;
+
+     @Mock
+     private AnnouncementOwnershipService ownershipService;
+
+     @InjectMocks
+     private AnnouncementService announcementService;
+
 
     /**
      * An announcement as it comes back from the database: id and createdAt are set by JPA.
@@ -79,11 +89,21 @@ class AnnouncementServiceTest {
         return announcement;
     }
 
+
+     private static User testUser() {
+                User user = new User("owner@example.com", "hashed-password", "Test Owner");
+                ReflectionTestUtils.setField(user, "id", 5L);
+                return user;
+     }
+
+
     @Test
     void createCopiesEveryRequestFieldIntoTheSavedEntity() {
         AnnouncementRequest request = new AnnouncementRequest(AnnouncementType.LOST, Species.DOG, "Oscar",
                 "Golden Retriever", "Golden", "Red nylon collar with bell", EVENT_DATE, 46.7712, 23.6236,
                 "Mărăști, Cluj-Napoca", "Ion Radu", "0740123456");
+        User owner = testUser();
+        when(ownershipService.currentUser()).thenReturn(owner);
         when(announcementRepository.save(any())).thenReturn(storedAnnouncement(15L, Species.DOG, "Oscar"));
 
         announcementService.create(request);
@@ -105,17 +125,26 @@ class AnnouncementServiceTest {
         assertThat(saved.getContactName()).isEqualTo("Ion Radu");
         assertThat(saved.getContactPhone()).isEqualTo("0740123456");
         assertThat(saved.getStatus()).isEqualTo(AnnouncementStatus.ACTIVE);
+        assertThat(saved.getOwner()).isSameAs(owner);
     }
 
     @Test
     void createReturnsTheSavedAnnouncement() {
         AnnouncementRequest request = new AnnouncementRequest(AnnouncementType.LOST, Species.DOG, "Oscar",
                 null, null, null, EVENT_DATE, null, null, "Mărăști, Cluj-Napoca", "Ion Radu", "0740123456");
-        when(announcementRepository.save(any())).thenReturn(storedAnnouncement(15L, Species.DOG, "Oscar"));
+
+        User owner = testUser();
+        Announcement savedAnnouncement = storedAnnouncement(15L, Species.DOG, "Oscar");
+        savedAnnouncement.setOwner(owner);
+
+        when(ownershipService.currentUser()).thenReturn(owner);
+        when(announcementRepository.save(any())).thenReturn(savedAnnouncement);
+
 
         AnnouncementResponse response = announcementService.create(request);
 
         assertThat(response.id()).isEqualTo(15L);
+        assertThat(response.ownerId()).isEqualTo(5L);
         assertThat(response.status()).isEqualTo(AnnouncementStatus.ACTIVE);
         assertThat(response.createdAt()).isEqualTo(CREATED_AT);
         assertThat(response.species()).isEqualTo(Species.DOG);
@@ -366,6 +395,8 @@ class AnnouncementServiceTest {
                 13L, AnnouncementStatus.RESOLVED
         );
 
+        verify(ownershipService).requireOwner(announcement);
+
         assertThat(result.status()).isEqualTo(AnnouncementStatus.RESOLVED);
         assertThat(announcement.getStatus()).isEqualTo(AnnouncementStatus.RESOLVED);
 
@@ -385,6 +416,8 @@ class AnnouncementServiceTest {
         AnnouncementResponse result = announcementService.updateStatus(
                 13L, AnnouncementStatus.ACTIVE
         );
+
+        verify(ownershipService).requireOwner(announcement);
 
         assertThat(result.status()).isEqualTo(AnnouncementStatus.ACTIVE);
         assertThat(announcement.getStatus()).isEqualTo(AnnouncementStatus.ACTIVE);
@@ -463,4 +496,55 @@ class AnnouncementServiceTest {
 
         verify(announcementRepository, never()).save(any(Announcement.class));
     }
+
+
+    @Test
+    void updateStatusRejectsNonOwnerWithoutSaving() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+
+        when(announcementRepository.findById(13L))
+                .thenReturn(Optional.of(announcement));
+
+        doThrow(new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only the owner can modify this announcement"
+        )).when(ownershipService).requireOwner(announcement);
+
+        assertThatThrownBy(() -> announcementService.updateStatus(
+                13L, AnnouncementStatus.RESOLVED
+        ))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode())
+                                .isEqualTo(HttpStatus.FORBIDDEN));
+
+        assertThat(announcement.getStatus()).isEqualTo(AnnouncementStatus.ACTIVE);
+
+        verify(announcementRepository, never()).save(any(Announcement.class));
+    }
+
+
+    @Test
+    void updateRejectsNonOwnerWithoutSaving() {
+        Announcement announcement = storedAnnouncement(13L, Species.DOG, "Oscar");
+
+        when(announcementRepository.findById(13L))
+                .thenReturn(Optional.of(announcement));
+
+        doThrow(new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Only the owner can modify this announcement"
+        )).when(ownershipService).requireOwner(announcement);
+
+        AnnouncementRequest request = mock(AnnouncementRequest.class);
+
+        assertThatThrownBy(() -> announcementService.update(13L, request))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode())
+                                .isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(ownershipService).requireOwner(announcement);
+        verify(announcementRepository, never()).save(any(Announcement.class));
+        }
+
+
 }
