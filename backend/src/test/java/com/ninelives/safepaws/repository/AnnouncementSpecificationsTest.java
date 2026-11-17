@@ -33,6 +33,9 @@ class AnnouncementSpecificationsTest {
     @Autowired
     private AnnouncementRepository announcementRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @BeforeEach
     void startFromAnEmptyTable() {
         announcementRepository.deleteAllInBatch();
@@ -41,6 +44,7 @@ class AnnouncementSpecificationsTest {
     private Announcement save(String area, AnnouncementType type, Species species, AnnouncementStatus status,
                               String color, String breed, Double latitude, Double longitude, int day) {
         Announcement announcement = new Announcement();
+        announcement.setOwner(userRepository.findByEmail("ana@safepaws.dev").orElseThrow());
         announcement.setType(type);
         announcement.setSpecies(species);
         announcement.setStatus(status);

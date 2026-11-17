@@ -72,6 +72,14 @@ class UserAccountsMigrationTest {
     }
 
     @Test
+    void everyAnnouncementNeedsAnOwner() {
+        assertThat(count("SELECT count(*) FROM announcement WHERE owner_id IS NULL")).isZero();
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE announcement SET owner_id = NULL WHERE contact_phone = '0700000001'"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     void ownerColumnIsIndexed() {
         List<String> indexes = jdbcTemplate.queryForList(
                 "SELECT indexname FROM pg_indexes WHERE tablename = 'announcement'", String.class);

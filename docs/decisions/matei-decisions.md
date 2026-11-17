@@ -66,18 +66,19 @@ Decisions and team messages for the database cards "Search support & demo data",
 
 ## DEMO 2: users and announcement owners
 
-Migrations `V6__users_and_owners.sql` and `V7__messages_and_sightings.sql`. The tables, columns and demo accounts are in `database.md`.
+Migrations `V6__users_and_owners.sql`, `V7__messages_and_sightings.sql` and `V8__require_announcement_owner.sql`. The tables, columns and demo accounts are in `database.md`.
 
 ### Decisions
 
 - **The table is `users`, not `user`:** `user` is a reserved word in PostgreSQL. The other tables stay singular (`announcement`, `photo`, `message`, `sighting`).
 - **The password column is `password_hash`** (`VARCHAR(60)`), because it only ever holds a BCrypt hash.
 - **Emails are checked in the database too:** `uq_users_email` makes them unique, and `ck_users_email_normalized` only accepts an email that is trimmed and lowercase. The backend still has to trim and lowercase it before saving, otherwise the insert fails.
-- **`owner_id` is nullable until `V8`:** posting keeps working until the backend sets the owner. `V8` makes it required once Patrick's card is on `main`.
+- **`owner_id` is required since `V8`:** the backend sets it from the logged-in user, so the database rejects an announcement without an owner. A test that saves an announcement directly through the repository has to set an owner, for example `userRepository.findByEmail("ana@safepaws.dev")`.
+- **Old announcements without an owner go to Ana:** on a local database, announcements posted before the backend set the owner had none. `V8` gives them to `ana@safepaws.dev` instead of deleting them, so the migration doesn't fail and they can still be edited. A fresh database has none.
 - **Demo accounts:** the 3 accounts from the contract, all with `SafePaws1!`, saved as BCrypt hashes (cost 10, a different hash per account). Each one owns LOST and FOUND, active and resolved announcements and one with 2 photos. The table is in `database.md`.
 - **The contact stays on the announcement:** the owner's display name and the announcement's `contact_name` can be different people, as in ADR 014.
 - **`V7` is a first design:** the contract does not describe messages and sightings yet. A conversation is all the messages about one announcement between the same two users, so there is no conversation table. `read_at` is empty until the message is read. A sighting needs coordinates and the time the pet was seen; the note is optional. Messages and sightings need an account, and they are deleted with their announcement. Changes are still easy while this PR is open; after it is merged they need a new migration.
-- **Next migration is `V8`,** and only I write migrations for now.
+- **Next migration is `V9`,** and only I write migrations for now.
 
 ### Messages
 
@@ -92,6 +93,8 @@ Migrations `V6__users_and_owners.sql` and `V7__messages_and_sightings.sql`. The 
 #### Patrick
 
 > `announcement.owner_id` is a `BIGINT` foreign key to `users(id)`, with an index. It's empty only for announcements posted before your card, because the 22 demo ones already have owners. Please write in the chat when your PR is merged, so I can add `V8` (owner required). For tests: Ana owns announcement 1, Mihai owns 2, Elena owns 3.
+>
+> `V8` makes `owner_id` required, so `announcement.getOwner()` is never null for a saved announcement. The 403 message in `AnnouncementOwnershipService` is `Only the owner can modify this announcement`, but the contract (`vanessza-decisions.md`, `api.md`) says `You can only change your own announcements`. Please use the contract's text, because the frontend may show it.
 
 #### Jessica
 
@@ -104,6 +107,10 @@ Migrations `V6__users_and_owners.sql` and `V7__messages_and_sightings.sql`. The 
 #### Tudor
 
 > For the root `README.md`: the demo accounts table is in `database.md` ("Demo accounts (V6)"). `architecture.md` should list `V6` and `V7`. The ER diagram in `database.md` will get the 3 new tables from me.
+>
+> In `architecture.md`, line 198 lists only V1, V2, V3 and V5; it needs V6, V7 and V8. Line 263 says new announcements are saved without an owner, which is no longer true: `POST /announcements` saves the logged-in user as the owner and `V8` makes `owner_id` required. The owner check is on `main` too, so the "planned, not on main yet" notes for `403` in `api.md` and `architecture.md:262` are out of date. Every announcement in the API now has an `ownerId`.
+>
+> Anyone whose `.env` was copied before `JWT_SECRET` was added to `.env.example` gets `Could not resolve placeholder 'JWT_SECRET'` and the backend doesn't start. A line in the README setup ("if you already have a `.env`, add `JWT_SECRET` from `.env.example`") would save people time.
 
 #### Vanessza
 
