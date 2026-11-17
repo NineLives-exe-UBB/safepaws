@@ -14,9 +14,9 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 | `POST` | `/announcements` | Creates a new announcement | Token | Antonia | Announcement form |
 | `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Public | Antonia | List page, map page |
 | `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Public | Antonia | Details page |
-| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Token; owner only (planned) | Antonia | Edit page (*planned, not on main yet*) |
-| `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Token; owner only (planned) | Patrick | `Mark as resolved` / `Mark as active` on the details page |
-| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Token; owner only (planned) | Patrick | Announcement form |
+| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Token; owner only | Antonia | Edit page (*planned, not on main yet*) |
+| `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Token; owner only | Patrick | `Mark as resolved` / `Mark as active` on the details page |
+| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Token; owner only | Patrick | Announcement form |
 | `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Public | Patrick | Announcement cards, map popups, details page |
 | `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Public | Alexandru | `Download poster` on each card and on the details page |
 
@@ -33,14 +33,14 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 | `GET /announcements`, `GET /announcements/{id}`, photos, posters | ✅ | ✅ | ✅ |
 | `POST /auth/register`, `POST /auth/login` | ✅ | ✅ | ✅ |
 | `GET /auth/me` | 401 | ✅ | ✅ |
-| `POST /announcements` | 401 | ✅ (becomes the owner, *planned*) | – |
-| `PUT /announcements/{id}` | 401 | 403 (*planned*; today ✅) | ✅ |
-| `PATCH /announcements/{id}/status` | 401 | 403 (*planned*; today ✅) | ✅ |
-| `POST /announcements/{id}/photos` | 401 | 403 (*planned*; today ✅) | ✅ |
+| `POST /announcements` | 401 | ✅ (becomes the owner) | – |
+| `PUT /announcements/{id}` | 401 | 403 | ✅ |
+| `PATCH /announcements/{id}/status` | 401 | 403 | ✅ |
+| `POST /announcements/{id}/photos` | 401 | 403 | ✅ |
 
-> **Planned, not on main yet (owner check — Patrick for status and photos, Antonia for editing; then `V8` by Matei):**
-> - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `You can only change your own announcements`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
-> - `POST /announcements` saves the logged-in user as the owner. Today the backend does not set the owner yet, so announcements created through the API have no owner (`owner_id` is `NULL`); only the demo announcements have one (`V6`). `V8` then makes `owner_id` required.
+> **Owner check:**
+> - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `Only the owner can modify this announcement`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
+> - `POST /announcements` saves the logged-in user as the owner. Every announcement has an owner: `V8` makes `owner_id` required.
 > - `GET /announcements/{id}` and the responses of `POST`, `PUT` and `PATCH` include `"ownerId": 1`. The list (`GET /announcements`) does not.
 >
 > Until then, any logged-in user can edit any announcement, change its status and add photos to it.
@@ -73,7 +73,7 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 #### `POST /announcements`
 Creates a new lost or found announcement.
 
-**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet:* the logged-in user becomes the owner, and the response includes `"ownerId"`.
+**Auth:** token required (`Authorization: Bearer <token>`). The logged-in user becomes the owner, and the response includes `"ownerId"`.
 
 ##### Request Body (`application/json`)
 ```json
@@ -205,7 +205,7 @@ Blank text parameters are ignored. In `color`, `breed` and `area`, `%` and `_` a
 #### `GET /announcements/{id}`
 Returns a single announcement by its unique identifier, including full details, coordinates, reporter contact info, and all associated photo metadata. Public.
 
-*Planned, not on main yet (owner check):* the response also has `"ownerId"` (the id of the user who posted it), so the frontend can show the owner's actions only to the owner.
+The response also has `"ownerId"` (the id of the user who posted it), so the frontend can show the owner's actions only to the owner.
 
 ##### Response (`200 OK`)
 ```json
@@ -262,7 +262,7 @@ The status, the photos, the owner and `createdAt` do not change here: the status
 
 **Auth:** token required (`Authorization: Bearer <token>`).
 
-> **Planned, not on main yet (owner check, Antonia):** only the owner may edit; another logged-in user gets `403 Forbidden` (`You can only change your own announcements`). Today any logged-in user can edit any announcement. The frontend edit page is also planned; today editing is only possible through the API (see `backend/auth.http`).
+> Only the owner may edit; another logged-in user gets `403 Forbidden` (`Only the owner can modify this announcement`). The frontend edit page is planned, not on main yet; today editing is only possible through the API (see `backend/auth.http`).
 
 ##### Request Body (`application/json`)
 The same body and the same field constraints as `POST /announcements` (see `AnnouncementRequest` above).
@@ -274,14 +274,14 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`.
 - `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked before the ID, so an invalid body returns `400` even when the ID does not exist.
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
 - `404 Not Found` (`Announcement not found with id: {id}`).
-- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*, see above.
+- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
 
 ---
 
 #### `PATCH /announcements/{id}/status`
 Changes the status of an announcement: `RESOLVED` when the pet is back home, `ACTIVE` to show it again in the default list. Sending the status it already has is not an error.
 
-**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet (owner check, Patrick):* only the owner may change the status; today any logged-in user can.
+**Auth:** token required (`Authorization: Bearer <token>`). Only the owner may change the status.
 
 ##### Request Body (`application/json`)
 ```json
@@ -301,7 +301,7 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 - `400 Bad Request`: `status` is missing (`status: Status is required`) or has another value (`status: Invalid value 'DONE', allowed values: ACTIVE, RESOLVED`).
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
 - `404 Not Found` (`Announcement not found with id: {id}`).
-- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*.
+- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
 
 ---
 
@@ -310,7 +310,7 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 #### `POST /announcements/{id}/photos`
 Uploads one or more binary photos and attaches them to the specified announcement.
 
-**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet (owner check, Patrick):* only the owner may add photos; today any logged-in user can.
+**Auth:** token required (`Authorization: Bearer <token>`). Only the owner may add photos.
 
 ##### Request Format
 - **Content-Type:** `multipart/form-data`
@@ -354,7 +354,7 @@ Uploads one or more binary photos and attaches them to the specified announcemen
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one.
 - `404 Not Found` (`Announcement not found with id: {id}`).
 - `413 Content Too Large` (`Maximum file size is 5 MB`).
-- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*.
+- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
 
 ---
 
@@ -529,7 +529,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Corrupted image data / invalid magic bytes (`PhotoService`) | `Invalid image file` | `[]` (empty) |
 | `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `null` |
 | `401 Unauthorized` | `Unauthorized` | Wrong login (`InvalidCredentialsException`) | `Invalid email or password` | `null` |
-| `403 Forbidden` | `Forbidden` | *Planned, not on main yet:* changing an announcement you do not own | `You can only change your own announcements` | not decided yet |
+| `403 Forbidden` | `Forbidden` | Changing an announcement you do not own (`AnnouncementOwnershipService`) | `Only the owner can modify this announcement` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Announcement ID not found (`AnnouncementNotFoundException`) | `Announcement not found with id: {id}` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Photo ID not found (`PhotoService`) | `Photo not found with id: {id}` | `[]` (empty) |
 | `409 Conflict` | `Conflict` | Email already has an account (`EmailAlreadyRegisteredException`) | `Email is already registered` | `[]` (empty) |

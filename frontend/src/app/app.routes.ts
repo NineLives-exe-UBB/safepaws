@@ -1,18 +1,21 @@
 
 import { Routes } from '@angular/router';
 import { AnnouncementList } from './pages/announcement-list/announcement-list';
+import { guestGuard, loggedInGuard } from './services/auth.guards';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'announcements' },
 
   {
     path: 'login',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./pages/login/login').then((module) => module.Login),
     title: 'Log in | SafePaws',
   },
   {
     path: 'register',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./pages/register/register').then((module) => module.Register),
     title: 'Create account | SafePaws',
@@ -24,6 +27,7 @@ export const routes: Routes = [
   },
   {
     path: 'announcements/new',
+    canActivate: [loggedInGuard],
     loadComponent: () =>
       import('./pages/announcement-form/announcement-form').then(
         (module) => module.AnnouncementForm,

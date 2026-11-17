@@ -23,10 +23,12 @@ Reading is public: the list, the map, an announcement's page and the posters wor
 - A wrong email or password shows `Invalid email or password.` The message is the same for both, so it does not reveal which emails have an account.
 - You stay logged in for **24 hours**, also after closing the browser (the session is kept in the browser's local storage). After that you are sent to the login page and brought back to the page you were on once you log in again.
 - **Log out** in the header logs you out on this browser.
+- While you are logged in, `/login` and `/register` take you to the announcements list.
 
 ### Your announcements
 - An announcement you post is yours.
-- *Planned, not on main yet (owner check, Patrick and Antonia):* only you can edit your announcement, mark it resolved or active and add photos to it; **Mark as resolved** / **Mark as active** is shown only to the owner, and an **Edit** page lets the owner change the details. Until then, any logged-in user can change the status of any announcement, and there is no edit page in the app (editing is only possible through the API, `PUT /announcements/{id}`).
+- Only you can mark your announcement resolved or active and add photos to it; **Mark as resolved** / **Mark as active** is shown only to the owner.
+- *Planned, not on main yet:* an **Edit** page. Until then, editing is only possible through the API (`PUT /announcements/{id}`), and only by the owner.
 
 ### Browse announcements (`/announcements`)
 - Each card shows the main photo (or `No photo`), a LOST or FOUND label, the species, the pet name when there is one, the area and the date.
@@ -48,7 +50,7 @@ The filter bar above the cards narrows the list:
 - The filter bar works like the one on the list, and the same filters give the same announcements. Announcements without a location are counted in a note above the map.
 
 ### Post an announcement (`/announcements/new`)
-You need to be logged in: the **Post announcement** link only appears in the header after you log in.
+You need to be logged in: the **Post announcement** link only appears in the header after you log in, and opening `/announcements/new` without an account takes you to the login page, then back to the form.
 
 1. Choose **Lost pet** or **Found animal**, and the **Species** (required).
 2. Optionally add the pet name, breed, color and distinctive marks.

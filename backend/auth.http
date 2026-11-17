@@ -111,9 +111,7 @@ Content-Type: application/json
 %}
 
 ### Mihai tries to edit Ana's announcement 1.
-### Planned, not on main yet (owner check, Patrick and Antonia): this returns
-### 403 Forbidden "You can only change your own announcements".
-### Today there is no owner check, so it returns 200 and the edit is saved.
+### Returns 403 Forbidden "Only the owner can modify this announcement"; nothing is saved.
 PUT {{baseUrl}}/announcements/{{announcementId}}
 Content-Type: application/json
 Authorization: Bearer {{mihaiToken}}

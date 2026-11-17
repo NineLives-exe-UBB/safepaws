@@ -71,6 +71,21 @@
   font-size: 0.875rem;
 }
 
+.password-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text-muted);
+}
+
+.password-rules p {
+  margin: 0 0 4px;
+}
+
+.password-rules .rule-valid {
+  color: var(--color-success);
+}
+
 .form-error {
   margin: 0;
   padding: 12px;
