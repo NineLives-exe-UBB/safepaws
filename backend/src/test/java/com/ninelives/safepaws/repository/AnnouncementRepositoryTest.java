@@ -28,13 +28,17 @@ class AnnouncementRepositoryTest {
     @Autowired
     private AnnouncementRepository announcementRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @BeforeEach
     void startFromAnEmptyTable() {
         announcementRepository.deleteAllInBatch();
     }
 
-    private static Announcement newAnnouncement() {
+    private Announcement newAnnouncement() {
         Announcement announcement = new Announcement();
+        announcement.setOwner(userRepository.findByEmail("ana@safepaws.dev").orElseThrow());
         announcement.setType(AnnouncementType.FOUND);
         announcement.setSpecies(Species.DOG);
         announcement.setPetName("Oscar");
