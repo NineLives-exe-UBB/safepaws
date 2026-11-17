@@ -39,7 +39,7 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 | `POST /announcements/{id}/photos` | 401 | 403 | ✅ |
 
 > **Owner check:**
-> - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `Only the owner can modify this announcement`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
+> - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `You can only change your own announcements`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
 > - `POST /announcements` saves the logged-in user as the owner. Every announcement has an owner: `V8` makes `owner_id` required.
 > - `GET /announcements/{id}` and the responses of `POST`, `PUT` and `PATCH` include `"ownerId": 1`. The list (`GET /announcements`) does not.
 >
@@ -53,7 +53,6 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 - **Interactive Documentation:**
   - Swagger UI: `http://localhost:8080/swagger-ui.html` (public, no login needed)
   - OpenAPI 3 Specification (JSON): `http://localhost:8080/v3/api-docs` (public)
-  - **Known issue:** both currently return `401`, because `SecurityConfig` does not permit `/swagger-ui/**` and `/v3/api-docs/**`.
   - Ready-made requests with the demo accounts: `backend/auth.http` (IntelliJ HTTP Client).
 - **Field Names:** All JSON identifiers are in English, using `camelCase` (e.g., `contactPhone`, `distinctiveMarks`, `eventDate`).
 - **Date-Time Format:** ISO 8601 string format without zone offset: `YYYY-MM-DDTHH:mm:ss` (e.g., `2026-11-01T14:30:00`).
@@ -262,7 +261,7 @@ The status, the photos, the owner and `createdAt` do not change here: the status
 
 **Auth:** token required (`Authorization: Bearer <token>`).
 
-> Only the owner may edit; another logged-in user gets `403 Forbidden` (`Only the owner can modify this announcement`). The frontend edit page is planned, not on main yet; today editing is only possible through the API (see `backend/auth.http`).
+> Only the owner may edit; another logged-in user gets `403 Forbidden` (`You can only change your own announcements`). The frontend edit page is planned, not on main yet; today editing is only possible through the API (see `backend/auth.http`).
 
 ##### Request Body (`application/json`)
 The same body and the same field constraints as `POST /announcements` (see `AnnouncementRequest` above).
@@ -274,7 +273,7 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`.
 - `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked before the ID, so an invalid body returns `400` even when the ID does not exist.
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
 - `404 Not Found` (`Announcement not found with id: {id}`).
-- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
+- `403 Forbidden` (`You can only change your own announcements`): the user is not the owner. Checked last.
 
 ---
 
@@ -301,7 +300,7 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 - `400 Bad Request`: `status` is missing (`status: Status is required`) or has another value (`status: Invalid value 'DONE', allowed values: ACTIVE, RESOLVED`).
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
 - `404 Not Found` (`Announcement not found with id: {id}`).
-- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
+- `403 Forbidden` (`You can only change your own announcements`): the user is not the owner. Checked last.
 
 ---
 
@@ -354,7 +353,7 @@ Uploads one or more binary photos and attaches them to the specified announcemen
 - `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one.
 - `404 Not Found` (`Announcement not found with id: {id}`).
 - `413 Content Too Large` (`Maximum file size is 5 MB`).
-- `403 Forbidden` (`Only the owner can modify this announcement`): the user is not the owner. Checked last.
+- `403 Forbidden` (`You can only change your own announcements`): the user is not the owner. Checked last.
 
 ---
 
@@ -529,7 +528,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Corrupted image data / invalid magic bytes (`PhotoService`) | `Invalid image file` | `[]` (empty) |
 | `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `null` |
 | `401 Unauthorized` | `Unauthorized` | Wrong login (`InvalidCredentialsException`) | `Invalid email or password` | `null` |
-| `403 Forbidden` | `Forbidden` | Changing an announcement you do not own (`AnnouncementOwnershipService`) | `Only the owner can modify this announcement` | `[]` (empty) |
+| `403 Forbidden` | `Forbidden` | Changing an announcement you do not own (`AnnouncementOwnershipService`) | `You can only change your own announcements` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Announcement ID not found (`AnnouncementNotFoundException`) | `Announcement not found with id: {id}` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Photo ID not found (`PhotoService`) | `Photo not found with id: {id}` | `[]` (empty) |
 | `409 Conflict` | `Conflict` | Email already has an account (`EmailAlreadyRegisteredException`) | `Email is already registered` | `[]` (empty) |

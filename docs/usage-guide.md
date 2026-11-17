@@ -138,8 +138,6 @@ PostgreSQL 17 runs containerized via Docker Compose.
    - OpenAPI 3 Spec (JSON): `http://localhost:8080/v3/api-docs`
    - Ready-made requests with the demo accounts: `backend/auth.http`
 
-   > **Known issue:** Swagger UI and `/v3/api-docs` currently return `401`, because `SecurityConfig` does not permit `/swagger-ui/**` and `/v3/api-docs/**`.
-
 ---
 
 ### Frontend (Angular)

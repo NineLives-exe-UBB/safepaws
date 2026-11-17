@@ -111,7 +111,7 @@ Content-Type: application/json
 %}
 
 ### Mihai tries to edit Ana's announcement 1.
-### Returns 403 Forbidden "Only the owner can modify this announcement"; nothing is saved.
+### Returns 403 Forbidden "You can only change your own announcements"; nothing is saved.
 PUT {{baseUrl}}/announcements/{{announcementId}}
 Content-Type: application/json
 Authorization: Bearer {{mihaiToken}}

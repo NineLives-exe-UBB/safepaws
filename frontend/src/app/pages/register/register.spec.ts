@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { Register } from './register';
 
@@ -193,5 +193,92 @@ describe('Register', () => {
     await submit();
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/announcements');
+  });
+
+  it('should clear the general error when the form is sent again', async () => {
+    register
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 500 })))
+      .mockReturnValueOnce(of({ id: 5, email: 'owner@example.com', displayName: 'Test Owner' }));
+
+    await render();
+    fillValidForm();
+    await submit();
+    expect(element.textContent).toContain('Could not create your account. Please try again.');
+
+    await submit();
+
+    expect(element.textContent).not.toContain('Could not create your account.');
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/announcements');
+  });
+
+  it('should disable the button while saving and send one request', async () => {
+    const response = new Subject<{ id: number; email: string; displayName: string }>();
+    register.mockReturnValue(response);
+
+    await render();
+    fillValidForm();
+    await submit();
+    await submit();
+
+    const button = element.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    expect(register).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(true);
+
+    response.next({ id: 5, email: 'owner@example.com', displayName: 'Test Owner' });
+    response.complete();
+    await fixture.whenStable();
+
+    expect(button.disabled).toBe(false);
+    expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('should tick the password rules as the password is typed', async () => {
+    await render();
+
+    const rules = async (password: string): Promise<string[]> => {
+      fill('#password', password);
+      await fixture.whenStable();
+      return Array.from(element.querySelectorAll('.password-rules small')).map(
+        (rule) => `${rule.classList.contains('rule-valid') ? 'ok' : 'no'} ${rule.textContent?.trim()}`,
+      );
+    };
+
+    expect(await rules('')).toEqual([
+      'no • At least 8 characters.',
+      'no • One uppercase letter.',
+      'no • One digit.',
+      'no • One special character.',
+    ]);
+    expect(await rules('safepaws')).toEqual([
+      'ok ✓ At least 8 characters.',
+      'no • One uppercase letter.',
+      'no • One digit.',
+      'no • One special character.',
+    ]);
+    expect(await rules('Safepaws')).toEqual([
+      'ok ✓ At least 8 characters.',
+      'ok ✓ One uppercase letter.',
+      'no • One digit.',
+      'no • One special character.',
+    ]);
+    expect(await rules('Safepaws1')).toEqual([
+      'ok ✓ At least 8 characters.',
+      'ok ✓ One uppercase letter.',
+      'ok ✓ One digit.',
+      'no • One special character.',
+    ]);
+    expect(await rules('Safepaws1!')).toEqual([
+      'ok ✓ At least 8 characters.',
+      'ok ✓ One uppercase letter.',
+      'ok ✓ One digit.',
+      'ok ✓ One special character.',
+    ]);
+    expect(await rules('Sp1!')).toEqual([
+      'no • At least 8 characters.',
+      'ok ✓ One uppercase letter.',
+      'ok ✓ One digit.',
+      'ok ✓ One special character.',
+    ]);
   });
 });

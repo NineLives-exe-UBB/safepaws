@@ -49,8 +49,6 @@ Navigate to the `backend/` directory and start the application using the Maven w
 ```
 Flyway will automatically run the migrations on startup (SQL in `src/main/resources/db/migration`, Java in `src/main/java/db/migration`) and seed the test announcements and demo photos. The API runs on `http://localhost:8080`, with the interactive documentation at `http://localhost:8080/swagger-ui.html` (public, no login needed).
 
-> **Known issue:** Swagger UI and `/v3/api-docs` currently return `401`, because `SecurityConfig` does not permit `/swagger-ui/**` and `/v3/api-docs/**`. Until that is fixed, use [`auth.http`](auth.http) or curl.
-
 To start again from the demo data (and get recent demo dates before a demo), run `docker compose down -v`, then `docker compose up -d` and start the backend again.
 
 ## API
