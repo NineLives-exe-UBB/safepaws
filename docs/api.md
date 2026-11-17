@@ -6,19 +6,44 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 
 ### Endpoint Overview & Team Assignments
 
-| Method | Endpoint | Description | Implemented by | Used by (frontend) |
-|---|---|---|---|---|
-| `POST` | `/announcements` | Creates a new announcement | Antonia | Announcement form |
-| `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Antonia | List page, map page |
-| `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Antonia | Details page |
-| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Antonia | Edit page |
-| `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Patrick | `Mark as resolved` / `Mark as active` on the details page |
-| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Patrick | Announcement form |
-| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Patrick | Announcement cards, map popups, details page |
-| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Alexandru | `Download poster` on each card and on the details page |
-| `POST` | `/auth/register` | Creates a user account | Antonia | Register page |
+| Method | Endpoint | Description | Auth | Implemented by | Used by (frontend) |
+|---|---|---|---|---|---|
+| `POST` | `/auth/register` | Creates a user account | Public | Antonia | Register page |
+| `POST` | `/auth/login` | Logs in, returns a JWT valid for 24 hours | Public | Alexandru | Login page (and right after registering) |
+| `GET` | `/auth/me` | Returns the logged-in user | Token | Alexandru | — |
+| `POST` | `/announcements` | Creates a new announcement | Token | Antonia | Announcement form |
+| `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Public | Antonia | List page, map page |
+| `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Public | Antonia | Details page |
+| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Token; owner only (planned) | Antonia | Edit page (*planned, not on main yet*) |
+| `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Token; owner only (planned) | Patrick | `Mark as resolved` / `Mark as active` on the details page |
+| `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Token; owner only (planned) | Patrick | Announcement form |
+| `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Public | Patrick | Announcement cards, map popups, details page |
+| `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Public | Alexandru | `Download poster` on each card and on the details page |
 
-There is no authentication: all endpoints are public, so anyone can also change the status of an announcement. User accounts are planned for DEMO 2.
+### Authentication & Permissions
+
+User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in `decisions/vanessza-decisions.md`.
+
+- **Token:** log in with `POST /auth/login` and send the returned token in the header `Authorization: Bearer <token>`. Tokens are JWTs signed with HS256 using `JWT_SECRET` (`.env`), hold the user id, and are valid for 24 hours. There is no refresh token and no logout endpoint: the token cannot be revoked before it expires, and changing `JWT_SECRET` invalidates every token.
+- **Public endpoints** work without a token. An invalid or expired token sent to a public endpoint is ignored: the request works as if no token was sent.
+- **Token endpoints** answer `401 Unauthorized` (`Authentication is required`) when the token is missing, invalid or expired. This check runs before anything else, so a request without a token gets `401` even when its body is invalid or the announcement does not exist.
+
+| Endpoint | Without an account | Another user | Owner |
+|---|---|---|---|
+| `GET /announcements`, `GET /announcements/{id}`, photos, posters | ✅ | ✅ | ✅ |
+| `POST /auth/register`, `POST /auth/login` | ✅ | ✅ | ✅ |
+| `GET /auth/me` | 401 | ✅ | ✅ |
+| `POST /announcements` | 401 | ✅ (becomes the owner, *planned*) | – |
+| `PUT /announcements/{id}` | 401 | 403 (*planned*; today ✅) | ✅ |
+| `PATCH /announcements/{id}/status` | 401 | 403 (*planned*; today ✅) | ✅ |
+| `POST /announcements/{id}/photos` | 401 | 403 (*planned*; today ✅) | ✅ |
+
+> **Planned, not on main yet (owner check — Patrick for status and photos, Antonia for editing; then `V8` by Matei):**
+> - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `You can only change your own announcements`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
+> - `POST /announcements` saves the logged-in user as the owner. Today the backend does not set the owner yet, so announcements created through the API have no owner (`owner_id` is `NULL`); only the demo announcements have one (`V6`). `V8` then makes `owner_id` required.
+> - `GET /announcements/{id}` and the responses of `POST`, `PUT` and `PATCH` include `"ownerId": 1`. The list (`GET /announcements`) does not.
+>
+> Until then, any logged-in user can edit any announcement, change its status and add photos to it.
 
 ---
 
@@ -26,15 +51,18 @@ There is no authentication: all endpoints are public, so anyone can also change 
 - **Base URL:** `http://localhost:8080` (all endpoints documented below are relative to this root). The frontend calls the backend on the same host it was opened from, so from a phone on the same Wi-Fi it is `http://<laptop IP>:8080`.
 - **CORS:** only the frontend addresses in `CORS_ALLOWED_ORIGINS` (`.env`, comma-separated, default `http://localhost:4200`) may call the API from a browser.
 - **Interactive Documentation:**
-  - Swagger UI: `http://localhost:8080/swagger-ui.html`
-  - OpenAPI 3 Specification (JSON): `http://localhost:8080/v3/api-docs`
+  - Swagger UI: `http://localhost:8080/swagger-ui.html` (public, no login needed)
+  - OpenAPI 3 Specification (JSON): `http://localhost:8080/v3/api-docs` (public)
+  - **Known issue:** both currently return `401`, because `SecurityConfig` does not permit `/swagger-ui/**` and `/v3/api-docs/**`.
+  - Ready-made requests with the demo accounts: `backend/auth.http` (IntelliJ HTTP Client).
 - **Field Names:** All JSON identifiers are in English, using `camelCase` (e.g., `contactPhone`, `distinctiveMarks`, `eventDate`).
 - **Date-Time Format:** ISO 8601 string format without zone offset: `YYYY-MM-DDTHH:mm:ss` (e.g., `2026-11-01T14:30:00`).
 - **Fixed Values (Enums):** Fixed domain attributes are strictly uppercase strings:
   - Announcement Type: `LOST`, `FOUND`
   - Status: `ACTIVE`, `RESOLVED`
   - Species: `CAT`, `DOG`, `OTHER`
-- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses, and printed on the poster. They are not part of `GET /announcements`.
+- **Authentication:** `Authorization: Bearer <token>` on the endpoints marked "Token" in the table above (see **Authentication & Permissions**).
+- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements`, `PUT /announcements/{id}` and `PATCH /announcements/{id}/status` responses, and printed on the poster. They are not part of `GET /announcements`.
 
 ---
 
@@ -45,8 +73,7 @@ There is no authentication: all endpoints are public, so anyone can also change 
 #### `POST /announcements`
 Creates a new lost or found announcement.
 
-**Headers Required:**
-- `Authorization: Bearer <token>`
+**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet:* the logged-in user becomes the owner, and the response includes `"ownerId"`.
 
 ##### Request Body (`application/json`)
 ```json
@@ -105,10 +132,10 @@ Creates a new lost or found announcement.
   "photos": []
 }
 ```
-**Error Responses:**
-- `401 Unauthorized` — `"Authentication is required"`
-- `403 Forbidden` — `"You can only change your own announcements"`
 
+##### Error Responses
+- `400 Bad Request` (`Some fields are invalid`): one `fieldErrors` entry per broken rule, sorted by field name, for example `type: Type is required`, `eventDate: Event date cannot be in the future`, `contactPhone: Contact phone must be a valid phone number`, `coordinates: Latitude and longitude must be provided together`. An unknown enum value gives `species: Invalid value 'Cat', allowed values: CAT, DOG, OTHER`; invalid JSON gives `Malformed request body`.
+- `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one.
 
 ---
 
@@ -176,7 +203,9 @@ Blank text parameters are ignored. In `color`, `breed` and `area`, `%` and `_` a
 ---
 
 #### `GET /announcements/{id}`
-Returns a single announcement by its unique identifier, including full details, coordinates, reporter contact info, and all associated photo metadata.
+Returns a single announcement by its unique identifier, including full details, coordinates, reporter contact info, and all associated photo metadata. Public.
+
+*Planned, not on main yet (owner check):* the response also has `"ownerId"` (the id of the user who posted it), so the frontend can show the owner's actions only to the owner.
 
 ##### Response (`200 OK`)
 ```json
@@ -231,10 +260,9 @@ Edits an announcement. Every field of the form is replaced with the body, so a f
 
 The status, the photos, the owner and `createdAt` do not change here: the status has `PATCH /announcements/{id}/status`, and photos are added with `POST /announcements/{id}/photos`.
 
-> **Owner only (ADR 014), coming in a separate PR:** once the owner check is on main, editing needs a token and only the owner may edit. Without a token → `401 Unauthorized` (`Authentication is required`); another user → `403 Forbidden` (`You can only change your own announcements`). Until then, this endpoint is public like the rest of the API.
+**Auth:** token required (`Authorization: Bearer <token>`).
 
-**Headers Required:**
-- `Authorization: Bearer <token>`
+> **Planned, not on main yet (owner check, Antonia):** only the owner may edit; another logged-in user gets `403 Forbidden` (`You can only change your own announcements`). Today any logged-in user can edit any announcement. The frontend edit page is also planned; today editing is only possible through the API (see `backend/auth.http`).
 
 ##### Request Body (`application/json`)
 The same body and the same field constraints as `POST /announcements` (see `AnnouncementRequest` above).
@@ -243,17 +271,17 @@ The same body and the same field constraints as `POST /announcements` (see `Anno
 The whole updated announcement, in the same format as `GET /announcements/{id}`.
 
 ##### Error Responses
-- `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked first, so an invalid body returns `400` even when the ID does not exist.
-- `401 Unauthorized` — `"Authentication is required"`
-- `403 Forbidden` — `"You can only change your own announcements"`
-- `404 Not Found`: When no announcement exists with the requested ID.
+- `400 Bad Request`: the same validation errors as `POST /announcements` (missing required fields, too long text, future `eventDate`, invalid phone, only one coordinate, invalid enum value). The body is checked before the ID, so an invalid body returns `400` even when the ID does not exist.
+- `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
+- `404 Not Found` (`Announcement not found with id: {id}`).
+- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*, see above.
+
 ---
 
 #### `PATCH /announcements/{id}/status`
 Changes the status of an announcement: `RESOLVED` when the pet is back home, `ACTIVE` to show it again in the default list. Sending the status it already has is not an error.
 
-**Headers Required:**
-- `Authorization: Bearer <token>`
+**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet (owner check, Patrick):* only the owner may change the status; today any logged-in user can.
 
 ##### Request Body (`application/json`)
 ```json
@@ -271,9 +299,9 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 
 ##### Error Responses
 - `400 Bad Request`: `status` is missing (`status: Status is required`) or has another value (`status: Invalid value 'DONE', allowed values: ACTIVE, RESOLVED`).
-- `401 Unauthorized` — `"Authentication is required"`
-- `403 Forbidden` — `"You can only change your own announcements"`
-- `404 Not Found`: When no announcement exists with the requested ID.
+- `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one. Checked first.
+- `404 Not Found` (`Announcement not found with id: {id}`).
+- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*.
 
 ---
 
@@ -282,8 +310,7 @@ The whole updated announcement, in the same format as `GET /announcements/{id}`,
 #### `POST /announcements/{id}/photos`
 Uploads one or more binary photos and attaches them to the specified announcement.
 
-**Headers Required:**
-- `Authorization: Bearer <token>`
+**Auth:** token required (`Authorization: Bearer <token>`). *Planned, not on main yet (owner check, Patrick):* only the owner may add photos; today any logged-in user can.
 
 ##### Request Format
 - **Content-Type:** `multipart/form-data`
@@ -322,9 +349,12 @@ Uploads one or more binary photos and attaches them to the specified announcemen
 ]
 ```
 
-**Error Responses:**
-- `401 Unauthorized` — `"Authentication is required"`
-- `403 Forbidden` — `"You can only change your own announcements"`
+##### Error Responses
+- `400 Bad Request`: `No files provided`, `File is empty`, `Only JPG and PNG images are allowed`, `File name is too long`, `Invalid image file` (see the table in section 4).
+- `401 Unauthorized` (`Authentication is required`): no token, or an invalid or expired one.
+- `404 Not Found` (`Announcement not found with id: {id}`).
+- `413 Content Too Large` (`Maximum file size is 5 MB`).
+- `403 Forbidden` (`You can only change your own announcements`): *planned, not on main yet*.
 
 ---
 
@@ -358,7 +388,7 @@ The poster shows the type (`LOST` / `FOUND`, plus `RESOLVED` when resolved) as l
 
 ### 3.4 Accounts
 
-User accounts follow ADR 014 (`decisions.md`). The full DEMO 2 contract, including login and who may change what, is in `decisions/vanessza-decisions.md`.
+User accounts follow ADR 014 (`decisions.md`); who may call what is in **Authentication & Permissions** (section 1). For local testing, Flyway seeds three demo accounts (`ana@safepaws.dev`, `mihai@safepaws.dev`, `elena@safepaws.dev`, password `SafePaws1!`, see the root `README.md`).
 
 #### `POST /auth/register`
 Creates a user account. Public: no token is needed. Registering does not log the user in, so the frontend calls `POST /auth/login` right after.
@@ -397,11 +427,10 @@ The password is stored only as a BCrypt hash and is never returned by any endpoi
   - A missing or blank field only gets its `... is required` message.
 - `409 Conflict`: `Email is already registered`, also when the same email was registered with different capital letters.
 
-### `POST /auth/login`
+#### `POST /auth/login`
+Logs in a user with email and password and returns a JWT valid for 24 hours. Public.
 
-Logs in a user with email and password and returns a 24-hour JWT token.
-
-**Request Body:**
+##### Request Body (`application/json`)
 ```json
 {
   "email": "ana@safepaws.dev",
@@ -409,7 +438,12 @@ Logs in a user with email and password and returns a 24-hour JWT token.
 }
 ```
 
-**Response `200 OK`:**
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `email` | `string` | Yes | Spaces at the ends are removed and capital letters do not matter (`" Ana@SafePaws.dev "` logs in as `ana@safepaws.dev`). |
+| `password` | `string` | Yes | Compared with the stored BCrypt hash. |
+
+##### Response (`200 OK`)
 ```json
 {
   "token": "<JWT>",
@@ -422,16 +456,19 @@ Logs in a user with email and password and returns a 24-hour JWT token.
 }
 ```
 
-**Error Responses:**
-- `401 Unauthorized` — `"Invalid email or password"` (returned for both unknown email and wrong password)
+- `token`: send it as `Authorization: Bearer <token>`.
+- `expiresAt`: when the token expires, in **UTC** (no zone offset in the string), 24 hours after the login.
+- `user`: the same shape as `GET /auth/me`. The password and its hash are never returned.
+
+##### Error Responses
+- `401 Unauthorized` (`Invalid email or password`), with `"fieldErrors": null`. The same answer for an unknown email, a wrong password, a missing or blank field, a missing body, and a password longer than 72 bytes, so the API does not reveal which emails have an account. There is no `400` for this endpoint.
 
 ---
 
-### `GET /auth/me`
+#### `GET /auth/me`
+Returns the currently logged-in user. Token required (`Authorization: Bearer <token>`).
 
-Returns the currently authenticated user. Requires `Authorization: Bearer <token>`.
-
-**Response `200 OK`:**
+##### Response (`200 OK`)
 ```json
 {
   "id": 1,
@@ -440,8 +477,8 @@ Returns the currently authenticated user. Requires `Authorization: Bearer <token
 }
 ```
 
-**Error Responses:**
-- `401 Unauthorized` — `"Authentication is required"` (missing, invalid, or expired token)
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`), with `"fieldErrors": null`: the token is missing, invalid or expired, or its user no longer exists.
 
 
 ---
@@ -471,8 +508,8 @@ All API errors return a consistent JSON structure defined by `ErrorResponse`:
 | `status` | `number` | HTTP status code (e.g., `400`, `404`, `413`, `500`). |
 | `error` | `string` | Short reason phrase (e.g., `"Bad Request"`, `"Not Found"`, `"Content Too Large"`). |
 | `message` | `string` | Human-readable explanation of what went wrong. |
-| `fieldErrors` | `array` | Validation errors specifying the invalid `field` and descriptive `message`. Empty array for non-validation errors. |
-| `timestamp` | `string` | ISO 8601 timestamp truncated to seconds when the error occurred. |
+| `fieldErrors` | `array` or `null` | Validation errors specifying the invalid `field` and descriptive `message`. Empty array for other errors, except `401`, where it is `null`. |
+| `timestamp` | `string` | ISO 8601 timestamp of when the error occurred, truncated to seconds (for `401` it is not truncated, e.g. `2026-11-16T10:15:30.123456`). |
 
 ### Real Error Messages Reference Table
 
@@ -480,7 +517,6 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 
 | Status Code | Reason Phrase (`error`) | Exception / Trigger | Message (`message`) | `fieldErrors` Payload |
 |---|---|---|---|---|
-| `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`, `status: "Status is required"`), sorted alphabetically by field name |
 | `400 Bad Request` | `Bad Request` | Validation failure (`MethodArgumentNotValidException`) | `Some fields are invalid` | Array of `{field, message}` (e.g., `type: "Type is required"`, `species: "Species is required"`, `petName: "Pet name must be at most 50 characters"`, `eventDate: "Event date cannot be in the future"`, `area: "Area is required"`, `contactName: "Contact name is required"`, `contactPhone: "Contact phone must be a valid phone number"`, `coordinates: "Latitude and longitude must be provided together"`, `status: "Status is required"`, `email: "Email must be a valid email address"`, `password: "Password must have at least 8 characters, one uppercase letter, one digit and one special character"`), sorted alphabetically by field name |
 | `400 Bad Request` | `Bad Request` | Invalid enum value (`HttpMessageNotReadableException`) | `Some fields are invalid` | `[{"field": "<fieldName>", "message": "Invalid value '<val>', allowed values: <ALLOWED_VALUES>"}]` |
 | `400 Bad Request` | `Bad Request` | Malformed JSON request body (`HttpMessageNotReadableException`) | `Malformed request body` | `[]` (empty) |
@@ -491,6 +527,9 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Non-JPG/PNG mime type (`PhotoService`) | `Only JPG and PNG images are allowed` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | File name exceeds 255 characters (`PhotoService`) | `File name is too long` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Corrupted image data / invalid magic bytes (`PhotoService`) | `Invalid image file` | `[]` (empty) |
+| `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `null` |
+| `401 Unauthorized` | `Unauthorized` | Wrong login (`InvalidCredentialsException`) | `Invalid email or password` | `null` |
+| `403 Forbidden` | `Forbidden` | *Planned, not on main yet:* changing an announcement you do not own | `You can only change your own announcements` | not decided yet |
 | `404 Not Found` | `Not Found` | Announcement ID not found (`AnnouncementNotFoundException`) | `Announcement not found with id: {id}` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Photo ID not found (`PhotoService`) | `Photo not found with id: {id}` | `[]` (empty) |
 | `409 Conflict` | `Conflict` | Email already has an account (`EmailAlreadyRegisteredException`) | `Email is already registered` | `[]` (empty) |

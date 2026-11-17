@@ -1,0 +1,134 @@
+### SafePaws: accounts, login and announcement changes
+#
+# Ready-made requests for the API in docs/api.md. Start the database and the backend first
+# (see backend/README.md). The accounts are the demo accounts seeded by V6__users_and_owners.sql
+# (listed in the root README); they are local demo data only.
+#
+# Format: IntelliJ IDEA HTTP Client. Run the requests from top to bottom.
+# - IntelliJ: "Log in as Ana" saves the token automatically in {{token}} (the `> {% ... %}` script),
+#   and "Log in as Mihai" saves {{mihaiToken}}.
+# - VS Code REST Client: the automatic token capture only works in IntelliJ. Run the login request,
+#   copy the "token" from the response and add these lines at the top of the file:
+#     @token = <paste Ana's token here>
+#     @mihaiToken = <paste Mihai's token here>
+#
+# Tokens are valid for 24 hours. Edit and resolve change the data; to get the demo data back,
+# run `docker compose down -v`, then `docker compose up -d` and start the backend again.
+
+@baseUrl = http://localhost:8080
+@demoPassword = SafePaws1!
+# Announcement 1 is Mitzi, owned by ana@safepaws.dev (V6)
+@announcementId = 1
+
+### Register a new account (public). Returns 201 with the user; a second run returns 409.
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "new.user@example.com",
+  "password": "{{demoPassword}}",
+  "displayName": "New User"
+}
+
+### Log in as Ana (public). Returns the token, its expiry and the user.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@safepaws.dev",
+  "password": "{{demoPassword}}"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
+### Who am I? Needs the token; without it (or with an expired one) returns 401.
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Create an announcement (needs a token). Returns 201 and a Location header.
+POST {{baseUrl}}/announcements
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "type": "LOST",
+  "species": "DOG",
+  "petName": "Bruno",
+  "breed": "Mixed breed",
+  "color": "Brown",
+  "distinctiveMarks": "Blue collar, white spot on the chest",
+  "eventDate": "2026-11-15T09:30:00",
+  "latitude": 46.7700,
+  "longitude": 23.5900,
+  "area": "Centru, Cluj-Napoca",
+  "contactName": "Ana Pop",
+  "contactPhone": "0711111111"
+}
+
+### Edit announcement 1 as Ana, its owner (needs a token). PUT replaces every field:
+### a field left out is cleared. Status, photos and owner do not change.
+PUT {{baseUrl}}/announcements/{{announcementId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "type": "LOST",
+  "species": "CAT",
+  "petName": "Mitzi",
+  "breed": "European",
+  "color": "Grey with white paws",
+  "distinctiveMarks": "Young kitten with blue eyes, white chest and paws, very playful. Wears a red collar.",
+  "eventDate": "2026-11-10T18:00:00",
+  "latitude": 46.7550,
+  "longitude": 23.5560,
+  "area": "Mănăștur, Cluj-Napoca",
+  "contactName": "Ana Pop",
+  "contactPhone": "0700000001"
+}
+
+### Resolve announcement 1 as Ana (needs a token). Send "ACTIVE" to show it again.
+PATCH {{baseUrl}}/announcements/{{announcementId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "RESOLVED"
+}
+
+### Log in as Mihai (public), to try changing an announcement he does not own.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "mihai@safepaws.dev",
+  "password": "{{demoPassword}}"
+}
+
+> {%
+    client.global.set("mihaiToken", response.body.token);
+%}
+
+### Mihai tries to edit Ana's announcement 1.
+### Planned, not on main yet (owner check, Patrick and Antonia): this returns
+### 403 Forbidden "You can only change your own announcements".
+### Today there is no owner check, so it returns 200 and the edit is saved.
+PUT {{baseUrl}}/announcements/{{announcementId}}
+Content-Type: application/json
+Authorization: Bearer {{mihaiToken}}
+
+{
+  "type": "LOST",
+  "species": "CAT",
+  "petName": "Mitzi",
+  "breed": "European",
+  "color": "Grey with white paws",
+  "distinctiveMarks": "Young kitten with blue eyes, white chest and paws, very playful. Wears a red collar.",
+  "eventDate": "2026-11-10T18:00:00",
+  "latitude": 46.7550,
+  "longitude": 23.5560,
+  "area": "Mănăștur, Cluj-Napoca",
+  "contactName": "Ana Pop",
+  "contactPhone": "0700000001"
+}
