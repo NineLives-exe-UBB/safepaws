@@ -92,7 +92,7 @@ This document records the architectural, technological, and procedural decisions
 ---
 
 ## ADR 010: No User Accounts in DEMO 1
-- **Status:** Accepted (until DEMO 2)
+- **Status:** Superseded by ADR 014
 - **Context:** The course asks that the first features delivered are the ones that bring the most value to the client, and states that user management does not count as a useful feature at this stage.
 - **Decision:** DEMO 1 has no accounts and no authentication. Every page and endpoint is public, including `PATCH /announcements/{id}/status`, and the reporter's name and phone are stored on the announcement.
 - **Consequences:** Anyone can post, and anyone can mark any announcement as resolved or active. The contact phone is visible on the details page and the poster. User accounts, messaging without a public phone number and notifications are planned for DEMO 2 (12 Dec), and will need a users table in a new migration (ADR 003).
