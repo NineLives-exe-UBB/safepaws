@@ -31,6 +31,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -107,7 +109,7 @@ class AnnouncementControllerTest {
 
     private static AnnouncementResponse response(Long id, AnnouncementStatus status) {
         return new AnnouncementResponse(
-                id, AnnouncementType.LOST, Species.DOG, "Oscar",
+                id, 5L, AnnouncementType.LOST, Species.DOG, "Oscar",
                 "Golden Retriever", "Golden", "Red nylon collar with bell",
                 LocalDateTime.of(2026, 11, 1, 9, 15),
                 46.7712, 23.6236, "Mărăști, Cluj-Napoca",
@@ -431,6 +433,7 @@ class AnnouncementControllerTest {
             mockMvc.perform(get("/announcements/1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.ownerId").value(5))
                     .andExpect(jsonPath("$.petName").value("Oscar"))
                     .andExpect(jsonPath("$.contactName").value("Ion Radu"))
                     .andExpect(jsonPath("$.contactPhone").value("0740123456"))
@@ -618,5 +621,38 @@ class AnnouncementControllerTest {
 
             verify(announcementService, never()).updateStatus(any(), any());
         }
+
+
+        @Test
+        void unauthenticatedUserCannotUpdateStatus() throws Exception {
+        mockMvc.perform(patch("/announcements/13/status")
+                        .header("Authorization", "")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"RESOLVED\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
+
+        verify(announcementService, never()).updateStatus(any(), any());
+        }
+
+        @Test
+        void nonOwnerCannotUpdateStatus() throws Exception {
+        when(announcementService.updateStatus(13L, AnnouncementStatus.RESOLVED))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Only the owner can modify this announcement"
+                ));
+
+        mockMvc.perform(patch("/announcements/13/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"RESOLVED\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message")
+                        .value("Only the owner can modify this announcement"));
+        }
+
     }
 }

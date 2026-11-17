@@ -6,6 +6,9 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
@@ -61,6 +64,10 @@ public class Announcement {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 10)
     private AnnouncementStatus status = AnnouncementStatus.ACTIVE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -180,4 +187,13 @@ public class Announcement {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+
 }
