@@ -43,6 +43,7 @@ export interface AnnouncementSummary {
 
 /** Returned by POST /announcements and GET /announcements/{id}. */
 export interface Announcement extends AnnouncementSummary {
+  ownerId: number | null;
   breed: string | null;
   color: string | null;
   distinctiveMarks: string | null;

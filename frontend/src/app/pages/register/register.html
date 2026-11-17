@@ -45,7 +45,7 @@
         }
 
         @if (form.controls.displayName.hasError('maxlength')) {
-          <small class="field-error">Display name cannot exceed 100 characters.</small>
+          <small class="field-error">Display name cannot exceed 50 characters.</small>
         }
 
         @if (serverError('displayName'); as message) {

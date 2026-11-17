@@ -91,14 +91,16 @@
 
           <div class="actions">
             <a class="button" [href]="posterUrl()" download>Download poster</a>
-            <button
-              type="button"
-              class="button secondary"
-              [disabled]="updatingStatus()"
-              (click)="toggleStatus()"
-            >
-              {{ announcement.status === 'ACTIVE' ? 'Mark as resolved' : 'Mark as active' }}
-            </button>
+            @if (isOwner()) {
+              <button
+                type="button"
+                class="button secondary"
+                [disabled]="updatingStatus()"
+                (click)="toggleStatus()"
+              >
+                {{ announcement.status === 'ACTIVE' ? 'Mark as resolved' : 'Mark as active' }}
+              </button>
+            }
           </div>
           @if (statusError()) {
             <p class="status-error">Could not update the status. Please try again.</p>
