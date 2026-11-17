@@ -9,6 +9,7 @@ import { TYPE_LABELS } from '../../models/announcement-filters.model';
 import { MapView } from '../../components/map/map';
 import { MapPin } from '../../models/map.model';
 import { DATE_FORMAT } from '../../shared/date-format';
+import { AuthService } from '../../services/auth.service';
 
 type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 
@@ -21,11 +22,22 @@ type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 export class AnnouncementDetails {
   private readonly announcementService = inject(AnnouncementService);
   private readonly title = inject(Title);
+  private readonly authService = inject(AuthService);
 
   protected readonly dateFormat = DATE_FORMAT;
 
   protected readonly state = signal<PageState>('loading');
   protected readonly announcement = signal<Announcement | null>(null);
+
+  protected readonly isOwner = computed(() => {
+    const announcement = this.announcement();
+    const user = this.authService.user();
+
+    return announcement !== null &&
+      user !== null &&
+      announcement.ownerId === user.id;
+  });
+
 
   protected readonly selectedPhotoIndex = signal(0);
 
@@ -111,7 +123,7 @@ export class AnnouncementDetails {
 
   protected toggleStatus(): void {
     const announcement = this.announcement();
-    if (!announcement || this.updatingStatus()) {
+    if (!announcement || !this.isOwner() || this.updatingStatus()) {
       return;
     }
 

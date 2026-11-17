@@ -28,6 +28,7 @@ describe('AnnouncementService', () => {
   };
   const announcement: Announcement = {
     id: 15,
+    ownerId: 5,
     type: 'LOST',
     species: 'CAT',
     petName: 'Misi',

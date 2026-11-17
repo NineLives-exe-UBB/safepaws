@@ -7,10 +7,14 @@ import type { Mock } from 'vitest';
 import { Announcement } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
 import { AnnouncementDetails } from './announcement-details';
+import { signal } from '@angular/core';
+import { User } from '../../models/user.model';
+import { AuthService } from '../../services/auth.service';
 
 describe('AnnouncementDetails', () => {
   const announcement: Announcement = {
     id: 9,
+    ownerId: 5,
     type: 'LOST',
     species: 'CAT',
     petName: 'Misi',
@@ -31,6 +35,13 @@ describe('AnnouncementDetails', () => {
     ],
   };
 
+  const currentUser = signal<User | null>({
+    id: 5,
+    email: 'owner@example.com',
+    displayName: 'Test Owner',
+  });
+
+
   let getById: Mock<(id: number) => Observable<Announcement>>;
   let updateStatus: Mock<(id: number, status: string) => Observable<Announcement>>;
   let fixture: ComponentFixture<AnnouncementDetails>;
@@ -40,6 +51,10 @@ describe('AnnouncementDetails', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: { user: currentUser },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap(id === null ? {} : { id }) } },
@@ -64,6 +79,11 @@ describe('AnnouncementDetails', () => {
   const text = (selector: string) => element.querySelector(selector)?.textContent?.trim();
 
   beforeEach(() => {
+    currentUser.set({
+    id: 5,
+    email: 'owner@example.com',
+    displayName: 'Test Owner',
+    });
     getById = vi.fn((_id: number) => of(announcement));
     updateStatus = vi.fn((_id: number, status: string) =>
       of({ ...announcement, status } as Announcement),
@@ -222,6 +242,37 @@ describe('AnnouncementDetails', () => {
   describe('status', () => {
     const statusButton = () => element.querySelector<HTMLButtonElement>('.button.secondary')!;
 
+
+    it('should show the status button to the owner', async () => {
+      await render();
+
+      expect(statusButton()).not.toBeNull();
+      expect(statusButton().textContent?.trim()).toBe('Mark as resolved');
+    });
+
+    it('should hide the status button from another user', async () => {
+      currentUser.set({
+        id: 8,
+        email: 'other@example.com',
+        displayName: 'Other User',
+      });
+
+      await render();
+
+      expect(element.querySelector('.button.secondary')).toBeNull();
+      expect(updateStatus).not.toHaveBeenCalled();
+    });
+
+  it('should hide the status button when logged out', async () => {
+    currentUser.set(null);
+
+    await render();
+
+    expect(element.querySelector('.button.secondary')).toBeNull();
+    expect(updateStatus).not.toHaveBeenCalled();
+  });
+
+
     it('should mark an active announcement as resolved', async () => {
       await render();
 
@@ -269,6 +320,17 @@ describe('AnnouncementDetails', () => {
       expect(element.querySelector('.resolved-badge')).toBeNull();
       expect(statusButton().disabled).toBe(false);
     });
+
+
+    it('should hide the status button when the announcement has no owner', async () => {
+      getById.mockReturnValue(of({ ...announcement, ownerId: null }));
+
+      await render();
+
+      expect(statusButton()).toBeNull();
+      expect(updateStatus).not.toHaveBeenCalled();
+});
+
   });
 
   describe('location', () => {
