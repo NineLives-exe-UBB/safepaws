@@ -13,7 +13,7 @@ SafePaws is a collaborative web platform designed to help communities report, tr
 - **Post an announcement:** details, photos and the place picked on the map.
 - **Announcement page:** photo gallery, details, the contact with a tap-to-call number, the location on the map, and "Mark as resolved" when the pet is back home.
 - **Printable poster:** a one-page PDF with the photo, the details and a QR code that opens the announcement online.
-- **Accounts:** register and log in; reading is public, while posting an announcement and changing it need an account. *Planned, not on main yet:* only the owner can change an announcement.
+- **Accounts:** register and log in; reading is public, while posting an announcement and changing it need an account, and only the owner can change an announcement.
 - **Works on phones:** the pages adapt to small screens, and the app can be opened from a phone on the same Wi-Fi.
 
 ---

@@ -94,7 +94,7 @@ Migrations `V6__users_and_owners.sql`, `V7__messages_and_sightings.sql` and `V8_
 
 > `announcement.owner_id` is a `BIGINT` foreign key to `users(id)`, with an index. It's empty only for announcements posted before your card, because the 22 demo ones already have owners. Please write in the chat when your PR is merged, so I can add `V8` (owner required). For tests: Ana owns announcement 1, Mihai owns 2, Elena owns 3.
 >
-> `V8` makes `owner_id` required, so `announcement.getOwner()` is never null for a saved announcement. The 403 message in `AnnouncementOwnershipService` is `Only the owner can modify this announcement`, but the contract (`vanessza-decisions.md`, `api.md`) says `You can only change your own announcements`. Please use the contract's text, because the frontend may show it.
+> `V8` makes `owner_id` required, so `announcement.getOwner()` is never null for a saved announcement. The 403 message in `AnnouncementOwnershipService` is `Only the owner can modify this announcement`, but the contract (`vanessza-decisions.md`, `api.md`) says `You can only change your own announcements`. Please use the contract's text, because the frontend may show it. (Done: the code uses the contract's text since `fix/auth-route-guards`.)
 
 #### Jessica
 

@@ -44,7 +44,7 @@ public class AnnouncementOwnershipService {
                 || !userId.equals(announcement.getOwner().getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Only the owner can modify this announcement"
+                    "You can only change your own announcements"
             );
         }
     }

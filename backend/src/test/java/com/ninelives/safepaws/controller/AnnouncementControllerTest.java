@@ -641,7 +641,7 @@ class AnnouncementControllerTest {
         when(announcementService.updateStatus(13L, AnnouncementStatus.RESOLVED))
                 .thenThrow(new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
-                        "Only the owner can modify this announcement"
+                        "You can only change your own announcements"
                 ));
 
         mockMvc.perform(patch("/announcements/13/status")
@@ -651,7 +651,7 @@ class AnnouncementControllerTest {
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.error").value("Forbidden"))
                 .andExpect(jsonPath("$.message")
-                        .value("Only the owner can modify this announcement"));
+                        .value("You can only change your own announcements"));
         }
 
     }

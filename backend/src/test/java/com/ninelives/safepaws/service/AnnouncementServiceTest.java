@@ -507,7 +507,7 @@ class AnnouncementServiceTest {
 
         doThrow(new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
-                "Only the owner can modify this announcement"
+                "You can only change your own announcements"
         )).when(ownershipService).requireOwner(announcement);
 
         assertThatThrownBy(() -> announcementService.updateStatus(
@@ -532,7 +532,7 @@ class AnnouncementServiceTest {
 
         doThrow(new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
-                "Only the owner can modify this announcement"
+                "You can only change your own announcements"
         )).when(ownershipService).requireOwner(announcement);
 
         AnnouncementRequest request = mock(AnnouncementRequest.class);

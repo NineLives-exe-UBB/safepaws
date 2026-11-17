@@ -360,7 +360,7 @@ class PhotoServiceTest {
 
         doThrow(new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
-                "Only the owner can modify this announcement"
+                "You can only change your own announcements"
         )).when(ownershipService).requireOwner(any(Announcement.class));
 
         MockMultipartFile file = image("cat.jpg", "image/jpeg", JPEG);

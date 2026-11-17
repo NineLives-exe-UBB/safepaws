@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { Login } from './login';
 
@@ -126,5 +126,63 @@ describe('Login', () => {
     await submit();
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/announcements');
+  });
+
+  it('should show a general error when the backend fails', async () => {
+    login.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    await render();
+
+    fill('#email', 'owner@example.com');
+    fill('#password', 'Password1!');
+    await submit();
+
+    expect(element.textContent).toContain('Could not log in. Please try again.');
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('should clear the error when the form is sent again', async () => {
+    login
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 401 })))
+      .mockReturnValueOnce(of({ id: 5, email: 'owner@example.com', displayName: 'Test Owner' }));
+
+    await render();
+
+    fill('#email', 'owner@example.com');
+    fill('#password', 'WrongPassword1!');
+    await submit();
+    expect(element.textContent).toContain('Invalid email or password.');
+
+    fill('#password', 'Password1!');
+    await submit();
+
+    expect(element.textContent).not.toContain('Invalid email or password.');
+    expect(element.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('should disable the button while logging in and send one request', async () => {
+    const response = new Subject<{ id: number; email: string; displayName: string }>();
+    login.mockReturnValue(response);
+
+    await render();
+
+    fill('#email', 'owner@example.com');
+    fill('#password', 'Password1!');
+    await submit();
+    await submit();
+
+    const button = element.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    expect(login).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(true);
+    expect(button.textContent?.trim()).toBe('Logging in...');
+
+    response.next({ id: 5, email: 'owner@example.com', displayName: 'Test Owner' });
+    response.complete();
+    await fixture.whenStable();
+
+    expect(button.disabled).toBe(false);
+    expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
   });
 });
