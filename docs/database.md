@@ -13,6 +13,7 @@ SafePaws uses **PostgreSQL 17**, containerized via Docker Compose. Schema migrat
 | `V5__complete_demo_data.sql` | Completes the demo announcements (breed, color, distinctive marks) so each description matches its photo. |
 | `V6__users_and_owners.sql` | Adds the `users` table and `announcement.owner_id` (ADR 014), creates the 3 demo accounts and shares the 22 demo announcements between them. |
 | `V7__messages_and_sightings.sql` | Adds the `message` table (messages about an announcement between two users) and the `sighting` table ("I saw it here" points for the map trail). |
+| `V8__require_announcement_owner.sql` | Makes `announcement.owner_id` required. Announcements without an owner (only possible on a local database, from before the backend set it) are given to Ana first. |
 
 Test announcements are matched across migrations by their fictional placeholder phone numbers (`0700000001`–`0700000022`), not by ID. The dates of the V3 announcements are relative to when the migration runs, so they are always recent.
 
@@ -39,7 +40,7 @@ Below is the conceptual and physical ER diagram:
 
 ### Relationships
 - **Announcement to Photos (`1 : N`):** An announcement can have zero or multiple photos; each photo belongs to exactly one announcement.
-- **User to Announcements (`1 : N`):** A user owns zero or more announcements; each announcement has one owner (`announcement.owner_id`). The column is nullable until `V8` makes it required.
+- **User to Announcements (`1 : N`):** A user owns zero or more announcements; each announcement has exactly one owner (`announcement.owner_id`, required since `V8`).
 - **Announcement to Messages (`1 : N`):** Every message is about one announcement and goes from one user (`sender_id`) to another (`recipient_id`). A conversation is all the messages about one announcement between the same two users.
 - **Announcement to Sightings (`1 : N`):** Every sighting belongs to one announcement and was reported by one user (`reporter_id`).
 - **Cascade Deletion:** `ON DELETE CASCADE` is enforced on `photo.announcement_id`, `message.announcement_id` and `sighting.announcement_id`. Deleting an announcement automatically deletes its photos, messages and sightings. Users are never deleted in cascade: a user who still owns announcements, messages or sightings cannot be deleted.
@@ -68,7 +69,7 @@ Stores lost and found pet reports.
 | `contact_phone` | `VARCHAR(20)` | Yes | Stored as text | Phone number (preserves leading `0` / `+40`). |
 | `status` | `VARCHAR(10)` | Yes | `CHECK (status IN ('ACTIVE', 'RESOLVED'))`, Default: `'ACTIVE'` | Current status of the report. Changed with `PATCH /announcements/{id}/status` ("Mark as resolved" / "Mark as active" on the details page). |
 | `created_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | Record creation timestamp. |
-| `owner_id` | `BIGINT` | No (until `V8`) | `FOREIGN KEY` references `users(id)` | The user who posted the announcement (`ownerId` in the API). Added in V6. |
+| `owner_id` | `BIGINT` | Yes | `FOREIGN KEY` references `users(id)` | The user who posted the announcement (`ownerId` in the API), set by the backend from the logged-in user. Added in V6, required since V8. |
 
 ---
 
@@ -152,7 +153,7 @@ Stores binary image data attached to announcements.
 
 ## 4. Architectural & Schema Decisions
 
-- **Users and owners (DEMO 2, ADR 014):** every announcement belongs to the user who posted it (`owner_id`). The contact name and phone still stay on the announcement, so they can differ from the owner's display name. `owner_id` is nullable in `V6` so that posting keeps working until the backend sets the owner; `V8` makes it required.
+- **Users and owners (DEMO 2, ADR 014):** every announcement belongs to the user who posted it (`owner_id`). The contact name and phone still stay on the announcement, so they can differ from the owner's display name. The backend sets `owner_id` from the logged-in user when an announcement is posted, and `V8` makes it required, so an announcement without an owner can't be saved.
 - **Demo passwords:** the demo accounts are created in `V6` with ready-made BCrypt hashes (cost 10, one hash per account), so no password is stored in plain text. The backend checks them with Spring's `BCryptPasswordEncoder`.
 - **No Locations Table:** The location (`area`, `latitude`, `longitude`) is stored as columns on the announcement.
 - **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL (see ADR 007 in `decisions.md`). Listing endpoints (`GET /announcements`) load only photo metadata, never the image bytes; individual photos are retrieved via `GET /photos/{id}`.
@@ -160,7 +161,7 @@ Stores binary image data attached to announcements.
 - **Conventions & Immutability:** 
   - Database schema uses strict `snake_case` (`contact_phone`, `pet_name`), mapping directly to `camelCase` in Java DTOs/Entities (`contactPhone`, `petName`).
   - Fixed domain attributes (`type`, `species`, `status`) use uppercase `VARCHAR` with SQL `CHECK` constraints to map cleanly to Spring Boot Java Enums.
-  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via a new migration; the next version is `V8`. SQL and Java migrations share version numbers, and the CI migration guard only checks SQL files, so check Java migrations by hand.
+  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via a new migration; the next version is `V9`. SQL and Java migrations share version numbers, and the CI migration guard only checks SQL files, so check Java migrations by hand.
 
 ---
 
