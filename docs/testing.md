@@ -6,14 +6,14 @@ How SafePaws is tested: automated tests, manual test scenarios and how to report
 
 Both parts fail the build when coverage is under 70%.
 
-| Part | Command | What it needs | Last run (12 Nov) |
+| Part | Command | What it needs | Last run (17 Nov) |
 |---|---|---|---|
-| backend | `cd backend && ./mvnw clean verify` | Docker running (the repository and migration tests start a PostgreSQL with Testcontainers) | 127 tests, 97.0% instructions (87% branches) |
-| frontend | `cd frontend && npm run test:coverage` | `npm ci` after every pull that changes `package-lock.json` | 214 tests, 92.2% statements (95.1% lines) |
+| backend | `cd backend && ./mvnw clean verify` | Docker running (the repository and migration tests start a PostgreSQL with Testcontainers) | 228 tests, 95.1% instructions (83.5% branches) |
+| frontend | `cd frontend && npm run test:coverage` | `npm ci` after every pull that changes `package-lock.json` | 274 tests, 93.1% statements (95.6% lines) |
 
 The test counts are the numbers the runners report, including each case of a parameterized test. Coverage reports: `backend/target/site/jacoco/index.html` and `frontend/coverage/index.html`.
 
-The backend threshold is in `pom.xml` (JaCoCo instruction coverage, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`: statements, branches, functions and lines) and applies to the total, not per file. The form page is still the weakest (81.4% statements, 81.3% branches, 88.6% functions), so new form code without tests can pull the total down quickly.
+The backend threshold is in `pom.xml` (JaCoCo instruction coverage, `verify` phase). The frontend threshold is in `angular.json` (`coverageThresholds`: statements, branches, functions and lines) and applies to the total, not per file. The form page is still the weakest (81.4% statements, 80.4% branches, 88.6% functions), so new form code without tests can pull the total down quickly.
 
 All CI jobs (backend tests, frontend tests and production build, secret scan, Flyway migration guard) run on every pull request through GitHub Actions (`.github/workflows/ci.yml`) and are required before merging into `main`.
 
@@ -21,25 +21,29 @@ Where the tests live:
 
 - backend: `backend/src/test/java/.../safepaws/`, same tree as `main`. Frameworks: JUnit 5, Mockito, Spring Boot Test, Testcontainers.
   - `controller/`: `@WebMvcTest` slice tests (status codes, JSON, validation, query parameters) with the services mocked.
-  - `service/`: unit tests with mocked repositories (announcements, filters and distances, status, photos, QR code, poster).
-  - `dto/`: plain unit tests for the `GET /announcements` filter rules (`AnnouncementFilterTest`).
-  - `repository/`: `@DataJpaTest` tests against a real PostgreSQL started by Testcontainers: the repository, the filter specifications (`AnnouncementSpecificationsTest`) and the migrations (`SearchSupportMigrationTest`, `DemoDataMigrationTest`, `DemoPhotosMigrationTest`). The demo data tests fail if a migration adds an incomplete announcement or one without exactly one main photo.
+  - `service/`: unit tests with mocked repositories (announcements, filters and distances, status, photos, QR code, poster, login and register, JWT, owner check), plus `AuthServiceIntegrationTest`.
+  - `dto/`: plain unit tests for the `GET /announcements` filter rules (`AnnouncementFilterTest`) and the register rules (`RegisterRequestTest`).
+  - `repository/`: `@DataJpaTest` tests against a real PostgreSQL started by Testcontainers: the repository, the filter specifications (`AnnouncementSpecificationsTest`) the users (`UserRepositoryTest`) and the migrations (`SearchSupportMigrationTest`, `DemoDataMigrationTest`, `DemoPhotosMigrationTest`, `UserAccountsMigrationTest`, `MessagesAndSightingsMigrationTest`). The demo data tests fail if a migration adds an incomplete announcement or one without exactly one main photo.
 - frontend: a `*.spec.ts` next to each component, page, service and the filters model, run with Vitest (jsdom, no browser needed).
 
 ## 2. Manual testing setup
 
-1. `cp .env.example .env` and set a password, then `docker compose up -d`
+1. `cp .env.example .env` and set `DB_PASSWORD` and `JWT_SECRET` (at least 32 characters; without it the backend does not start), then `docker compose up -d`
 2. `cd backend && ./mvnw spring-boot:run`, wait for `Started SafepawsApplication`
 3. API is at `http://localhost:8080`, Swagger UI at `http://localhost:8080/swagger-ui.html`
 4. frontend: `cd frontend && npm start`, then open `http://localhost:4200`
 
 The frontend calls the backend on port 8080 of the host it was opened from (`http://localhost:8080` on the laptop). To test from a phone, follow "Opening the app from a phone" in `usage-guide.md`. If port 8080 is taken, start the backend with `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8099` for API testing only; UI testing needs the backend on 8080.
 
-Test data comes from the Flyway migrations (`V2` to `V5`, see `database.md`): 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates) in 8 cities (Cluj-Napoca and nearby, Brașov, Timișoara, Iași, Sibiu, Oradea), and 25 photos. Every announcement has exactly one main photo; Mitzi and Rex keep photo ids 1 and 2, and announcements 9, 13 and 21 have 2 photos each (gallery). `Iosefin, Timisoara` and `Tatarasi, Iasi` are written without diacritics on purpose, for the search. The dates of the announcements added in `V3` depend on when the migration ran, so scenarios don't use exact dates. To test an announcement without photos or without coordinates, create one through the API. To reset the data: `docker compose down -v`, then start again.
+Test data comes from the Flyway migrations (`V2` to `V8`, see `database.md`): 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates) in 8 cities (Cluj-Napoca and nearby, Brașov, Timișoara, Iași, Sibiu, Oradea), and 25 photos. Every announcement has exactly one main photo; Mitzi and Rex keep photo ids 1 and 2, and announcements 9, 13 and 21 have 2 photos each (gallery). `Iosefin, Timisoara` and `Tatarasi, Iasi` are written without diacritics on purpose, for the search. The dates of the announcements added in `V3` depend on when the migration ran, so scenarios don't use exact dates. To test an announcement without photos or without coordinates, create one through the API (with a token, see section M).
+
+Accounts (`V6`): `ana@safepaws.dev`, `mihai@safepaws.dev` and `elena@safepaws.dev`, password `SafePaws1!` (user ids 1, 2 and 3). Every announcement has an owner (`V8`): of the 22 demo announcements Ana owns 8 (1, 4, 7, 10, 13, 16, 19, 22), Mihai 7 (2, 8, 9, 11, 12, 17, 20) and Elena 7 (3, 5, 6, 14, 15, 18, 21). Ready-made requests with these accounts are in `backend/auth.http`. The frontend keeps the session in local storage under `safepaws.session`. To reset the data: `docker compose down -v`, then start again.
 
 ## 3. Test scenarios
 
 Status: **ready** = can be run now, **blocked** = feature not on `main` yet; the scenario is written so it can run as soon as it lands. The owner is who to review the scenario with. Since 12 Nov every scenario is ready.
+
+Since 17 Nov (accounts) posting, editing, changing the status and adding photos need a token, and only the owner may change an announcement. For A, B (uploads), I and K log in first (M7 or `POST /auth/login`) and use an announcement of that account. Who may call what is tested in N.
 
 Field rules for an announcement (from `AnnouncementRequest`):
 required `type`, `species`, `eventDate`, `area`, `contactName`, `contactPhone`; `species` is `CAT`, `DOG` or `OTHER`; `eventDate` not in the future; `contactPhone` 7 to 15 digits with optional `+`; `latitude` and `longitude` both or none; max lengths: petName 50, breed 100, color 100, distinctiveMarks 500, area 150, contactName 100, contactPhone 20. The form additionally requires the location.
@@ -258,8 +262,74 @@ Every page in Chrome DevTools with the iPhone SE size, and on a real phone (see 
 | L4 | form and details | open the form and a details page | one column, buttons full width | ready |
 | L5 | same date everywhere | compare a card, its map popup, its details page and its poster | the same date, `30 Oct 2026, 18:00` | ready |
 | L6 | readable labels | check cards, details pages and posters | `Lost`, `Found`, `Cat`, never `LOST` written in the page text or `CAT` | ready |
+| L7 | accounts on a phone | open `/login`, `/register`, and the header logged in and logged out | no side scrolling, one column, the password rules one per line, `Log out` and the display name fit in the header | ready |
+| L8 | console | DevTools Console open, go through M and N in the browser | no errors except the expected `401`/`403`/`409` responses | ready |
+
+### M. Accounts: register, log in, log out
+
+Pages `/register` and `/login`, endpoints `POST /auth/register`, `POST /auth/login`, `GET /auth/me`. Owners: Antonia (register API), Alexandru (login API), Victor (pages). Password rules: at least 8 characters, one uppercase letter, one digit, one special character.
+
+| ID | Scenario | Steps | Expected | Status |
+|---|---|---|---|---|
+| M1 | register | `/register`, a new email, a display name, `SafePaws1!` twice, `Create account` | logged in straight away, taken to the list; the header shows `Post announcement`, the display name and `Log out` | ready |
+| M2 | same email twice | register again with the M1 email, then with it in capitals | `This email address is already registered.`; the API answers `409 Email is already registered` both times | ready |
+| M3 | weak password | passwords without an uppercase letter (`safepaws1!`), without a digit (`SafePaws!!`), without a special character (`SafePaws12`) | `Your password does not meet all the requirements.`, nothing sent; the API answers `400` with a field error on `password` | ready |
+| M4 | rules tick as you type | type `safepaws`, then `Safepaws`, `Safepaws1`, `Safepaws1!` | the rules turn from `•` to `✓` one by one: length, uppercase, digit, special character | ready |
+| M5 | passwords do not match | `SafePaws1!` and `SafePaws2!` | `Passwords do not match.`, nothing sent | ready |
+| M6 | email with spaces | register with `  someone@example.com ` | accepted; saved without the spaces and in lowercase (psql: `select email from users`) | ready |
+| M7 | log in | `/login` with `ana@safepaws.dev` / `SafePaws1!` | taken to the list (or to `returnUrl`), the header shows `Ana Pop` | ready |
+| M8 | wrong password | Ana with a wrong password, and an email without an account | `Invalid email or password.` for both, the same message; API `401` | ready |
+| M9 | email case and spaces | log in as `ANA@safepaws.dev` and as `  ana@safepaws.dev ` | both log in as Ana | ready |
+| M10 | log out | `Log out` in the header | the header shows `Log in` and `Register`, `Post announcement` is gone, `safepaws.session` is removed from local storage | ready |
+| M11 | refresh while logged in | log in, reload the page, close and reopen the tab | still logged in | ready |
+| M12 | auth pages while logged in | logged in, open `/login` and `/register` | taken to the list | ready |
+| M13 | who am I | `GET /auth/me` with Ana's token, then without a token | `200` with `id`, `email`, `displayName`; without a token `401 Authentication is required` | ready |
+
+### N. Permissions and owners
+
+Endpoints that need a token: `POST /announcements`, `PUT /announcements/{id}`, `PATCH /announcements/{id}/status`, `POST /announcements/{id}/photos`. Errors: no token, invalid or expired token `401 Authentication is required`; another user `403 You can only change your own announcements`. Checks run in the order 401, 400, 404, 403. Owners: Alexandru (API protection), Patrick (owner check, owner buttons), Matei (`V8`), Tudor (`auth.http`).
+
+| ID | Scenario | Steps | Expected | Status |
+|---|---|---|---|---|
+| N1 | post without an account (API) | `POST /announcements` with a valid body and no token; with `{}` and no token; with `Authorization: Bearer abc.def.ghi` | `401 Authentication is required` all three times, nothing saved | ready |
+| N2 | post with an account (API) | the same body with Ana's token | `201`, `ownerId: 1` in the response and in `GET /announcements/{id}` | ready |
+| N3 | post without an account (UI) | logged out, open `/announcements/new` | taken to `/login?returnUrl=%2Fannouncements%2Fnew`; after logging in the form opens | ready |
+| N4 | edit someone else's announcement | in `backend/auth.http` run "Log in as Mihai", then "Mihai tries to edit Ana's announcement 1" | `403 You can only change your own announcements`, announcement 1 unchanged | ready |
+| N5 | edit, three ways | `PUT /announcements/1` with no token, with Mihai's token, with Ana's token | `401`, `403`, `200` | ready |
+| N6 | status, three ways | `PATCH /announcements/1/status` (`RESOLVED`) with no token, Mihai's, Elena's, Ana's token; then Ana sets `ACTIVE` | `401`, `403`, `403`, `200`, `200` | ready |
+| N7 | photos, three ways | upload a png to an announcement of Ana with no token, Mihai's token, Ana's token | `401`, `403`, `201` | ready |
+| N8 | check order | Mihai: `PUT /announcements/1` with `{}`; `PUT /announcements/99999` with a valid body | `400` with the field errors; `404` (not `403`) | ready |
+| N9 | demo accounts | log in as Ana, Mihai and Elena; each sends `PATCH /status` with the current status to all 22 demo announcements, then resolves one of their own and sets it back | each gets `200` on their own (8, 7 and 7) and `403` on the others; resolve and back both `200` | ready |
+| N10 | owner buttons | as Ana open announcement 1, then 2 (Mihai); log out and open 1 | `Mark as resolved` / `Mark as active` only on 1 while logged in as Ana; none on 2, none when logged out | ready |
+| N11 | resolve someone else's (UI) | as Ana open one of Mihai's announcements | no status button; the API answers `403` (N6) | ready |
+| N12 | expired or invalid token (API) | send a token with `exp` in the past, or with a changed signature, to `GET /auth/me` and `PATCH /status`; send it to `GET /announcements` | `401` on the token endpoints; `200` on the public list (the token is ignored) | ready |
+| N13 | deleted or expired token (UI) | log in as Ana, open announcement 1, in DevTools change the `token` in `safepaws.session` (or delete the key), reload, click `Mark as active` / `Mark as resolved` | logged out, sent to `/login?returnUrl=...`; after logging in back on announcement 1 | ready |
+| N14 | Swagger without an account | logged out, open `http://localhost:8080/swagger-ui.html` and `http://localhost:8080/v3/api-docs` | Swagger UI loads and lists the endpoints; the JSON document opens; `POST /announcements` from Swagger without a token still answers `401` | ready |
 
 ## 4. Last run
+
+Run on 17 Nov 2026 on `main` (`324315d`), fresh database (all 7 migration files `V1` to `V8` applied from empty), both test suites, the API through curl (the same requests as `backend/auth.http`), the UI in Chrome on the laptop and in a 375 x 667 frame for the phone width. Not run in this pass: the older manual UI scenarios (C1 to C3, C7 to C11, D, E7 to E9, F12, G12 to G14, H, I, J, K5 to K8, L1 to L6) and D11 (QR scan); M and N were not run on a real phone. Parts not checked: in M10 the local storage key, in M11 closing and reopening the tab, in N10 announcement 1 while logged out, in N13 deleting the key (the token was changed instead).
+
+| Area | Result |
+|---|---|
+| backend suite | pass, 228 tests, 95.1% instructions (83.5% branches) |
+| frontend suite | pass, 274 tests, 93.1% statements (95.6% lines) |
+| M1 to M11, M13 | all pass |
+| M12 | fail on `main`: `/login` and `/register` open while logged in (fixed on branch `fix/auth-route-guards`) |
+| N1, N2, N4 to N13 | all pass |
+| N3 | fail on `main` (fixed on branch `fix/auth-route-guards`) |
+| L7, L8 | pass, apart from the password rules finding below |
+| N14 | fail on `main` (fixed on branch `fix/auth-route-guards`) |
+
+Findings from this run:
+
+- N3: logged out, `/announcements/new` opens and the whole form can be filled in. On submit the backend answers `401` and the form shows `Could not create the announcement. Please check your information and try again.`, which does not say that you need to log in. The header hides the link, but the URL works.
+- M12: `/login` and `/register` show the form while logged in.
+- L7: on a phone the password rules are one paragraph, so a rule wraps in the middle (`One uppercase` / `letter.`), and a met rule only changes `•` to `✓`, without a color.
+- The 403 message in the code was `Only the owner can modify this announcement`, while the contract (`vanessza-decisions.md`, `api.md`) and Matei's note in `matei-decisions.md` say `You can only change your own announcements`. `api.md`, `architecture.md`, `usage-guide.md`, the root `README.md` and `backend/auth.http` also still described the owner check as planned, and `auth.http` said Mihai's edit returns `200`. Fixed on branch `fix/auth-route-guards`: the code uses the contract's text and the docs describe the owner check as built.
+- The login and register specs did not check: the general error on login when the backend fails, the error cleared when the form is sent again, the button disabled while saving (one request on a double click), and the password rules ticking (`passwordRules` was executed by the render, so it showed as covered, but nothing asserted it). The email trim and the general error on register were already tested. Added on branch `fix/auth-route-guards` (6 tests).
+
+Earlier run:
 
 Run on 11 Nov 2026 on `main` (`6ab521e`), fresh database (all 5 migrations applied from empty), backend through the API (curl), both test suites. The UI scenarios (C1 to C3, C7, C8, E4, E7 to E9, F12, G12 to G14, H, I) are manual and were not run in this pass.
 
@@ -285,8 +355,9 @@ On 12 Nov both automated suites passed on `main`: backend 127 tests, 97.0% instr
 
 ## 5. Known issues
 
-- `contactName` and `contactPhone` are returned by `GET /announcements/{id}` (and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses) to anyone, because there is no authentication. They are not in the list response. Messaging without a public phone number is planned for DEMO 2.
-- Anyone can mark any announcement as resolved or active, because there are no accounts yet (DEMO 2).
+- `contactName` and `contactPhone` are returned by `GET /announcements/{id}` (and in the `POST /announcements` and `PATCH /announcements/{id}/status` responses) to anyone, because reading is public. They are not in the list response. Messaging without a public phone number is planned for DEMO 2.
+- A token cannot be revoked before it expires (24 hours): `Log out` only forgets it in the browser (see `api.md`).
+- Swagger UI and `/v3/api-docs` answer `401` on `main`, because `SecurityConfig` does not permit them; use `backend/auth.http` or curl. Fixed on branch `fix/auth-route-guards` (N14).
 - `grey` does not find `Gray` (F7): they are different words, not an accent difference.
 - On the poster, distinctive marks longer than 140 characters are cut, sometimes in the middle of a word (D5). The full text is on the details page, which the QR code opens.
 - On a phone over `http://<laptop IP>`, the browser does not give the location, so the radius filter and `Closest first` are disabled (G12 to G14 only run on the laptop).
