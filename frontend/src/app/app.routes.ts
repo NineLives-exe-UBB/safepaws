@@ -35,6 +35,15 @@ export const routes: Routes = [
     title: 'Post announcement | SafePaws',
   },
   {
+    path: 'announcements/:id/edit',
+    canActivate: [loggedInGuard],
+    loadComponent: () =>
+      import('./pages/announcement-form/announcement-form').then(
+        (module) => module.AnnouncementForm,
+      ),
+    title: 'Edit announcement | SafePaws',
+  },
+  {
     path: 'announcements/:id',
     loadComponent: () =>
       import('./pages/announcement-details/announcement-details').then(

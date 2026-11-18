@@ -53,6 +53,10 @@ export class AnnouncementService {
     return this.http.post<Announcement>(this.announcementsUrl, announcement);
   }
 
+  update(id: number, announcement: AnnouncementRequest): Observable<Announcement> {
+    return this.http.put<Announcement>(`${this.announcementsUrl}/${id}`, announcement);
+  }
+
   updateStatus(id: number, status: AnnouncementStatus): Observable<Announcement> {
     return this.http.patch<Announcement>(`${this.announcementsUrl}/${id}/status`, { status });
   }

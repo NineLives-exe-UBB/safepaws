@@ -7,7 +7,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnnouncementRequest, Species } from '../../models/announcement.model';
 import { Coordinates, MapPin } from '../../models/map.model';
 import { AnnouncementService } from '../../services/announcement.service';
@@ -31,6 +31,13 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   private readonly announcementService = inject(AnnouncementService);
   private readonly locationService = inject(LocationService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /** Set on /announcements/:id/edit: the form loads that announcement and saves with PUT. */
+  protected readonly editId = this.parseEditId();
+  protected readonly loadingAnnouncement = signal(false);
+  /** Photos the announcement already has; the backend keeps its main photo when more are added. */
+  protected readonly existingPhotoCount = signal(0);
 
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly previewUrls = signal<string[]>([]);
@@ -93,18 +100,77 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-  const displayName = this.authService.user()?.displayName;
+    if (this.editId !== undefined) {
+      this.loadAnnouncement(this.editId);
+      return;
+    }
 
-  if (displayName && !this.form.controls.contactName.value) {
-    this.form.controls.contactName.setValue(displayName);
+    const displayName = this.authService.user()?.displayName;
+
+    if (displayName && !this.form.controls.contactName.value) {
+      this.form.controls.contactName.setValue(displayName);
+    }
+
+    this.locationService.getCurrentLocation().then((location) => {
+      if (location) {
+        this.mapCenter.set(location);
+      }
+    });
   }
 
-  this.locationService.getCurrentLocation().then((location) => {
-    if (location) {
-      this.mapCenter.set(location);
-    }
-  });
-}
+  private parseEditId(): number | undefined {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    return Number.isInteger(id) && id > 0 ? id : undefined;
+  }
+
+  /** Fills the form with the announcement; only its owner may edit it. */
+  private loadAnnouncement(id: number): void {
+    this.loadingAnnouncement.set(true);
+    this.form.disable();
+
+    this.announcementService.getById(id).subscribe({
+      next: (announcement) => {
+        this.loadingAnnouncement.set(false);
+
+        if (announcement.ownerId !== this.authService.user()?.id) {
+          this.errorMessage.set('You can only change your own announcements.');
+          return;
+        }
+
+        this.existingPhotoCount.set(announcement.photos.length);
+        this.form.enable();
+        this.form.patchValue({
+          type: announcement.type,
+          species: announcement.species,
+          petName: announcement.petName ?? '',
+          breed: announcement.breed ?? '',
+          color: announcement.color ?? '',
+          distinctiveMarks: announcement.distinctiveMarks ?? '',
+          eventDate: announcement.eventDate.slice(0, 16),
+          area: announcement.area,
+          contactName: announcement.contactName,
+          contactPhone: announcement.contactPhone,
+        });
+
+        if (announcement.latitude !== null && announcement.longitude !== null) {
+          const location = { latitude: announcement.latitude, longitude: announcement.longitude };
+          this.mapCenter.set(location);
+          this.selectedLocation.set(location);
+          this.form.controls.latitude.setValue(location.latitude);
+          this.form.controls.longitude.setValue(location.longitude);
+        }
+
+      },
+      error: (error: unknown) => {
+        this.loadingAnnouncement.set(false);
+        this.errorMessage.set(
+          error instanceof HttpErrorResponse && error.status === 404
+            ? 'This announcement does not exist.'
+            : 'Could not load the announcement. Please try again.',
+        );
+      },
+    });
+  }
 
   protected readonly locationPins = computed<MapPin[]>(() => {
     const location = this.selectedLocation();
@@ -213,7 +279,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
   protected onSubmit(): void {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.submitting()) {
+    if (this.form.invalid || this.form.disabled || this.submitting()) {
       return;
     }
 
@@ -244,6 +310,11 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       contactPhone: values.contactPhone!.trim(),
     };
 
+    if (this.editId !== undefined) {
+      this.saveChanges(this.editId, announcement);
+      return;
+    }
+
     this.announcementService.create(announcement).subscribe({
       next: (createdAnnouncement) => {
         this.createdAnnouncementId = createdAnnouncement.id;
@@ -261,13 +332,39 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     });
   }
 
+  private saveChanges(id: number, announcement: AnnouncementRequest): void {
+    this.announcementService.update(id, announcement).subscribe({
+      next: () => {
+        // A photo retry after this only uploads the photos, like on the create page.
+        this.createdAnnouncementId = id;
+        this.uploadSelectedPhotos(id);
+      },
+      error: (error: unknown) => {
+        this.submitting.set(false);
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          this.errorMessage.set('You can only change your own announcements.');
+          return;
+        }
+        this.errorMessage.set(
+          this.showFieldErrors(error)
+            ? 'Some details are not valid. Please check the highlighted fields.'
+            : 'Could not save the changes. Please check your information and try again.',
+        );
+      },
+    });
+  }
+
   private uploadSelectedPhotos(announcementId: number): void {
     const files = this.selectedFiles();
 
     if (files.length === 0) {
       this.submitting.set(false);
 
-      this.successMessage.set('Your announcement was created successfully!');
+      this.successMessage.set(
+        this.editId !== undefined
+          ? 'Your changes were saved.'
+          : 'Your announcement was created successfully!',
+      );
 
       this.redirectToDetails(announcementId);
       return;
@@ -277,7 +374,11 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       next: () => {
         this.submitting.set(false);
 
-        this.successMessage.set('Your announcement and photos were uploaded successfully!');
+        this.successMessage.set(
+          this.editId !== undefined
+            ? 'Your changes and photos were saved.'
+            : 'Your announcement and photos were uploaded successfully!',
+        );
 
         this.redirectToDetails(announcementId);
       },
@@ -286,7 +387,8 @@ export class AnnouncementForm implements OnInit, OnDestroy {
         this.submitting.set(false);
 
         this.errorMessage.set(
-          'Your announcement was created, but the photos could not be uploaded. Check the photos and submit again to retry, or remove them to continue without photos.',
+          (this.editId !== undefined ? 'Your changes were saved' : 'Your announcement was created') +
+            ', but the photos could not be uploaded. Check the photos and submit again to retry, or remove them to continue without photos.',
         );
       },
     });

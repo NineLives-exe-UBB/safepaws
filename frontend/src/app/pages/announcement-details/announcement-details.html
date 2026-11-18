@@ -92,6 +92,9 @@
           <div class="actions">
             <a class="button" [href]="posterUrl()" download>Download poster</a>
             @if (isOwner()) {
+              <a class="button" [routerLink]="['/announcements', announcement.id, 'edit']">
+                Edit
+              </a>
               <button
                 type="button"
                 class="button secondary"
