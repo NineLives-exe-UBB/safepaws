@@ -1,7 +1,12 @@
 <section class="form-page">
   <div class="form-heading">
-    <h1>Post an announcement</h1>
-    <p>Help reunite lost pets with their families or give found animals a chance to get home.</p>
+    @if (editId) {
+      <h1>Edit announcement</h1>
+      <p>Change the details and save. Photos you add here are added to the existing ones.</p>
+    } @else {
+      <h1>Post an announcement</h1>
+      <p>Help reunite lost pets with their families or give found animals a chance to get home.</p>
+    }
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="announcement-form">
@@ -310,7 +315,7 @@
           <div class="photo-preview-grid">
             @for (file of selectedFiles(); track $index; let i = $index) {
               <div class="photo-preview-item">
-                @if (i === 0) {
+                @if (i === 0 && existingPhotoCount() === 0) {
                   <span class="main-photo-label">Main photo</span>
                 }
 
@@ -353,8 +358,8 @@
     }
 
     <div class="form-actions">
-      <button type="submit" class="submit-button" [disabled]="submitting()">
-        {{ submitting() ? 'Submitting...' : 'Submit announcement' }}
+      <button type="submit" class="submit-button" [disabled]="submitting() || loadingAnnouncement()">
+        {{ submitting() ? 'Submitting...' : editId ? 'Save changes' : 'Submit announcement' }}
       </button>
     </div>
 
