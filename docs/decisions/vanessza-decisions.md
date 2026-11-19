@@ -234,3 +234,157 @@ The existing announcements are shared between these three accounts.
 **Tudor**
 
 > `JWT_SECRET` has to be in `.env.example` together with Alexandru’s PR, otherwise nobody’s backend starts after pulling. The request file is needed by Jessica for testing the editing.
+
+
+---
+
+## Messages, sightings and notifications (until 02.12)
+
+The contract for the cards until 02.12. How the frontend gets new messages and notifications is in ADR 015 (`decisions.md`). All rules from the user accounts contract still apply: the `Authorization: Bearer <token>` header, the `ErrorResponse` format, messages without a full stop, and the checks in this order: 401, 400, 404, 403.
+
+### Messages – Antonia
+
+A conversation is every message about one announcement between the same two people: the owner and someone who wrote to them.
+
+**`POST /announcements/{id}/messages`** (logged in)
+
+```json
+{ "body": "Hi! I think I saw your cat near the park.", "recipientId": null }
+```
+
+- Someone who is not the owner leaves out `recipientId`: the message always goes to the owner.
+- The owner must give `recipientId`: the person they answer, who must have written about this announcement before.
+- `201 Created` → the message:
+  ```json
+  { "id": 12, "senderId": 2, "recipientId": 1, "body": "Hi! I think I saw your cat near the park.", "createdAt": "2026-11-25T18:40:00", "readAt": null }
+  ```
+- `400` with `fieldErrors`:
+  - `body`: "Message is required", "Message must be at most 1000 characters"
+  - `recipientId`: "Recipient is required" (the owner did not give one), "Recipient has not written about this announcement"
+- `404` → "Announcement not found with id: {id}"
+
+**`GET /announcements/{id}/messages?with={userId}`** (logged in)
+
+- The messages between me and `userId` about this announcement, oldest first. Someone who is not the owner can leave out `with`: it means the owner.
+- Opening the conversation marks the messages I received in it as read.
+- `200 OK` → a list of messages, same shape as above
+- `403` → "You can only read your own conversations" (when the owner is not part of the pair)
+- `404` → "Announcement not found with id: {id}"
+
+**`GET /conversations`** (logged in)
+
+- All my conversations, the one with the newest message first:
+  ```json
+  [
+    {
+      "announcementId": 1,
+      "petName": "Mitzi",
+      "species": "CAT",
+      "type": "LOST",
+      "otherUser": { "id": 2, "displayName": "Mihai Rus" },
+      "lastMessage": { "body": "Hi! I think I saw your cat...", "createdAt": "2026-11-25T18:40:00", "fromMe": false },
+      "unreadCount": 1
+    }
+  ]
+  ```
+
+**`GET /messages/unread-count`** (logged in)
+
+- `200 OK` → `{ "count": 3 }` (for the header; called every 30 seconds)
+
+### Sightings – Patrick
+
+**`GET /announcements/{id}/sightings`** (public)
+
+- `200 OK` → the trail, in the order the pet was seen (`seenAt`):
+  ```json
+  [
+    {
+      "id": 4,
+      "latitude": 46.7571,
+      "longitude": 23.5547,
+      "seenAt": "2026-11-24T19:30:00",
+      "note": "Under a parked car, very scared",
+      "reporter": { "id": 2, "displayName": "Mihai Rus" },
+      "createdAt": "2026-11-24T19:45:00"
+    }
+  ]
+  ```
+- `404` → "Announcement not found with id: {id}"
+
+**`POST /announcements/{id}/sightings`** (logged in)
+
+```json
+{ "latitude": 46.7571, "longitude": 23.5547, "seenAt": "2026-11-24T19:30:00", "note": "Under a parked car, very scared" }
+```
+
+- `201 Created` → the sighting, same shape as above
+- `400` with `fieldErrors`:
+  - `latitude`, `longitude`: "Latitude is required", "Latitude must be between -90 and 90", and the same for longitude
+  - `seenAt`: "Seen at is required", "Seen at cannot be in the future", "Seen at cannot be before the pet was lost"
+  - `note`: "Note must be at most 500 characters" (optional)
+- `400` → "Sightings can only be added to active lost pet announcements" (a FOUND or a resolved announcement)
+- `404` → "Announcement not found with id: {id}"
+
+**`DELETE /sightings/{id}`** (logged in)
+
+- `204 No Content`
+- `403` → "You can only delete your own sightings or sightings on your announcements"
+- `404` → "Sighting not found with id: {id}"
+
+### Notifications – Alexandru
+
+A user chooses an area (a point and a radius). When a new announcement is posted inside it, they get a notification. The author never gets one for their own announcement, and an announcement without coordinates sends none.
+
+**`GET /notifications/area`** (logged in)
+
+- `200 OK` → `{ "latitude": 46.7571, "longitude": 23.5547, "radiusKm": 3 }`
+- `404` → "Notification area is not set"
+
+**`PUT /notifications/area`** (logged in)
+
+- The body is the same as the answer above. `200 OK` → the saved area.
+- `400` with `fieldErrors`: "Latitude is required", "Latitude must be between -90 and 90" (the same for longitude), `radiusKm`: "Radius is required", "Radius must be between 1 and 20 km"
+
+**`DELETE /notifications/area`** (logged in)
+
+- `204 No Content` (no more notifications; the old ones stay)
+
+**`GET /notifications`** (logged in)
+
+- My last 50 notifications, newest first:
+  ```json
+  [
+    {
+      "id": 7,
+      "announcement": { "id": 31, "type": "LOST", "species": "DOG", "petName": "Bruno", "area": "Grigorescu, Cluj-Napoca" },
+      "createdAt": "2026-11-26T10:05:00",
+      "read": false
+    }
+  ]
+  ```
+
+**`GET /notifications/unread-count`** (logged in)
+
+- `200 OK` → `{ "count": 2 }`
+
+**`PATCH /notifications/{id}/read`** and **`PATCH /notifications/read-all`** (logged in)
+
+- `204 No Content`
+- `404` → "Notification not found with id: {id}" (also for someone else's notification, so nobody can find out which ids exist)
+
+### Optional phone – Matei (V9), Antonia, Alexandru, Victor
+
+- `contactPhone` is optional in `POST` and `PUT /announcements`. When it is filled in, the same validation as now applies.
+- An announcement without a phone has `"contactPhone": null` in every answer.
+- The poster then shows “Scan the QR code to send a message” instead of the phone number.
+
+### Messages
+
+**Everyone**
+
+> The contract for the cards until 02.12 is above. Please use exactly these endpoints, field names and messages. The tables for messages and sightings already exist from V7, so Antonia and Patrick can start right away; Alexandru starts after Matei's V9. Luca and Victor can start from the contract with test data.
+
+**Matei**
+
+> V9: the `notifications` table, the notification area on `users` (a point and a radius in km) and the optional `contact_phone`. You choose the column names; the API above stays the same.

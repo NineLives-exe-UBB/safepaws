@@ -140,3 +140,14 @@ This document records the architectural, technological, and procedural decisions
   - Reading stays public: the list, the map, the details page, photos and posters work without an account. Registering and logging in are public too. Posting, editing, uploading photos and changing the status need a token, and only the owner of an announcement may change it.
   - Every announcement belongs to a user. The existing announcements are given to three demo accounts (`V6`), and after that the owner is required (`V8`).
 - **Consequences:** The server keeps no sessions, so restarting the backend does not log anyone out. A token cannot be revoked before it expires: logging out only deletes it from the browser. Changing `JWT_SECRET` logs everyone out. The contact name and phone stay on the announcement for now; messages without a public phone number come later in DEMO 2. The endpoints and errors are listed in `decisions/vanessza-decisions.md`.
+
+---
+
+## ADR 015: Messages and Notifications — In the App, Checked Every 30 Seconds
+- **Status:** Accepted
+- **Context:** Users can now write to each other about an announcement without sharing a phone number, and get notified when a new announcement is posted in their area. The frontend has to find out about new messages and notifications while the user has the app open.
+- **Decision:**
+  - Messages and notifications exist only in the app. There are no emails and no push notifications.
+  - The frontend asks the backend for the number of unread messages and notifications every **30 seconds** (polling), and an open conversation reloads its messages at the same interval.
+  - We do not use WebSockets: polling needs no extra library or server configuration, and works with the JWT login from ADR 014 as it is.
+- **Consequences:** A new message or notification can appear up to 30 seconds late, which is acceptable for lost and found pets. Every open tab sends a few small requests per minute. Users only find out about new messages when they open the app. If faster delivery is needed later, the polling can be replaced with WebSockets without changing the endpoints.
