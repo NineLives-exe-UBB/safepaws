@@ -78,7 +78,7 @@ Migrations `V6__users_and_owners.sql`, `V7__messages_and_sightings.sql` and `V8_
 - **Demo accounts:** the 3 accounts from the contract, all with `SafePaws1!`, saved as BCrypt hashes (cost 10, a different hash per account). Each one owns LOST and FOUND, active and resolved announcements and one with 2 photos. The table is in `database.md`.
 - **The contact stays on the announcement:** the owner's display name and the announcement's `contact_name` can be different people, as in ADR 014.
 - **`V7` is a first design:** the contract does not describe messages and sightings yet. A conversation is all the messages about one announcement between the same two users, so there is no conversation table. `read_at` is empty until the message is read. A sighting needs coordinates and the time the pet was seen; the note is optional. Messages and sightings need an account, and they are deleted with their announcement. Changes are still easy while this PR is open; after it is merged they need a new migration.
-- **Next migration is `V9`,** and only I write migrations for now.
+- **Only I write migrations for now.** The next version is in the DEMO 3 section.
 
 ### Messages
 
@@ -115,3 +115,52 @@ Migrations `V6__users_and_owners.sql`, `V7__messages_and_sightings.sql` and `V8_
 #### Vanessza
 
 > `V7` adds the `message` and `sighting` tables, but the contract doesn't describe them yet. Please look at them in the PR before the messages and sightings cards are written. Two small things in the contract: the login example has a double comma after `"token": "<JWT>"`, and cards #46 and #47 write "Email is already registered." and "Invalid email or password." with a full stop, while the contract says no full stop.
+
+---
+
+## DEMO 3: notifications, optional phone, demo messages and sightings
+
+Migration `V9__notifications_and_optional_phone.sql`. The columns, indexes and demo data are in `database.md`.
+
+### Decisions
+
+- **The table is `notification`, not `notifications`:** like the other tables (`announcement`, `message`, `sighting`). Only `users` is plural, because `user` is reserved. The API stays as in the contract.
+- **The notification area is 3 columns on `users`:** `notify_latitude`, `notify_longitude` and `notify_radius_km`. A user has at most one area, so there is no separate table. The three are either all set or all empty (`ck_users_notify_area_complete`); empty means no area. The radius is a whole number of km from 1 to 20, as in the contract.
+- **Read state is a time:** `notification.read_at` is empty until the notification is read, like `message.read_at`. The API's `"read"` is `read_at != null`.
+- **One notification per user per announcement:** `uq_notification_user_announcement`. Notifications are deleted with their announcement.
+- **`contact_phone` is optional since `V9`.** The demo announcements keep their phones, because migrations find them by phone. To test an announcement without a phone, create one through the API.
+- **The CI guard and `DROP NOT NULL`:** the guard flags any line that alters a table and drops something, even `DROP NOT NULL`, which deletes no data. In `V9` the statement is split over two lines.
+- **Demo messages and sightings are on Mitzi** (announcement 1, Ana's lost kitten): 4 sightings (3 from Mihai, 1 from Elena) and 2 conversations (Ana with Mihai, Ana with Elena). Their times are relative to when Mitzi was lost, so they are never in the future. No account has a notification area and there are no notifications.
+- **Next migration is `V10`.**
+
+### Messages
+
+#### Crișan
+
+> `V9` is ready for your card. The area is on `users`: `notify_latitude`, `notify_longitude` (`DOUBLE PRECISION`) and `notify_radius_km` (`INTEGER`, 1 to 20). Set all three or none, otherwise the database rejects the update; `DELETE /notifications/area` sets all three to null. Notifications are in the `notification` table: `id`, `user_id`, `announcement_id`, `created_at`, `read_at` (null = unread, so `"read"` is `read_at != null`). `uq_notification_user_announcement` allows one notification per user per announcement. For the unread count, `WHERE user_id = ? AND read_at IS NULL` uses the index `idx_notification_unread`. The distance check can reuse the Haversine formula in `AnnouncementService`. Remember: no notification for the author, and none for an announcement without coordinates.
+>
+> About the CI migration guard: it flags `ALTER TABLE ... DROP NOT NULL` on one line as destructive, even though no data is deleted. `V9` splits it over two lines. If you want, the check could ignore `DROP NOT NULL` and `DROP DEFAULT`.
+
+#### Antonia
+
+> `contact_phone` is optional in the database since `V9`. In the `Announcement` entity, `@Column(name = "contact_phone", nullable = false, ...)` should become `nullable = true`. In `AnnouncementRequest`, removing `@NotBlank` from `contactPhone` is enough, because the `@Pattern` already accepts an empty value. An empty string should probably be saved as `null`, so the API answers `"contactPhone": null` as the contract says. For messages, the tables are from `V7`: `message` has `announcement_id`, `sender_id`, `recipient_id`, `body`, `created_at` and `read_at`. The database already rejects a blank body and a message to yourself (`ck_message_body_not_blank`, `ck_message_not_to_self`), but give your own 400 first. On a fresh database, Ana has 2 conversations about Mitzi (with Mihai and with Elena), so you can test the list right away.
+
+#### Patrick
+
+> Mitzi (announcement 1) has a trail of 4 sightings on a fresh database: 3 from Mihai and 1 from Elena, in the days after she was lost. `sighting` has `latitude`, `longitude`, `seen_at` (required) and `note` (optional). The database checks the coordinate ranges, but not that `seen_at` is in the past or after the date the pet was lost; your service has to.
+
+#### Luca
+
+> To see the trail on the map: open announcement 1 (Mitzi). It has 4 sightings around Mănăștur, so the map should zoom to show them all with the point where she was lost. Announcement 2 (Rex) is also lost and active, with no sightings, for the empty case.
+
+#### Victor
+
+> To try the messages: log in as `ana@safepaws.dev` (2 conversations about Mitzi, 1 unread from Mihai) or `elena@safepaws.dev` (1 unread from Ana). Mihai has no unread messages. Every demo announcement still has a phone, so create one without a phone through the form to test "only Send a message".
+
+#### Jessica
+
+> After `docker compose down -v`: Mitzi (1) has 4 sightings and 6 messages. Ana has 2 conversations and 1 unread message, Elena has 1 unread, Mihai has none. No account has a notification area, so set one first to test notifications. The dates of the sightings and messages depend on when the database was created, so don't use exact dates in scenarios.
+
+#### Tudor
+
+> For `architecture.md`: `V9` adds the `notification` table, the notification area on `users` and the optional `contact_phone`, plus demo messages and sightings. The details are in `database.md`, and the ER diagram has the new table and columns.
