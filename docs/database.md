@@ -14,10 +14,17 @@ SafePaws uses **PostgreSQL 17**, containerized via Docker Compose. Schema migrat
 | `V6__users_and_owners.sql` | Adds the `users` table and `announcement.owner_id` (ADR 014), creates the 3 demo accounts and shares the 22 demo announcements between them. |
 | `V7__messages_and_sightings.sql` | Adds the `message` table (messages about an announcement between two users) and the `sighting` table ("I saw it here" points for the map trail). |
 | `V8__require_announcement_owner.sql` | Makes `announcement.owner_id` required. Announcements without an owner (only possible on a local database, from before the backend set it) are given to Ana first. |
+| `V9__notifications_and_optional_phone.sql` | Adds the `notification` table and a notification area on `users` (a point and a radius in km), makes `announcement.contact_phone` optional, and adds demo messages and sightings for Mitzi (announcement 1). |
 
 Test announcements are matched across migrations by their fictional placeholder phone numbers (`0700000001`–`0700000022`), not by ID. The dates of the V3 announcements are relative to when the migration runs, so they are always recent.
 
-On a fresh database: 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates), 25 photos and 3 users. Announcements 9, 13 and 21 have 2 photos each. There are no messages or sightings.
+On a fresh database: 22 announcements (12 LOST, 10 FOUND; 18 ACTIVE, 4 RESOLVED; 10 without a pet name; all with coordinates), 25 photos and 3 users. Announcements 9, 13 and 21 have 2 photos each. Every demo announcement has a phone; to test one without a phone, create it through the API. No account has a notification area, and there are no notifications.
+
+### Demo messages and sightings (V9)
+Mitzi (announcement 1, Ana's lost kitten) has the demo data. The times are relative to when Mitzi was lost (`event_date`): all of them are after it and at most 4 days later, so they are never in the future.
+
+- **Sightings:** a trail of 4 around Mănăștur, 3 from Mihai and 1 from Elena, from the morning after she was lost to 4 days later.
+- **Messages:** 2 conversations about Mitzi. Ana and Mihai: 4 messages, the last one from Mihai is unread. Ana and Elena: 2 messages, Ana's answer is unread. So Ana and Elena each have 1 unread message, and Mihai has none.
 
 ### Demo accounts (V6)
 All three use the password `SafePaws1!`. It is stored only as a BCrypt hash; the password itself is public, for the demo.
@@ -43,7 +50,8 @@ Below is the conceptual and physical ER diagram:
 - **User to Announcements (`1 : N`):** A user owns zero or more announcements; each announcement has exactly one owner (`announcement.owner_id`, required since `V8`).
 - **Announcement to Messages (`1 : N`):** Every message is about one announcement and goes from one user (`sender_id`) to another (`recipient_id`). A conversation is all the messages about one announcement between the same two users.
 - **Announcement to Sightings (`1 : N`):** Every sighting belongs to one announcement and was reported by one user (`reporter_id`).
-- **Cascade Deletion:** `ON DELETE CASCADE` is enforced on `photo.announcement_id`, `message.announcement_id` and `sighting.announcement_id`. Deleting an announcement automatically deletes its photos, messages and sightings. Users are never deleted in cascade: a user who still owns announcements, messages or sightings cannot be deleted.
+- **User to Notifications (`1 : N`):** Every notification tells one user (`user_id`) about one new announcement (`announcement_id`) inside their notification area. A user gets at most one notification per announcement.
+- **Cascade Deletion:** `ON DELETE CASCADE` is enforced on `photo.announcement_id`, `message.announcement_id`, `sighting.announcement_id` and `notification.announcement_id`. Deleting an announcement automatically deletes its photos, messages, sightings and notifications. Users are never deleted in cascade: a user who still owns announcements, messages, sightings or notifications cannot be deleted.
 
 ---
 
@@ -66,7 +74,7 @@ Stores lost and found pet reports.
 | `longitude` | `DOUBLE PRECISION`| No | Range: `[-180, 180]` | Coordinate longitude (set together with latitude). |
 | `area` | `VARCHAR(150)` | Yes | — | "Neighborhood, City" (e.g., "Mănăștur, Cluj-Napoca"). |
 | `contact_name` | `VARCHAR(100)` | Yes | — | Name of contact person. |
-| `contact_phone` | `VARCHAR(20)` | Yes | Stored as text | Phone number (preserves leading `0` / `+40`). |
+| `contact_phone` | `VARCHAR(20)` | No | Stored as text | Phone number (preserves leading `0` / `+40`). Optional since V9: without it, the owner can be reached only through messages. |
 | `status` | `VARCHAR(10)` | Yes | `CHECK (status IN ('ACTIVE', 'RESOLVED'))`, Default: `'ACTIVE'` | Current status of the report. Changed with `PATCH /announcements/{id}/status` ("Mark as resolved" / "Mark as active" on the details page). |
 | `created_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | Record creation timestamp. |
 | `owner_id` | `BIGINT` | Yes | `FOREIGN KEY` references `users(id)` | The user who posted the announcement (`ownerId` in the API), set by the backend from the logged-in user. Added in V6, required since V8. |
@@ -83,6 +91,24 @@ Stores user accounts (ADR 014). The name is plural because `user` is a reserved 
 | `password_hash` | `VARCHAR(60)` | Yes | — | BCrypt hash (`$2a$10$...`, 60 characters). The password itself is never stored or returned. |
 | `display_name` | `VARCHAR(50)` | Yes | Not blank | Name shown in the app. |
 | `created_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | Registration timestamp. |
+| `notify_latitude` | `DOUBLE PRECISION` | No | Range: `[-90, 90]` | Center of the notification area (`latitude` in `/notifications/area`). Added in V9. |
+| `notify_longitude` | `DOUBLE PRECISION` | No | Range: `[-180, 180]` | Center of the notification area (`longitude`). Added in V9. |
+| `notify_radius_km` | `INTEGER` | No | Range: `[1, 20]` | Radius of the notification area in km (`radiusKm`). Added in V9. |
+
+The three `notify_` columns are either all set or all empty (`ck_users_notify_area_complete`). Empty means the user has not chosen an area and gets no notifications; `DELETE /notifications/area` sets them back to empty.
+
+---
+
+### Table: `notification`
+A new announcement posted inside a user's notification area (ADR 015). Added in V9.
+
+| Column | Type | Required | Constraints / Default | Description |
+|---|---|---|---|---|
+| `id` | `BIGINT` | Yes | `GENERATED ALWAYS AS IDENTITY PRIMARY KEY` | Unique identifier. |
+| `user_id` | `BIGINT` | Yes | `FOREIGN KEY` references `users(id)`, `UNIQUE (user_id, announcement_id)` | Who is notified. |
+| `announcement_id` | `BIGINT` | Yes | `FOREIGN KEY` references `announcement(id)` `ON DELETE CASCADE` | The new announcement. |
+| `created_at` | `TIMESTAMP` | Yes | Default: `CURRENT_TIMESTAMP` | When the notification was created. |
+| `read_at` | `TIMESTAMP` | No | — | When the user read it; empty means unread (`"read": false` in the API). |
 
 ---
 
@@ -147,6 +173,10 @@ Stores binary image data attached to announcements.
 | `idx_message_recipient_id` | `message (recipient_id, created_at DESC)` | V7 | A user's inbox, newest first, and unread counts. |
 | `idx_sighting_announcement_id` | `sighting (announcement_id, seen_at)` | V7 | The trail of an announcement, in the order the pet was seen. |
 | `idx_sighting_reporter_id` | `sighting (reporter_id)` | V7 | The reporter foreign key. |
+| `uq_notification_user_announcement` | `UNIQUE notification (user_id, announcement_id)` | V9 | At most one notification per user for each announcement. |
+| `idx_notification_user_id` | `notification (user_id, created_at DESC)` | V9 | A user's notifications, newest first. |
+| `idx_notification_unread` | `notification (user_id) WHERE read_at IS NULL` | V9 | The unread count, checked every 30 seconds (ADR 015). |
+| `idx_notification_announcement_id` | `notification (announcement_id)` | V9 | The announcement foreign key, for deleting an announcement. |
 | extension `unaccent` | `CREATE EXTENSION IF NOT EXISTS unaccent` | V3 | Case- and diacritic-insensitive text filters (`color`, `breed`, `area`). `unaccent` is not `IMMUTABLE`, so it is not indexed. |
 
 ---
@@ -154,6 +184,10 @@ Stores binary image data attached to announcements.
 ## 4. Architectural & Schema Decisions
 
 - **Users and owners (DEMO 2, ADR 014):** every announcement belongs to the user who posted it (`owner_id`). The contact name and phone still stay on the announcement, so they can differ from the owner's display name. The backend sets `owner_id` from the logged-in user when an announcement is posted, and `V8` makes it required, so an announcement without an owner can't be saved.
+- **Optional phone (DEMO 3):** since `V9`, `contact_phone` can be empty, so the owner is reached only through messages. The demo announcements keep their phones, because migrations find them by phone.
+- **Notification area on the user:** a user has at most one area, so it is 3 columns on `users`, not a separate table. Finding the users whose area contains a new announcement is done in the backend; at this size no spatial index is needed.
+- **Read state as a time:** `notification.read_at` and `message.read_at` are empty until read, so the API's `read` is `read_at IS NOT NULL`.
+- **Optional phone and the CI guard:** the guard flags any line that alters a table and drops something, even `DROP NOT NULL`, which deletes no data. In `V9` the statement is split over two lines.
 - **Demo passwords:** the demo accounts are created in `V6` with ready-made BCrypt hashes (cost 10, one hash per account), so no password is stored in plain text. The backend checks them with Spring's `BCryptPasswordEncoder`.
 - **No Locations Table:** The location (`area`, `latitude`, `longitude`) is stored as columns on the announcement.
 - **Binary Image Storage (`BYTEA`):** Images are stored directly in PostgreSQL (see ADR 007 in `decisions.md`). Listing endpoints (`GET /announcements`) load only photo metadata, never the image bytes; individual photos are retrieved via `GET /photos/{id}`.
@@ -161,7 +195,7 @@ Stores binary image data attached to announcements.
 - **Conventions & Immutability:** 
   - Database schema uses strict `snake_case` (`contact_phone`, `pet_name`), mapping directly to `camelCase` in Java DTOs/Entities (`contactPhone`, `petName`).
   - Fixed domain attributes (`type`, `species`, `status`) use uppercase `VARCHAR` with SQL `CHECK` constraints to map cleanly to Spring Boot Java Enums.
-  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via a new migration; the next version is `V9`. SQL and Java migrations share version numbers, and the CI migration guard only checks SQL files, so check Java migrations by hand.
+  - Merged Flyway migrations must never be altered. Any subsequent schema updates must be introduced via a new migration; the next version is `V10`. SQL and Java migrations share version numbers, and the CI migration guard only checks SQL files, so check Java migrations by hand.
 
 ---
 
