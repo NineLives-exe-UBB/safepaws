@@ -408,12 +408,18 @@ public class PosterService {
             float textLeft = left + CARD_PADDING;
             float textRight = qrBoxX - 16f;
             String species = speciesWord(announcement.getSpecies(), isLost);
-            String callToAction = isLost
-                    ? "If you see " + (petName != null && !petName.isEmpty() ? petName : "this " + species)
-                    + ", please call"
-                    : "Recognize this " + species + "? Please call";
-            String contactName = truncateText(announcement.getContactName(), MAX_NAME_LENGTH);
+            String callToAction;
             String phone = announcement.getContactPhone() != null ? announcement.getContactPhone().trim() : "";
+            if (phone.isEmpty()) {
+                // No phone: tell people to scan the QR code and send a message instead
+                callToAction = "Scan the QR code to send a message";
+            } else {
+                callToAction = isLost
+                        ? "If you see " + (petName != null && !petName.isEmpty() ? petName : "this " + species)
+                        + ", please call"
+                        : "Recognize this " + species + "? Please call";
+            }
+            String contactName = truncateText(announcement.getContactName(), MAX_NAME_LENGTH);
 
             float y = bottom + CARD_HEIGHT - 26f;
             Font callToActionFont = font(regular, 13f, TEXT_MUTED);

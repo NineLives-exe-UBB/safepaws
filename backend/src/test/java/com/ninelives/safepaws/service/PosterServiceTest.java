@@ -226,6 +226,27 @@ class PosterServiceTest {
     }
 
     @Test
+    void generatePosterWithoutPhoneNumberShowsScanQrMessageInstead() throws Exception {
+        Announcement announcement = storedAnnouncement(7L, AnnouncementType.LOST, Species.CAT, "Misi");
+        announcement.setContactPhone(null);
+
+        when(announcementRepository.findById(7L)).thenReturn(Optional.of(announcement));
+        when(photoRepository.findMetadataByAnnouncementIds(List.of(7L))).thenReturn(List.of());
+
+        byte[] pdfBytes = posterService.generatePoster(7L);
+
+        assertThat(pdfBytes).isNotEmpty();
+        try (PdfReader reader = new PdfReader(pdfBytes)) {
+            assertThat(reader.getNumberOfPages()).isEqualTo(1);
+            String text = new PdfTextExtractor(reader).getTextFromPage(1);
+            assertThat(text)
+                    .contains("Scan the QR code to send a message")
+                    .doesNotContain("please call")
+                    .contains("Ion Radu");
+        }
+    }
+
+    @Test
     void generatePosterThrowsWhenTheAnnouncementDoesNotExist() {
         when(announcementRepository.findById(999L)).thenReturn(Optional.empty());
 

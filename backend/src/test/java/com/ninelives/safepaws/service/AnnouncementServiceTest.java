@@ -63,6 +63,9 @@ class AnnouncementServiceTest {
      @Mock
      private AnnouncementOwnershipService ownershipService;
 
+     @Mock
+     private NotificationService notificationService;
+
      @InjectMocks
      private AnnouncementService announcementService;
 
