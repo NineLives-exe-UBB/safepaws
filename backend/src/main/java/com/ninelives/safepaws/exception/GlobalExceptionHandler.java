@@ -82,6 +82,14 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getFieldErrors());
     }
 
+    /**
+     * A field breaks a rule only the service can check, e.g. a message recipient who never wrote.
+     */
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(InvalidRequestException ex) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getFieldErrors());
+    }
+
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     public ResponseEntity<ErrorResponse> handleEmailTaken(EmailAlreadyRegisteredException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), List.of());

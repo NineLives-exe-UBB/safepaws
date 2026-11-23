@@ -58,7 +58,7 @@ public class Announcement {
     @Column(name = "contact_name", nullable = false, length = 100)
     private String contactName;
 
-    @Column(name = "contact_phone", nullable = false, length = 20)
+    @Column(name = "contact_phone", length = 20)
     private String contactPhone;
 
     @Enumerated(EnumType.STRING)

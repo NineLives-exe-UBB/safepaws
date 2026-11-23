@@ -46,6 +46,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -196,15 +197,15 @@ class AnnouncementControllerTest {
                     .andExpect(jsonPath("$.error").value("Bad Request"))
                     .andExpect(jsonPath("$.message").value("Some fields are invalid"))
                     .andExpect(jsonPath("$.timestamp").exists())
-                    .andExpect(jsonPath("$.fieldErrors", hasSize(6)))
+                    .andExpect(jsonPath("$.fieldErrors", hasSize(5)))
                     // sorted by field name
                     .andExpect(jsonPath("$.fieldErrors[0].field").value("area"))
                     .andExpect(jsonPath("$.fieldErrors[0].message").value("Area is required"))
                     .andExpect(jsonPath("$.fieldErrors[1].message").value("Contact name is required"))
-                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Contact phone is required"))
-                    .andExpect(jsonPath("$.fieldErrors[3].message").value("Event date is required"))
-                    .andExpect(jsonPath("$.fieldErrors[4].message").value("Species is required"))
-                    .andExpect(jsonPath("$.fieldErrors[5].message").value("Type is required"));
+                    // the phone is optional since V9
+                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Event date is required"))
+                    .andExpect(jsonPath("$.fieldErrors[3].message").value("Species is required"))
+                    .andExpect(jsonPath("$.fieldErrors[4].message").value("Type is required"));
 
             verify(announcementService, never()).create(any());
         }
@@ -216,11 +217,31 @@ class AnnouncementControllerTest {
                     .replace("\"Ion Radu\"", "\"\"")
                     .replace("\"0740123456\"", "\"\""))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.fieldErrors", hasSize(3)))
+                    .andExpect(jsonPath("$.fieldErrors", hasSize(2)))
                     .andExpect(jsonPath("$.fieldErrors[0].message").value("Area is required"))
-                    .andExpect(jsonPath("$.fieldErrors[1].message").value("Contact name is required"))
-                    // one error for an empty phone, not "required" + "invalid"
-                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Contact phone is required"));
+                    .andExpect(jsonPath("$.fieldErrors[1].message").value("Contact name is required"));
+        }
+
+        @Test
+        void phoneIsOptionalAndAnEmptyPhoneBecomesNull() throws Exception {
+            when(announcementService.create(any())).thenReturn(response(15L));
+
+            postJson(VALID_REQUEST.replace("\"contactPhone\": \"0740123456\"", "\"contactPhone\": \"  \""))
+                    .andExpect(status().isCreated());
+            postJson(VALID_REQUEST.replaceAll(",\\s*\"contactPhone\": \"0740123456\"", ""))
+                    .andExpect(status().isCreated());
+
+            ArgumentCaptor<AnnouncementRequest> captor = ArgumentCaptor.forClass(AnnouncementRequest.class);
+            verify(announcementService, times(2)).create(captor.capture());
+            assertThat(captor.getAllValues()).extracting(AnnouncementRequest::contactPhone).containsOnlyNulls();
+        }
+
+        @Test
+        void aFilledInPhoneIsStillValidated() throws Exception {
+            postJson(VALID_REQUEST.replace("\"0740123456\"", "\"call me\""))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors[0].field").value("contactPhone"))
+                    .andExpect(jsonPath("$.fieldErrors[0].message").value("Contact phone must be a valid phone number"));
         }
 
         @Test
@@ -495,13 +516,13 @@ class AnnouncementControllerTest {
             mockMvc.perform(put("/announcements/13").contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Some fields are invalid"))
-                    .andExpect(jsonPath("$.fieldErrors", hasSize(6)))
+                    .andExpect(jsonPath("$.fieldErrors", hasSize(5)))
                     .andExpect(jsonPath("$.fieldErrors[0].message").value("Area is required"))
                     .andExpect(jsonPath("$.fieldErrors[1].message").value("Contact name is required"))
-                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Contact phone is required"))
-                    .andExpect(jsonPath("$.fieldErrors[3].message").value("Event date is required"))
-                    .andExpect(jsonPath("$.fieldErrors[4].message").value("Species is required"))
-                    .andExpect(jsonPath("$.fieldErrors[5].message").value("Type is required"));
+                    // the phone is optional since V9
+                    .andExpect(jsonPath("$.fieldErrors[2].message").value("Event date is required"))
+                    .andExpect(jsonPath("$.fieldErrors[3].message").value("Species is required"))
+                    .andExpect(jsonPath("$.fieldErrors[4].message").value("Type is required"));
 
             verify(announcementService, never()).update(any(), any());
         }
