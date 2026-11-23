@@ -14,11 +14,15 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 | `POST` | `/announcements` | Creates a new announcement | Token | Antonia | Announcement form |
 | `GET` | `/announcements` | Returns announcements matching optional filters (summary projection, active and newest event first by default) | Public | Antonia | List page, map page |
 | `GET` | `/announcements/{id}` | Returns one announcement with full details and photo metadata | Public | Antonia | Details page |
-| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Token; owner only | Antonia | Edit page (*planned, not on main yet*) |
+| `PUT` | `/announcements/{id}` | Edits an announcement (replaces every form field) | Token; owner only | Antonia | Edit page |
 | `PATCH` | `/announcements/{id}/status` | Marks an announcement as resolved or active again | Token; owner only | Patrick | `Mark as resolved` / `Mark as active` on the details page |
 | `POST` | `/announcements/{id}/photos` | Uploads photos to an announcement (multipart) | Token; owner only | Patrick | Announcement form |
 | `GET` | `/photos/{id}` | Returns raw image stream (JPG/PNG) | Public | Patrick | Announcement cards, map popups, details page |
 | `GET` | `/announcements/{id}/poster` | Downloads announcement poster as PDF | Public | Alexandru | `Download poster` on each card and on the details page |
+| `POST` | `/announcements/{id}/messages` | Sends a message about an announcement | Token | Antonia | Conversation page, `Send a message` on the details page |
+| `GET` | `/announcements/{id}/messages` | Returns one conversation, oldest first, and marks it as read | Token; only the two people in it | Antonia | Conversation page |
+| `GET` | `/conversations` | Returns all my conversations, newest first | Token | Antonia | Messages page |
+| `GET` | `/messages/unread-count` | Returns how many messages I have not read | Token | Antonia | Header badge (every 30 seconds) |
 
 ### Authentication & Permissions
 
@@ -37,6 +41,9 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 | `PUT /announcements/{id}` | 401 | 403 | ✅ |
 | `PATCH /announcements/{id}/status` | 401 | 403 | ✅ |
 | `POST /announcements/{id}/photos` | 401 | 403 | ✅ |
+| `POST /announcements/{id}/messages` | 401 | ✅ (always to the owner) | ✅ (only to someone who wrote) |
+| `GET /announcements/{id}/messages` | 401 | ✅ own conversation; 403 for anyone else's | ✅ |
+| `GET /conversations`, `GET /messages/unread-count` | 401 | ✅ | ✅ |
 
 > **Owner check:**
 > - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `You can only change your own announcements`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
@@ -61,7 +68,7 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
   - Status: `ACTIVE`, `RESOLVED`
   - Species: `CAT`, `DOG`, `OTHER`
 - **Authentication:** `Authorization: Bearer <token>` on the endpoints marked "Token" in the table above (see **Authentication & Permissions**).
-- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements`, `PUT /announcements/{id}` and `PATCH /announcements/{id}/status` responses, and printed on the poster. They are not part of `GET /announcements`.
+- **Contact Details:** `contactName` and `contactPhone` are returned by `GET /announcements/{id}` and in the `POST /announcements`, `PUT /announcements/{id}` and `PATCH /announcements/{id}/status` responses, and printed on the poster. They are not part of `GET /announcements`. `contactPhone` is optional (V9): an announcement without a phone has `"contactPhone": null` in every response, and its poster asks people to scan the QR code and send a message instead.
 
 ---
 
@@ -106,7 +113,7 @@ Creates a new lost or found announcement.
 | `longitude` | `number` | No | Range: `[-180.0, 180.0]`; must be provided together with `latitude`. |
 | `area` | `string` | Yes | "Neighborhood, City", for example `Mănăștur, Cluj-Napoca`. Not blank, max 150 characters. |
 | `contactName` | `string` | Yes | Not blank, max 100 characters. |
-| `contactPhone` | `string` | Yes | Valid phone string (max 20 chars, regex: `^(\+?[0-9]{7,15})?$`). |
+| `contactPhone` | `string` | No | Valid phone string (max 20 chars, regex: `^(\+?[0-9]{7,15})?$`) when filled in. Left out, `null` or empty (`""`, spaces) means no phone and is saved as `null`. |
 
 ##### Response (`201 Created`)
 - **Headers:** `Location: /announcements/{id}`
@@ -482,6 +489,110 @@ Returns the currently logged-in user. Token required (`Authorization: Bearer <to
 
 ---
 
+### 3.5 Messages
+
+Messages follow ADR 015 (`decisions.md`): they exist only in the app, and the frontend checks for new ones every 30 seconds. A **conversation** is every message about one announcement between the same two people: the owner and someone who wrote to them. Every endpoint needs a token; the checks run in the order `401`, `400`, `404`, `403`.
+
+Times are `YYYY-MM-DDTHH:mm:ss`, without fractions of a second.
+
+#### `POST /announcements/{id}/messages`
+Sends a message about the announcement.
+
+- Someone who is **not the owner** leaves out `recipientId`: the message always goes to the owner. Naming anyone else returns `403`.
+- The **owner** must give `recipientId`: the person they answer, who must have written about this announcement before. So nobody can start a conversation with their own announcement.
+
+##### Request Body (`application/json`)
+```json
+{
+  "body": "Hi! I think I saw your cat near the park.",
+  "recipientId": null
+}
+```
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `body` | `string` | Yes | Not blank, max 1000 characters. Spaces at the start and end are removed. |
+| `recipientId` | `number` | Owner only | The id of someone who has written about this announcement. Left out (or `null`) by everyone else. |
+
+##### Response (`201 Created`)
+```json
+{
+  "id": 12,
+  "senderId": 2,
+  "recipientId": 1,
+  "body": "Hi! I think I saw your cat near the park.",
+  "createdAt": "2026-11-25T18:40:00",
+  "readAt": null
+}
+```
+
+##### Error Responses
+- `400 Bad Request` (`Some fields are invalid`):
+  - `body`: `Message is required`, `Message must be at most 1000 characters`
+  - `recipientId`: `Recipient is required` (the owner did not give one), `Recipient has not written about this announcement` (also when the owner names themselves)
+- `403 Forbidden`: `You can only write in your own conversations` (someone who is not the owner names a `recipientId` other than the owner)
+- `404 Not Found`: `Announcement not found with id: {id}`
+
+---
+
+#### `GET /announcements/{id}/messages?with={userId}`
+Returns the messages between me and `userId` about this announcement, **oldest first**. Opening the conversation marks the messages I received in it as read (their `readAt` is set); messages I sent stay unread until the other person opens it.
+
+- Someone who is not the owner can leave out `with`: it means the owner.
+- The owner must give `with`.
+- A conversation nobody has written in yet returns `[]`.
+
+##### Response (`200 OK`)
+A list of messages, each in the same shape as the `POST` response above.
+
+##### Error Responses
+- `400 Bad Request`: `with: Conversation partner is required` (the owner left out `with`); `with: Invalid value 'abc'` (not a number)
+- `403 Forbidden`: `You can only read your own conversations` (neither I nor `with` is the owner, so it is someone else's conversation)
+- `404 Not Found`: `Announcement not found with id: {id}`
+
+---
+
+#### `GET /conversations`
+Returns all my conversations, as owner and as writer, **the one with the newest message first**.
+
+##### Response (`200 OK`)
+```json
+[
+  {
+    "announcementId": 1,
+    "petName": "Mitzi",
+    "species": "CAT",
+    "type": "LOST",
+    "otherUser": { "id": 2, "displayName": "Mihai Rus" },
+    "lastMessage": {
+      "body": "I saw her again this evening, close to the first spot. She looked fine.",
+      "createdAt": "2026-11-06T19:15:00",
+      "fromMe": false
+    },
+    "unreadCount": 1
+  }
+]
+```
+
+| Field | Notes |
+|---|---|
+| `petName` | `null` when the announcement has none (often for `FOUND`) |
+| `otherUser` | The other person in the conversation |
+| `lastMessage.fromMe` | `true` when I sent the last message |
+| `unreadCount` | Messages I received in this conversation and have not opened |
+
+---
+
+#### `GET /messages/unread-count`
+How many messages I have received and not opened, in all conversations. The header calls it every 30 seconds.
+
+##### Response (`200 OK`)
+```json
+{ "count": 3 }
+```
+
+---
+
 ## 4. Standard Error Response Format
 
 All API errors return a consistent JSON structure defined by `ErrorResponse`:
@@ -521,6 +632,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Malformed JSON request body (`HttpMessageNotReadableException`) | `Malformed request body` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Path or query parameter type mismatch (`MethodArgumentTypeMismatchException`, e.g. `/announcements/abc` or `?species=cat`) | `Some fields are invalid` | `[{"field": "id", "message": "Invalid value 'abc'"}]` (for enums followed by `, allowed values: ...`) |
 | `400 Bad Request` | `Bad Request` | Invalid `GET /announcements` filter combination (`InvalidFilterException`) | `Some fields are invalid` | Array of `{field, message}`, see `GET /announcements` above |
+| `400 Bad Request` | `Bad Request` | A rule only the service can check (`InvalidRequestException`), e.g. a message recipient who never wrote | `Some fields are invalid` | `[{"field": "recipientId", "message": "Recipient has not written about this announcement"}]`, see `3.5 Messages` |
 | `400 Bad Request` | `Bad Request` | No files provided in upload (`PhotoService`) | `No files provided` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Uploaded file is empty (`PhotoService`) | `File is empty` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Non-JPG/PNG mime type (`PhotoService`) | `Only JPG and PNG images are allowed` | `[]` (empty) |
@@ -529,6 +641,8 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `null` |
 | `401 Unauthorized` | `Unauthorized` | Wrong login (`InvalidCredentialsException`) | `Invalid email or password` | `null` |
 | `403 Forbidden` | `Forbidden` | Changing an announcement you do not own (`AnnouncementOwnershipService`) | `You can only change your own announcements` | `[]` (empty) |
+| `403 Forbidden` | `Forbidden` | Reading a conversation you are not part of (`MessageService`) | `You can only read your own conversations` | `[]` (empty) |
+| `403 Forbidden` | `Forbidden` | Writing to someone other than the owner when you are not the owner (`MessageService`) | `You can only write in your own conversations` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Announcement ID not found (`AnnouncementNotFoundException`) | `Announcement not found with id: {id}` | `[]` (empty) |
 | `404 Not Found` | `Not Found` | Photo ID not found (`PhotoService`) | `Photo not found with id: {id}` | `[]` (empty) |
 | `409 Conflict` | `Conflict` | Email already has an account (`EmailAlreadyRegisteredException`) | `Email is already registered` | `[]` (empty) |

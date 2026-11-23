@@ -54,11 +54,18 @@ public record AnnouncementRequest(
         @Size(max = 100, message = "Contact name must be at most 100 characters")
         String contactName,
 
-        @NotBlank(message = "Contact phone is required")
+        // optional since V9: people can be reached through messages instead
         @Size(max = 20, message = "Contact phone must be at most 20 characters")
         @Pattern(regexp = "^(\\+?[0-9]{7,15})?$", message = "Contact phone must be a valid phone number")
         String contactPhone
 ) {
+
+    public AnnouncementRequest {
+        // an empty phone means "no phone", stored and returned as null
+        if (contactPhone != null && contactPhone.isBlank()) {
+            contactPhone = null;
+        }
+    }
 
     /**
      * A map pin needs both coordinates, so they are sent together or not at all.
