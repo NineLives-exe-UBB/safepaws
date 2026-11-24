@@ -13,4 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /** All users who have a notification area set (notify_latitude IS NOT NULL). */
+    @org.springframework.data.jpa.repository.Query(
+            "select u from User u where u.notifyLatitude is not null")
+    java.util.List<User> findAllWithNotifyArea();
 }

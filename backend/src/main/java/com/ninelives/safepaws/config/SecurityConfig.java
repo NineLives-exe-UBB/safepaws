@@ -4,6 +4,7 @@ import com.ninelives.safepaws.service.JwtService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -37,6 +38,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/announcements", "/announcements/*/photos").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/announcements/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/announcements/*/status").authenticated()
+                        // Notification area and in-app notifications (all authenticated, V9)
+                        .requestMatchers("/notifications/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
@@ -45,10 +48,10 @@ public class SecurityConfig {
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                             String body = String.format(
-                                    "{\"status\":%d,\"error\":\"%s\",\"message\":\"Authentication is required\",\"fieldErrors\":null,\"timestamp\":\"%s\"}",
+                                    "{\"status\":%d,\"error\":\"%s\",\"message\":\"Authentication is required\",\"fieldErrors\":[],\"timestamp\":\"%s\"}",
                                     HttpStatus.UNAUTHORIZED.value(),
                                     HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                                    LocalDateTime.now()
+                                    LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
                             );
                             response.getWriter().write(body);
                         })

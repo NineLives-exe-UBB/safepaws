@@ -23,6 +23,13 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 | `GET` | `/announcements/{id}/messages` | Returns one conversation, oldest first, and marks it as read | Token; only the two people in it | Antonia | Conversation page |
 | `GET` | `/conversations` | Returns all my conversations, newest first | Token | Antonia | Messages page |
 | `GET` | `/messages/unread-count` | Returns how many messages I have not read | Token | Antonia | Header badge (every 30 seconds) |
+| `GET` | `/notifications/area` | Returns my notification area | Token | Crișan | Notification settings |
+| `PUT` | `/notifications/area` | Saves or updates my notification area | Token | Crișan | Notification settings |
+| `DELETE` | `/notifications/area` | Removes my notification area | Token | Crișan | Notification settings |
+| `GET` | `/notifications` | Returns my notifications (newest first) | Token | Crișan | Notifications page |
+| `GET` | `/notifications/unread-count` | Returns how many notifications I have not read | Token | Crișan | Header badge (every 30 seconds) |
+| `PATCH` | `/notifications/{id}/read` | Marks one notification as read | Token | Crișan | Notifications page |
+| `PATCH` | `/notifications/read-all` | Marks all my notifications as read | Token | Crișan | Notifications page |
 
 ### Authentication & Permissions
 
@@ -44,6 +51,8 @@ User accounts follow ADR 014 (`decisions.md`); the agreed DEMO 2 contract is in 
 | `POST /announcements/{id}/messages` | 401 | ✅ (always to the owner) | ✅ (only to someone who wrote) |
 | `GET /announcements/{id}/messages` | 401 | ✅ own conversation; 403 for anyone else's | ✅ |
 | `GET /conversations`, `GET /messages/unread-count` | 401 | ✅ | ✅ |
+| `GET /notifications/area`, `PUT /notifications/area`, `DELETE /notifications/area` | 401 | ✅ | ✅ |
+| `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all` | 401 | ✅ | ✅ |
 
 > **Owner check:**
 > - Only the owner may edit an announcement, change its status or add photos. Another logged-in user gets `403 Forbidden` with `You can only change your own announcements`. The checks run in this order: `401`, then `400` (validation), then `404`, then `403`.
@@ -593,6 +602,129 @@ How many messages I have received and not opened, in all conversations. The head
 
 ---
 
+### 3.6 Notifications
+
+Notifications follow ADR 015 (`decisions.md`): a user sets an area (a point and a radius), and whenever a new announcement is posted inside that area, the user gets an in-app notification. The author never gets one for their own announcement, and an announcement without coordinates creates no notifications. The frontend checks for new notifications every 30 seconds. Every endpoint needs a token.
+
+Times are `YYYY-MM-DDTHH:mm:ss`, without fractions of a second.
+
+#### `GET /notifications/area`
+Returns the current user's notification area. Token required.
+
+##### Response (`200 OK`)
+```json
+{
+  "latitude": 46.7571,
+  "longitude": 23.5547,
+  "radiusKm": 3
+}
+```
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`): no token or invalid/expired token.
+- `404 Not Found` (`Notification area is not set`): user has not set an area.
+
+---
+
+#### `PUT /notifications/area`
+Saves or replaces the user's notification area. Token required.
+
+##### Request Body (`application/json`)
+```json
+{
+  "latitude": 46.7571,
+  "longitude": 23.5547,
+  "radiusKm": 3
+}
+```
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `latitude` | `number` | Yes | `[-90.0, 90.0]` |
+| `longitude` | `number` | Yes | `[-180.0, 180.0]` |
+| `radiusKm` | `integer` | Yes | Whole number of km between `1` and `20` |
+
+##### Response (`200 OK`)
+The saved notification area (same shape as `GET /notifications/area`).
+
+##### Error Responses
+- `400 Bad Request` (`Some fields are invalid`): `latitude`: "Latitude is required", "Latitude must be between -90 and 90"; `longitude`: "Longitude is required", "Longitude must be between -180 and 180"; `radiusKm`: "Radius is required", "Radius must be between 1 and 20 km".
+- `401 Unauthorized` (`Authentication is required`).
+
+---
+
+#### `DELETE /notifications/area`
+Removes the current user's notification area. Existing notifications are retained. Token required.
+
+##### Response (`204 No Content`)
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`).
+
+---
+
+#### `GET /notifications`
+Returns the user's notifications (up to 50, newest first). Token required.
+
+##### Response (`200 OK`)
+```json
+[
+  {
+    "id": 7,
+    "announcement": {
+      "id": 31,
+      "type": "LOST",
+      "species": "DOG",
+      "petName": "Bruno",
+      "area": "Grigorescu, Cluj-Napoca"
+    },
+    "createdAt": "2026-11-26T10:05:00",
+    "read": false
+  }
+]
+```
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`).
+
+---
+
+#### `GET /notifications/unread-count`
+Returns how many notifications the user has not read. Checked by the header every 30 seconds. Token required.
+
+##### Response (`200 OK`)
+```json
+{
+  "count": 2
+}
+```
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`).
+
+---
+
+#### `PATCH /notifications/{id}/read`
+Marks a single notification as read. Token required.
+
+##### Response (`204 No Content`)
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`).
+- `404 Not Found` (`Notification not found with id: {id}`): when the notification does not exist or belongs to another user.
+
+---
+
+#### `PATCH /notifications/read-all`
+Marks all of the user's notifications as read. Token required.
+
+##### Response (`204 No Content`)
+
+##### Error Responses
+- `401 Unauthorized` (`Authentication is required`).
+
+---
+
 ## 4. Standard Error Response Format
 
 All API errors return a consistent JSON structure defined by `ErrorResponse`:
@@ -618,8 +750,8 @@ All API errors return a consistent JSON structure defined by `ErrorResponse`:
 | `status` | `number` | HTTP status code (e.g., `400`, `404`, `413`, `500`). |
 | `error` | `string` | Short reason phrase (e.g., `"Bad Request"`, `"Not Found"`, `"Content Too Large"`). |
 | `message` | `string` | Human-readable explanation of what went wrong. |
-| `fieldErrors` | `array` or `null` | Validation errors specifying the invalid `field` and descriptive `message`. Empty array for other errors, except `401`, where it is `null`. |
-| `timestamp` | `string` | ISO 8601 timestamp of when the error occurred, truncated to seconds (for `401` it is not truncated, e.g. `2026-11-16T10:15:30.123456`). |
+| `fieldErrors` | `array` or `null` | Validation errors specifying the invalid `field` and descriptive `message`. Empty array for other errors and for 401 from SecurityConfig, `null` for 401 from wrong credentials (`/auth/login`). |
+| `timestamp` | `string` | ISO 8601 timestamp of when the error occurred, truncated to seconds. |
 
 ### Real Error Messages Reference Table
 
@@ -638,7 +770,7 @@ The table below catalogs the exact HTTP status codes, reason phrases, triggers, 
 | `400 Bad Request` | `Bad Request` | Non-JPG/PNG mime type (`PhotoService`) | `Only JPG and PNG images are allowed` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | File name exceeds 255 characters (`PhotoService`) | `File name is too long` | `[]` (empty) |
 | `400 Bad Request` | `Bad Request` | Corrupted image data / invalid magic bytes (`PhotoService`) | `Invalid image file` | `[]` (empty) |
-| `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `null` |
+| `401 Unauthorized` | `Unauthorized` | Missing, invalid or expired token on a token endpoint (Spring Security), or the token's user no longer exists (`/auth/me`) | `Authentication is required` | `[]` (empty) |
 | `401 Unauthorized` | `Unauthorized` | Wrong login (`InvalidCredentialsException`) | `Invalid email or password` | `null` |
 | `403 Forbidden` | `Forbidden` | Changing an announcement you do not own (`AnnouncementOwnershipService`) | `You can only change your own announcements` | `[]` (empty) |
 | `403 Forbidden` | `Forbidden` | Reading a conversation you are not part of (`MessageService`) | `You can only read your own conversations` | `[]` (empty) |

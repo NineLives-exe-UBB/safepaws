@@ -32,13 +32,16 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final PhotoRepository photoRepository;
     private final AnnouncementOwnershipService ownershipService;
+    private final NotificationService notificationService;
 
     public AnnouncementService(AnnouncementRepository announcementRepository,
                             PhotoRepository photoRepository,
-                            AnnouncementOwnershipService ownershipService) {
+                            AnnouncementOwnershipService ownershipService,
+                            NotificationService notificationService) {
         this.announcementRepository = announcementRepository;
         this.photoRepository = photoRepository;
         this.ownershipService = ownershipService;
+        this.notificationService = notificationService;
     }
 
 
@@ -49,6 +52,9 @@ public class AnnouncementService {
         announcement.setOwner(ownershipService.currentUser());
 
         Announcement saved = announcementRepository.save(announcement);
+
+        // Notify users whose area contains the new announcement (ADR 015 / V9)
+        notificationService.notifyUsersInArea(saved);
 
         // photos are uploaded separately, after the announcement exists
         return toResponse(saved, List.of());
