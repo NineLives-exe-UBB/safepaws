@@ -153,6 +153,17 @@ describe('AnnouncementDetails', () => {
       expect(text('.subtitle')).toBe('Found cat');
     });
 
+    it('should hide the phone number when it is not provided', async () => {
+  getById.mockReturnValue(
+    of({ ...announcement, contactPhone: null }),
+  );
+
+  await render();
+
+  expect(text('.contact p')).toBe('Ana Pop');
+  expect(element.querySelector('.phone')).toBeNull();
+});
+
     it('should put the name of the pet in the browser tab', async () => {
       await render();
 
@@ -190,6 +201,48 @@ describe('AnnouncementDetails', () => {
       expect(phone?.getAttribute('href')).toBe('tel:0712345678');
       expect(phone?.textContent?.trim()).toBe('0712345678');
     });
+
+
+it('should show a Send message link for another logged-in user', async () => {
+  currentUser.set({
+    id: 8,
+    email: 'other@example.com',
+    displayName: 'Other User',
+  });
+
+  await render();
+
+  const messageLink = element.querySelector<HTMLAnchorElement>(
+    '.actions a.button.message-link',
+  );
+
+  expect(messageLink?.textContent?.trim()).toBe('Send message');
+  expect(messageLink?.getAttribute('href')).toBe('/messages/9/5');
+});
+
+it('should send logged-out visitors to login', async () => {
+  currentUser.set(null);
+
+  await render();
+
+  const messageLink = element.querySelector<HTMLAnchorElement>(
+    '.actions a.button.message-link',
+  );
+
+  expect(messageLink?.textContent?.trim()).toBe('Send message');
+  expect(messageLink?.getAttribute('href')).toBe('/login');
+});
+
+it('should not show Send message to the announcement owner', async () => {
+  await render();
+
+  const messageLink = element.querySelector(
+    '.actions a.button.message-link',
+  );
+
+  expect(messageLink).toBeNull();
+});
+
 
     it('should link to the poster of the announcement', async () => {
       await render();

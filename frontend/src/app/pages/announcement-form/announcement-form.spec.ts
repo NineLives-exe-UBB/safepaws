@@ -80,16 +80,16 @@ describe('AnnouncementForm', () => {
   });
 
   it('should require the main announcement fields and coordinates', () => {
-    const controls = component['form'].controls;
+  const controls = component['form'].controls;
 
-    expect(controls.species.hasError('required')).toBe(true);
-    expect(controls.eventDate.hasError('required')).toBe(true);
-    expect(controls.area.hasError('required')).toBe(true);
-    expect(controls.contactName.hasError('required')).toBe(true);
-    expect(controls.contactPhone.hasError('required')).toBe(true);
-    expect(controls.latitude.hasError('required')).toBe(true);
-    expect(controls.longitude.hasError('required')).toBe(true);
-  });
+  expect(controls.species.hasError('required')).toBe(true);
+  expect(controls.eventDate.hasError('required')).toBe(true);
+  expect(controls.area.hasError('required')).toBe(true);
+  expect(controls.contactName.hasError('required')).toBe(true);
+  expect(controls.contactPhone.hasError('required')).toBe(false);
+  expect(controls.latitude.hasError('required')).toBe(true);
+  expect(controls.longitude.hasError('required')).toBe(true);
+});
 
   it('should keep breed and color optional', () => {
     const controls = component['form'].controls;
@@ -131,6 +131,14 @@ describe('AnnouncementForm', () => {
 
     expect(eventDate.valid).toBe(true);
   });
+
+  it('should allow the phone number to be empty', () => {
+  const phone = component['form'].controls.contactPhone;
+
+  phone.setValue('');
+
+  expect(phone.valid).toBe(true);
+});
 
   it('should not offer future dates in the date picker', () => {
     const input = compiled.querySelector('#eventDate') as HTMLInputElement;
@@ -426,6 +434,15 @@ describe('AnnouncementForm', () => {
       expect(sent.color).toBeUndefined();
       expect(sent.distinctiveMarks).toBeUndefined();
     });
+
+    it('should omit the phone number when it is empty', () => {
+  component['form'].controls.contactPhone.setValue('');
+
+  component['onSubmit']();
+
+  expect(sentAnnouncements).toHaveLength(1);
+  expect(sentAnnouncements[0].contactPhone).toBeUndefined();
+});
 
     it('should include the selected coordinates in the request', () => {
       component['onSubmit']();

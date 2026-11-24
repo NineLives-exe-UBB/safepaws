@@ -52,6 +52,22 @@ export const routes: Routes = [
     title: 'Announcement | SafePaws',
   },
   {
+    path: 'messages/:announcementId/:withUserId',
+    canActivate: [loggedInGuard],
+    loadComponent: () =>
+      import('./pages/conversation/conversation').then(
+        (module) => module.ConversationPage,
+      ),
+    title: 'Conversation | SafePaws',
+  },
+  {
+    path: 'messages',
+    canActivate: [loggedInGuard],
+    loadComponent: () =>
+      import('./pages/messages/messages').then((module) => module.Messages),
+    title: 'Messages | SafePaws',
+  },
+  {
     path: 'map',
     loadComponent: () =>
       import('./pages/map-page/map-page').then((module) => module.MapPage),

@@ -1,10 +1,12 @@
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+
 import { Announcement, SPECIES_LABELS } from '../../models/announcement.model';
 import { AnnouncementService } from '../../services/announcement.service';
-import { DatePipe } from '@angular/common';
 import { TYPE_LABELS } from '../../models/announcement-filters.model';
 import { MapView } from '../../components/map/map';
 import { MapPin } from '../../models/map.model';
@@ -22,8 +24,8 @@ type PageState = 'loading' | 'loaded' | 'not-found' | 'error';
 export class AnnouncementDetails {
   private readonly announcementService = inject(AnnouncementService);
   private readonly title = inject(Title);
-  private readonly authService = inject(AuthService);
 
+  protected readonly authService = inject(AuthService);
   protected readonly dateFormat = DATE_FORMAT;
 
   protected readonly state = signal<PageState>('loading');
@@ -38,15 +40,14 @@ export class AnnouncementDetails {
       announcement.ownerId === user.id;
   });
 
-
   protected readonly selectedPhotoIndex = signal(0);
 
   protected readonly updatingStatus = signal(false);
   protected readonly statusError = signal(false);
 
-  /** The main photo first, so it is the one shown when the page opens. */
   protected readonly photoUrls = computed(() => {
     const photos = this.announcement()?.photos ?? [];
+
     return [...photos]
       .sort((a, b) => Number(b.isMain) - Number(a.isMain))
       .map((photo) => this.announcementService.photoUrl(photo));
@@ -56,15 +57,17 @@ export class AnnouncementDetails {
     () => this.photoUrls()[this.selectedPhotoIndex()] ?? null,
   );
 
-  /** The pet's name, or its species when it has no name (e.g. a found pet). */
   protected readonly heading = computed(() => {
     const announcement = this.announcement();
-    return announcement ? (announcement.petName ?? SPECIES_LABELS[announcement.species]) : '';
+
+    return announcement
+      ? (announcement.petName ?? SPECIES_LABELS[announcement.species])
+      : '';
   });
 
-  /** E.g. "Lost cat" or "Found dog". */
   protected readonly subtitle = computed(() => {
     const announcement = this.announcement();
+
     return announcement
       ? `${TYPE_LABELS[announcement.type]} ${SPECIES_LABELS[announcement.species].toLowerCase()}`
       : '';
@@ -72,20 +75,25 @@ export class AnnouncementDetails {
 
   protected readonly typeLabel = computed(() => {
     const announcement = this.announcement();
+
     return announcement ? TYPE_LABELS[announcement.type] : '';
   });
 
   protected readonly posterUrl = computed(() => {
     const announcement = this.announcement();
-    return announcement ? this.announcementService.posterUrl(announcement.id) : null;
+
+    return announcement
+      ? this.announcementService.posterUrl(announcement.id)
+      : null;
   });
 
-  /** One pin for the announcement, or none when it has no coordinates. */
   protected readonly pins = computed<MapPin[]>(() => {
     const announcement = this.announcement();
+
     if (announcement?.latitude == null || announcement.longitude == null) {
       return [];
     }
+
     return [
       {
         latitude: announcement.latitude,
@@ -111,7 +119,9 @@ export class AnnouncementDetails {
         this.title.setTitle(`${this.heading()} | SafePaws`);
       },
       error: (error: unknown) => {
-        const notFound = error instanceof HttpErrorResponse && error.status === 404;
+        const notFound =
+          error instanceof HttpErrorResponse && error.status === 404;
+
         this.state.set(notFound ? 'not-found' : 'error');
       },
     });
@@ -123,11 +133,14 @@ export class AnnouncementDetails {
 
   protected toggleStatus(): void {
     const announcement = this.announcement();
+
     if (!announcement || !this.isOwner() || this.updatingStatus()) {
       return;
     }
 
-    const status = announcement.status === 'ACTIVE' ? 'RESOLVED' : 'ACTIVE';
+    const status =
+      announcement.status === 'ACTIVE' ? 'RESOLVED' : 'ACTIVE';
+
     this.updatingStatus.set(true);
     this.statusError.set(false);
 
