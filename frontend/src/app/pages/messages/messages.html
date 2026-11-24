@@ -1,0 +1,67 @@
+
+<main class="messages-page">
+  <div class="page-heading">
+    <h1>Messages</h1>
+    <p>Your conversations about lost and found pets.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="status-message">
+      Loading conversations...
+    </div>
+  } @else if (error()) {
+    <div class="status-message error">
+      {{ error() }}
+    </div>
+  } @else if (conversations().length === 0) {
+    <div class="empty-state">
+      <h2>No conversations yet.</h2>
+      <p>
+        When someone sends you a message about an announcement,
+        your conversation will appear here.
+      </p>
+    </div>
+  } @else {
+    <section class="conversation-list">
+      @for (conversation of conversations(); track conversation.announcementId + '-' + conversation.otherUser.id) {
+        <a
+          class="conversation"
+          [class.unread]="conversation.unreadCount > 0"
+          [routerLink]="[
+            '/messages',
+            conversation.announcementId,
+            conversation.otherUser.id
+          ]"
+        >
+          <div class="conversation-content">
+            <div class="conversation-heading">
+              <h2>{{ conversation.petName || 'Pet announcement' }}</h2>
+
+              @if (conversation.unreadCount > 0) {
+                <span class="unread-badge">
+                  {{ conversation.unreadCount }}
+                  {{ conversation.unreadCount === 1 ? 'new message' : 'new messages' }}
+                </span>
+              }
+            </div>
+
+            <p class="other-user">
+              {{ conversation.otherUser.displayName }}
+            </p>
+
+            <p class="last-message">
+              @if (conversation.lastMessage.fromMe) {
+                <span>You: </span>
+              }
+              {{ conversation.lastMessage.body }}
+            </p>
+          </div>
+
+          <time class="message-date">
+            {{ conversation.lastMessage.createdAt | date:'short' }}
+          </time>
+        </a>
+      }
+    </section>
+  }
+</main>

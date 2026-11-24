@@ -1,3 +1,4 @@
+
 import { Photo } from './photo.model';
 
 export type AnnouncementType = 'LOST' | 'FOUND';
@@ -22,10 +23,9 @@ export interface AnnouncementRequest {
   longitude?: number;
   area: string;
   contactName: string;
-  contactPhone: string;
+  contactPhone?: string | null;
 }
 
-/** Returned by GET /announcements: only the fields needed to show the list. */
 export interface AnnouncementSummary {
   id: number;
   type: AnnouncementType;
@@ -37,17 +37,15 @@ export interface AnnouncementSummary {
   eventDate: string;
   status: AnnouncementStatus;
   photos: Photo[];
-  /** Only present when the request included the user's location. */
   distanceKm?: number | null;
 }
 
-/** Returned by POST /announcements and GET /announcements/{id}. */
 export interface Announcement extends AnnouncementSummary {
   ownerId: number | null;
   breed: string | null;
   color: string | null;
   distinctiveMarks: string | null;
   contactName: string;
-  contactPhone: string;
+  contactPhone: string | null;
   createdAt: string;
 }

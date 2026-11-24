@@ -1,0 +1,149 @@
+
+.messages-page {
+  width: min(900px, calc(100% - 32px));
+  margin: 32px auto;
+}
+
+.page-heading {
+  margin-bottom: 24px;
+}
+
+.page-heading h1 {
+  margin: 0 0 8px;
+  color: var(--color-text);
+}
+
+.page-heading p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.conversation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.conversation:last-child {
+  border-bottom: none;
+}
+
+.conversation:hover {
+  background-color: var(--color-primary-light);
+}
+
+.conversation.unread {
+  background-color: var(--color-primary-light);
+}
+
+.conversation-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.conversation-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.conversation-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.conversation.unread .conversation-heading h2,
+.conversation.unread .other-user,
+.conversation.unread .last-message {
+  font-weight: 700;
+}
+
+.unread-badge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.other-user {
+  margin: 5px 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.last-message {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-date {
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+  font-size: 0.8rem;
+}
+
+.status-message,
+.empty-state {
+  padding: 32px 20px;
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.status-message.error {
+  color: var(--color-error);
+}
+
+.empty-state h2 {
+  margin-top: 0;
+}
+
+.empty-state p {
+  margin-bottom: 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .messages-page {
+    margin: 20px auto;
+  }
+
+  .conversation {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .message-date {
+    font-size: 0.75rem;
+  }
+
+  .conversation-heading {
+    align-items: flex-start;
+  }
+}

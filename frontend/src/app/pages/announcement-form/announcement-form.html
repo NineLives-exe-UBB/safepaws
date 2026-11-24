@@ -256,31 +256,36 @@
           }
         </div>
 
-        <div class="form-group">
-          <label for="contactPhone">Phone number *</label>
+        
+<div class="form-group">
+  <label for="contactPhone">Phone number</label>
 
-          <input
-            id="contactPhone"
-            type="tel"
-            formControlName="contactPhone"
-            placeholder="e.g. 0712345678"
-          />
+  <input
+    id="contactPhone"
+    type="tel"
+    formControlName="contactPhone"
+    placeholder="e.g. 0712345678"
+  />
 
-          @if (
-            (form.controls.contactPhone.hasError('required') ||
-              form.controls.contactPhone.hasError('pattern') ||
-              form.controls.contactPhone.hasError('maxlength')) &&
-            form.controls.contactPhone.touched
-          ) {
-            <small class="field-error">
-              Enter a valid phone number (7–15 digits, optionally starting with +).
-            </small>
-          }
+  <small class="field-hint">
+    Optional. You can leave this empty if you prefer to communicate through messages.
+  </small>
 
-          @if (serverError('contactPhone'); as message) {
-            <small class="field-error">{{ message }}</small>
-          }
-        </div>
+  @if (
+    (form.controls.contactPhone.hasError('pattern') ||
+      form.controls.contactPhone.hasError('maxlength')) &&
+    form.controls.contactPhone.touched
+  ) {
+    <small class="field-error">
+      Enter a valid phone number (7–15 digits, optionally starting with +).
+    </small>
+  }
+
+  @if (serverError('contactPhone'); as message) {
+    <small class="field-error">{{ message }}</small>
+  }
+</div>
+
       </div>
     </fieldset>
 

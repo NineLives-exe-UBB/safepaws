@@ -90,9 +90,9 @@ export class AnnouncementForm implements OnInit, OnDestroy {
     contactName: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
 
     contactPhone: [
-      '',
-      [Validators.required, Validators.maxLength(20), Validators.pattern(/^\+?[0-9]{7,15}$/)],
-    ],
+  '',
+  [Validators.maxLength(20), Validators.pattern(/^(\+?[0-9]{7,15})?$/)],
+],
   });
 
   private readonly selectedType = toSignal(this.form.controls.type.valueChanges, {
@@ -307,7 +307,7 @@ export class AnnouncementForm implements OnInit, OnDestroy {
       longitude: values.longitude!,
       area: values.area!.trim(),
       contactName: values.contactName!.trim(),
-      contactPhone: values.contactPhone!.trim(),
+      contactPhone: values.contactPhone?.trim() || undefined,
     };
 
     if (this.editId !== undefined) {

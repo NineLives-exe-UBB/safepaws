@@ -1,9 +1,11 @@
 
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
+import { of } from 'rxjs';
+
 import { AuthService } from '../../services/auth.service';
+import { MessageService } from '../../services/message.service';
 import { Header } from './header';
 
 @Component({ template: '' })
@@ -30,6 +32,10 @@ describe('Header', () => {
     },
   };
 
+  const messageServiceMock = {
+    getUnreadCount: () => of({ count: 0 }),
+  };
+
   beforeEach(async () => {
     loggedIn.set(false);
     currentUser.set(null);
@@ -41,6 +47,7 @@ describe('Header', () => {
           { path: 'announcements/new', component: Page },
           { path: 'announcements', component: Page },
           { path: 'map', component: Page },
+          { path: 'messages', component: Page },
           { path: 'login', component: Page },
           { path: 'register', component: Page },
         ]),
@@ -48,10 +55,15 @@ describe('Header', () => {
           provide: AuthService,
           useValue: authMock,
         },
+        {
+          provide: MessageService,
+          useValue: messageServiceMock,
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Header);
+    fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -75,7 +87,7 @@ describe('Header', () => {
     ]);
   });
 
-  it('should show the post announcement link when logged in', () => {
+  it('should show the Messages link when logged in', () => {
     loggedIn.set(true);
     currentUser.set({
       id: 1,
@@ -89,10 +101,38 @@ describe('Header', () => {
       link.getAttribute('href'),
     );
 
+    expect(hrefs).toContain('/messages');
     expect(hrefs).toContain('/announcements/new');
     expect(hrefs).not.toContain('/login');
     expect(hrefs).not.toContain('/register');
-    expect(compiled.querySelector('.user-name')?.textContent).toContain('Test User');
+  });
+
+  it('should show the post announcement link when logged in', () => {
+    loggedIn.set(true);
+    currentUser.set({
+      id: 1,
+      email: 'test@example.com',
+      displayName: 'Test User',
+    });
+
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.user-name')?.textContent).toContain(
+      'Test User',
+    );
+  });
+
+  it('should not show the unread counter when the count is zero', () => {
+    loggedIn.set(true);
+    currentUser.set({
+      id: 1,
+      email: 'test@example.com',
+      displayName: 'Test User',
+    });
+
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.unread-count')).toBeNull();
   });
 
   async function activeLinks(url: string): Promise<(string | null)[]> {
@@ -132,5 +172,18 @@ describe('Header', () => {
 
   it('should highlight only the map link on the map page', async () => {
     expect(await activeLinks('/map')).toEqual(['/map']);
+  });
+
+  it('should highlight the Messages link on the messages page', async () => {
+    loggedIn.set(true);
+    currentUser.set({
+      id: 1,
+      email: 'test@example.com',
+      displayName: 'Test User',
+    });
+
+    fixture.detectChanges();
+
+    expect(await activeLinks('/messages')).toEqual(['/messages']);
   });
 });

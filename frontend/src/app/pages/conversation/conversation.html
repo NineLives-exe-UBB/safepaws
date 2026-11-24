@@ -1,0 +1,66 @@
+
+<main class="conversation-page">
+  <a class="back-link" routerLink="/messages">← Back to messages</a>
+
+  <section class="conversation-panel">
+    <header class="conversation-header">
+      <h1>
+        Conversation about
+        {{ announcement()?.petName || 'this pet' }}
+      </h1>
+      <p>Messages are refreshed automatically every 30 seconds.</p>
+    </header>
+
+    @if (error()) {
+      <p class="error-message">{{ error() }}</p>
+    }
+
+    <div class="message-list">
+      @if (loading()) {
+        <p class="status-message">Loading messages...</p>
+      } @else if (messages().length === 0) {
+        <p class="status-message">No messages in this conversation yet.</p>
+      } @else {
+        @for (message of messages(); track message.id) {
+          <div
+            class="message-row"
+            [class.mine]="message.senderId === currentUserId()"
+          >
+            <article class="message-bubble">
+              <p>{{ message.body }}</p>
+              <time>{{ message.createdAt | date:'short' }}</time>
+            </article>
+          </div>
+        }
+      }
+    </div>
+
+    <form class="message-form" (submit)="$event.preventDefault(); sendMessage()">
+      <label for="message">Your message</label>
+
+      <textarea
+        id="message"
+        rows="3"
+        maxlength="1000"
+        placeholder="Write your message..."
+        [value]="draft()"
+        (input)="updateDraft($event)"
+      ></textarea>
+
+      <div class="form-footer">
+        <span>{{ draft().length }}/1000</span>
+
+        <button
+          type="submit"
+          [disabled]="!draft().trim() || sending() || draft().trim().length > 1000"
+        >
+          {{ sending() ? 'Sending...' : 'Send message' }}
+        </button>
+      </div>
+
+      @if (sendError()) {
+        <p class="error-message">{{ sendError() }}</p>
+      }
+    </form>
+  </section>
+</main>
