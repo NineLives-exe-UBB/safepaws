@@ -54,6 +54,20 @@ app-map {
   background-color: var(--color-found);
 }
 
+.map-pin-sighting {
+  background-color: var(--color-primary);
+}
+
+.map-pin-draft {
+  background-color: var(--color-text-subtle);
+}
+
+/* The line that joins the points of a trail, in the order the pet was seen */
+.map-trail {
+  stroke: var(--color-primary);
+  stroke-dasharray: 6 8;
+}
+
 /* Responsive layout */
 @media (max-width: 768px) {
   app-map {

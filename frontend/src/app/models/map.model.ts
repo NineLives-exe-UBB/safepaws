@@ -5,8 +5,14 @@ export interface Coordinates {
   longitude: number;
 }
 
+/**
+ * LOST and FOUND are announcements. SIGHTING is a place where a lost pet was seen. DRAFT is a place
+ * the user just clicked, not saved yet: it does not count when the map zooms to show all the pins.
+ */
+export type PinType = AnnouncementType | 'SIGHTING' | 'DRAFT';
+
 export interface MapPin extends Coordinates {
-  type: AnnouncementType;
+  type: PinType;
   /** Shown as the tooltip of the pin. */
   label?: string;
   /** Lets the page find what the pin stands for, e.g. to fill its popup. */
