@@ -220,6 +220,73 @@ describe('MapView', () => {
     });
   });
 
+  describe('the trail', () => {
+    const points: Coordinates[] = [
+      { latitude: 46.77, longitude: 23.6 },
+      { latitude: 46.78, longitude: 23.62 },
+      { latitude: 46.76, longitude: 23.64 },
+    ];
+
+    const lines = () =>
+      (fixture.componentInstance['trailLayer'] as L.LayerGroup).getLayers() as L.Polyline[];
+
+    it('should join the points with a line, in the given order', async () => {
+      await render({ trail: points });
+      const drawn = (lines()[0].getLatLngs() as L.LatLng[]).map((point) => [point.lat, point.lng]);
+
+      expect(lines()).toHaveLength(1);
+      expect(drawn).toEqual(points.map((point) => [point.latitude, point.longitude]));
+      expect(element.querySelector('.map-trail')).not.toBeNull();
+    });
+
+    it('should not draw a line through fewer than two points', async () => {
+      await render({ trail: [points[0]] });
+
+      expect(lines()).toHaveLength(0);
+    });
+
+    it('should replace the line when the points change', async () => {
+      await render({ trail: points });
+      fixture.componentRef.setInput('trail', points.slice(0, 2));
+      await fixture.whenStable();
+
+      expect(lines()).toHaveLength(1);
+      expect(lines()[0].getLatLngs()).toHaveLength(2);
+    });
+
+    it('should show the line below the pins', async () => {
+      await render({ trail: points, pins: [lostPin] });
+      const layers = [...element.querySelectorAll('.leaflet-overlay-pane, .leaflet-marker-pane')];
+
+      expect(layers[0].classList).toContain('leaflet-overlay-pane');
+    });
+
+    it('should color the pin of a sighting and of a draft like the other pins', async () => {
+      await render({
+        pins: [
+          { ...clujNapoca, type: 'SIGHTING' },
+          { ...clujNapoca, type: 'DRAFT' },
+        ],
+      });
+
+      expect(element.querySelectorAll('.map-pin-sighting')).toHaveLength(1);
+      expect(element.querySelectorAll('.map-pin-draft')).toHaveLength(1);
+    });
+
+    it('should not move the map when only a draft pin is added', async () => {
+      const cluj: MapPin = { latitude: 46.77, longitude: 23.6, type: 'SIGHTING' };
+      const timisoara: MapPin = { latitude: 45.75, longitude: 21.23, type: 'SIGHTING' };
+      await render({ pins: [cluj, timisoara], fitToPins: true });
+      leafletMap().setView([44, 26], 8);
+
+      fixture.componentRef.setInput('pins', [cluj, timisoara, { ...clujNapoca, type: 'DRAFT' }]);
+      await fixture.whenStable();
+
+      expect(leafletMap().getCenter().lat).toBeCloseTo(44, 4);
+      expect(element.querySelectorAll('.leaflet-marker-icon')).toHaveLength(3);
+    });
+  });
+
   describe('popups', () => {
     let host: ComponentFixture<PopupHost>;
     let hostElement: HTMLElement;

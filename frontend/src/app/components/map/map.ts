@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -48,6 +49,9 @@ export class MapView {
   /** Without a center, zooms so that all the pins fit on the screen. */
   readonly fitToPins = input(false);
 
+  /** A line drawn through these points, in order. Nothing is drawn for fewer than two points. */
+  readonly trail = input<Coordinates[]>([]);
+
   /** The content of the popup that opens when a pin is clicked. */
   readonly popup = input<TemplateRef<PinPopupContext> | null>(null);
 
@@ -59,8 +63,18 @@ export class MapView {
 
   private readonly ready = signal(false);
 
+  /**
+   * The pins the map zooms to. Its value is only new when a location changes, so a pin that does not
+   * count (a draft) does not move the map while the user explores it to choose a place.
+   */
+  private readonly fitTargets = computed(
+    () => (this.fitToPins() ? this.pins().filter((pin) => pin.type !== 'DRAFT') : []),
+    { equal: sameLocations },
+  );
+
   private map?: L.Map;
   private pinLayer?: L.LayerGroup;
+  private trailLayer?: L.LayerGroup;
   private resizeObserver?: ResizeObserver;
 
   constructor() {
@@ -89,6 +103,14 @@ export class MapView {
 
       this.showPins(this.pins());
     });
+
+    effect(() => {
+      if (!this.ready()) {
+        return;
+      }
+
+      this.showTrail(this.trail());
+    });
   }
 
   private createMap(): void {
@@ -111,6 +133,7 @@ export class MapView {
     });
 
     this.map = map;
+    this.trailLayer = L.layerGroup().addTo(map);
     this.pinLayer = L.layerGroup().addTo(map);
 
     this.observeContainerSize(container);
@@ -144,7 +167,7 @@ export class MapView {
       return;
     }
 
-    const pins = this.fitToPins() ? this.pins() : [];
+    const pins = this.fitTargets();
 
     if (pins.length > 0) {
       const bounds = L.latLngBounds(pins.map((pin) => [pin.latitude, pin.longitude]));
@@ -155,6 +178,23 @@ export class MapView {
       });
     } else {
       this.map?.fitBounds(ROMANIA_BOUNDS);
+    }
+  }
+
+  private showTrail(points: Coordinates[]): void {
+    const layer = this.trailLayer;
+
+    if (!layer) {
+      return;
+    }
+
+    layer.clearLayers();
+
+    if (points.length >= 2) {
+      L.polyline(
+        points.map((point) => [point.latitude, point.longitude] as L.LatLngTuple),
+        { className: 'map-trail', weight: 3, interactive: false },
+      ).addTo(layer);
     }
   }
 
@@ -217,4 +257,11 @@ export class MapView {
   private round(value: number): number {
     return Number(value.toFixed(COORDINATE_DECIMALS));
   }
+}
+
+function sameLocations(a: MapPin[], b: MapPin[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((pin, i) => pin.latitude === b[i].latitude && pin.longitude === b[i].longitude)
+  );
 }

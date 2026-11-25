@@ -225,6 +225,97 @@
   height: 320px;
 }
 
+.trail-note {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+}
+
+.trail-note .error {
+  color: var(--color-error);
+}
+
+.sighting-success {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.sighting-error {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.sighting-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 480px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-muted);
+}
+
+.sighting-form h3 {
+  margin: 0 0 4px;
+}
+
+.sighting-form label {
+  font-weight: 600;
+}
+
+.sighting-form input,
+.sighting-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.sighting-form textarea {
+  resize: vertical;
+}
+
+.field-error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 0.9rem;
+}
+
+.sighting-form .actions {
+  margin-top: 8px;
+}
+
+/* The content of the popup of a point of the trail */
+.sighting-popup p {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.sighting-popup .sighting-author {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.button.danger {
+  background-color: var(--color-error);
+}
+
+.button.danger:hover:not(:disabled) {
+  background-color: var(--color-error-light-hover);
+  color: var(--color-error);
+}
+
 @media (max-width: 700px) {
   .details {
     grid-template-columns: minmax(0, 1fr);
@@ -233,6 +324,16 @@
 
   .actions .button {
     flex: 1;
+    text-align: center;
+  }
+
+  .sighting-form {
+    max-width: none;
+  }
+
+  .location > .button {
+    display: block;
+    margin-bottom: 10px;
     text-align: center;
   }
 }

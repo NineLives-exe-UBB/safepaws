@@ -151,7 +151,134 @@
         @if (pins().length > 0) {
           <section class="location">
             <h2>Location</h2>
-            <app-map [center]="pins()[0]" [zoom]="15" [pins]="pins()" />
+
+            @if (showTrail()) {
+              <p class="trail-note">
+                @if (sightingsFailed()) {
+                  <span class="error">Could not load the sightings.</span>
+                } @else if (sightings().length === 0) {
+                  No one has reported seeing it yet.
+                } @else {
+                  The line joins the place where it was lost with every sighting, in the order it was seen.
+                }
+              </p>
+
+              @if (canAddSighting()) {
+                @if (authService.user()) {
+                  <p class="trail-note">Click on the map where you saw it.</p>
+                } @else {
+                  <a
+                    class="button"
+                    routerLink="/login"
+                    [queryParams]="{ returnUrl: '/announcements/' + announcement.id }"
+                  >
+                    I saw it here
+                  </a>
+                }
+              }
+            }
+
+            <app-map
+              [center]="mapCenter()"
+              [zoom]="15"
+              [pins]="pins()"
+              [trail]="trail()"
+              [fitToPins]="true"
+              [popup]="showTrail() ? sightingPopup : null"
+              (locationSelected)="startSighting($event)"
+            />
+
+            @if (sightingSaved()) {
+              <p class="sighting-success" role="status">Thank you, the sighting was added.</p>
+            }
+
+            @if (sightingError()) {
+              <p class="sighting-error" role="alert">{{ sightingError() }}</p>
+            }
+
+            @if (draft()) {
+              <form class="sighting-form" [formGroup]="sightingForm" (ngSubmit)="saveSighting()" novalidate>
+                <h3>I saw it here</h3>
+
+                <label for="seen-at">When did you see it?</label>
+                <input
+                  id="seen-at"
+                  type="datetime-local"
+                  formControlName="seenAt"
+                  [min]="seenAtMin()"
+                  [max]="seenAtMax"
+                />
+
+                @if (sightingForm.controls.seenAt.touched) {
+                  @if (sightingForm.controls.seenAt.hasError('required')) {
+                    <p class="field-error">Enter the date and the time.</p>
+                  } @else if (sightingForm.controls.seenAt.hasError('future')) {
+                    <p class="field-error">The date cannot be in the future.</p>
+                  } @else if (sightingForm.controls.seenAt.hasError('beforeLost')) {
+                    <p class="field-error">The date cannot be before the pet was lost.</p>
+                  }
+                }
+
+                <label for="sighting-note">Note (optional)</label>
+                <textarea id="sighting-note" rows="3" formControlName="note"></textarea>
+
+                @if (sightingForm.controls.note.hasError('maxlength')) {
+                  <p class="field-error">The note can have at most {{ maxNoteLength }} characters.</p>
+                }
+
+                @if (sightingFormError()) {
+                  <p class="field-error" role="alert">{{ sightingFormError() }}</p>
+                }
+
+                <div class="actions">
+                  <button type="submit" class="button" [disabled]="savingSighting()">
+                    Add sighting
+                  </button>
+                  <button
+                    type="button"
+                    class="button secondary"
+                    [disabled]="savingSighting()"
+                    (click)="cancelSighting()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            }
+
+            <ng-template #sightingPopup let-pin>
+              @if (sightingFor(pin); as sighting) {
+                <div class="sighting-popup">
+                  <p class="sighting-when">
+                    <strong>{{ sighting.seenAt | date: dayFormat }}</strong>
+                    at
+                    <strong>{{ sighting.seenAt | date: timeFormat }}</strong>
+                  </p>
+
+                  @if (sighting.note) {
+                    <p class="sighting-note">{{ sighting.note }}</p>
+                  }
+
+                  <p class="sighting-author">Added by {{ sighting.reporter.displayName }}.</p>
+
+                  @if (canDelete(sighting)) {
+                    <button
+                      type="button"
+                      class="button danger"
+                      (click)="deleteSighting(sighting)"
+                    >
+                      Delete
+                    </button>
+                  }
+                </div>
+              } @else if (pin.type === 'DRAFT') {
+                <p class="sighting-popup">Your sighting will be added here.</p>
+              } @else {
+                <p class="sighting-popup">
+                  {{ typeLabel() }} here, on {{ announcement.eventDate | date: dateFormat }}.
+                </p>
+              }
+            </ng-template>
           </section>
         }
       </article>

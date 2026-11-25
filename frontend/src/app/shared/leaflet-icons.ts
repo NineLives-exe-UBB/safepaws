@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { AnnouncementType } from '../models/announcement.model';
+import { PinType } from '../models/map.model';
 
 const MARKER_IMAGES_PATH = 'leaflet/';
 
@@ -15,8 +15,8 @@ export function fixDefaultMarkerIcons(): void {
   });
 }
 
-/** A pin colored with --color-lost (red) or --color-found (green), see map.css. */
-export function createPinIcon(type: AnnouncementType): L.DivIcon {
+/** A pin colored by its type, with the CSS variables of styles.css, see map.css. */
+export function createPinIcon(type: PinType): L.DivIcon {
   return L.divIcon({
     className: 'map-pin',
     html: `<span class="map-pin-shape map-pin-${type.toLowerCase()}"></span>`,
