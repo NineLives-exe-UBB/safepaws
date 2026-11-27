@@ -8,6 +8,9 @@ SafePaws exposes a RESTful web API for lost and found pets, photo attachments, a
 
 | Method | Endpoint | Description | Auth | Implemented by | Used by (frontend) |
 |---|---|---|---|---|---|
+| `POST` | `/announcements/{id}/sightings` | Reports a lost-pet sighting | Token | Patrick | Details page, sighting form |
+| `GET` | `/announcements/{id}/sightings` | Lists sightings chronologically | Public | Patrick | Details page, map |
+| `DELETE` | `/sightings/{id}` | Deletes a sighting | Token; reporter or announcement owner | Patrick | Details page |
 | `POST` | `/auth/register` | Creates a user account | Public | Antonia | Register page |
 | `POST` | `/auth/login` | Logs in, returns a JWT valid for 24 hours | Public | Alexandru | Login page (and right after registering) |
 | `GET` | `/auth/me` | Returns the logged-in user | Token | Alexandru | — |
@@ -722,6 +725,96 @@ Marks all of the user's notifications as read. Token required.
 
 ##### Error Responses
 - `401 Unauthorized` (`Authentication is required`).
+
+---
+
+
+### 3.7 Sightings
+
+Sightings allow users to report where and when they saw a lost pet.
+
+#### `POST /announcements/{id}/sightings`
+
+Creates a sighting. Authentication is required.
+
+Sightings can only be added to ACTIVE, LOST announcements.
+
+##### Request Body (`application/json`)
+
+```json
+{
+  "latitude": 46.7712,
+  "longitude": 23.6236,
+  "seenAt": "2026-11-25T14:30:00",
+  "note": "I saw the cat near the park."
+}
+```
+
+##### Field Constraints
+
+| Field | Required | Constraints |
+|---|---|---|
+| `latitude` | Yes | Number between -90 and 90 |
+| `longitude` | Yes | Number between -180 and 180 |
+| `seenAt` | Yes | Cannot be in the future or before the pet went missing |
+| `note` | No | Maximum 500 characters |
+
+##### Response (`201 Created`)
+
+```json
+{
+  "id": 5,
+  "latitude": 46.7712,
+  "longitude": 23.6236,
+  "seenAt": "2026-11-25T14:30:00",
+  "note": "I saw the cat near the park.",
+  "reporter": {
+    "id": 2,
+    "displayName": "Mihai Rus"
+  },
+  "createdAt": "2026-11-25T14:35:00"
+}
+```
+
+##### Error Responses
+
+- `400 Bad Request`: Invalid coordinates, date, note length, or announcement type/status.
+- `401 Unauthorized`: Missing or invalid authentication token.
+- `404 Not Found`: Announcement does not exist.
+
+---
+
+#### `GET /announcements/{id}/sightings`
+
+Returns all sightings for an announcement.
+
+This endpoint is public. Results are ordered by `seenAt` ascending, then by ID ascending.
+
+##### Response (`200 OK`)
+
+An array of sightings using the same response structure as POST. Returns `[]` when no sightings exist.
+
+##### Error Responses
+
+- `404 Not Found`: Announcement does not exist.
+
+---
+
+#### `DELETE /sightings/{id}`
+
+Deletes an existing sighting.
+
+Authentication is required. Only the sighting's reporter or the announcement owner can delete it.
+
+##### Response (`204 No Content`)
+
+No response body.
+
+##### Error Responses
+
+- `401 Unauthorized`: Missing or invalid authentication token.
+- `403 Forbidden`: The user is neither the reporter nor the announcement owner.
+- `404 Not Found`: Sighting does not exist.
 
 ---
 
